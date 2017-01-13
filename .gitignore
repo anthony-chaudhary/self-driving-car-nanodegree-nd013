@@ -87,3 +87,5 @@ ENV/
 
 # Rope project settings
 .ropeproject
+*.gz
+CarND-LetNet/lenet.data-00000-of-00001
