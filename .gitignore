@@ -89,3 +89,9 @@ ENV/
 .ropeproject
 *.gz
 CarND-LetNet/lenet.data-00000-of-00001
+
+# other
+data/
+udacity-sdc-udacity-self-driving-car-simulator-dominique-default-windows-desktop-64-bit-4/
+carND-Keras-Lab/CarND-Keras-Lab-master/train.p
+carND-Keras-Lab/CarND-Keras-Lab-master/test.p
