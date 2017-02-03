@@ -1,4 +1,5 @@
 import tensorflow as tf
+import argparse
 from keras.models import Sequential
 from keras.layers.core import Dense, Flatten, Dropout, Lambda, Activation
 from keras.layers.convolutional import Convolution2D
@@ -23,21 +24,30 @@ Pre processing pipeline
 
 def process_line(line):
 
-    imgname = line[0]
-    # print(imgname)
-    x = cv2.imread('data/' + imgname)
-    x = np.array(x)
-    y = line[3]
-    y = np.array(y)
-    # print(y)
-    # https://carnd-forums.udacity.com/questions/36897633/fitgenerator----valueerror-error-when-checking-model-input-expected-lambdainput1-to-have-4-dimensions-but-got-array-with-shape-160-320-3
-    x = np.expand_dims(x, axis=0)
-    y = np.expand_dims(y, axis=0)
-    # print(x.shape, y.shape)
-    return x, y
+    X_train = np.empty([0, 160, 320, 3])
+    y_train = np.empty([0, 1])
 
-# Inspired by
-# https://github.com/commaai/research/blob/master/train_steering_model.py
+    for i in range(3):
+
+        imgname = line[i].strip()
+        X_single_sample = cv2.imread(imgname)
+        X_train = np.append(X_train, [X_single_sample], axis=0)
+
+        y_single_sample = line[3]
+        # Adjust steering angles
+        if i == 1:  # left
+            steering_adjust = +.2
+        elif i == 2:  # right
+            steering_adjust = -.1
+        else:
+            steering_adjust = 0
+
+        y_single_sample = [y_single_sample + steering_adjust]
+        y_train = np.append(y_train, [y_single_sample], axis=0)
+
+    #print(X_train.shape, y_train.shape)
+    return X_train, y_train
+
 
 """
 Data generator
@@ -49,9 +59,8 @@ def generate_arrays_from_file(path):
     while 1:
         data = read_csv(path).values
         for line in data:
-            x, y = process_line(line)
-            # print(x, y)
-            yield x, y
+            X_train, y_train = process_line(line)
+            yield X_train, y_train
 
 """
 Model architecture
@@ -81,15 +90,12 @@ model.add(Dropout(.2))
 model.add(ELU())
 
 model.add(Dense(512))
-model.add(ELU())
-
-model.add(Dense(256))
-
 model.add(Dropout(.5))
 model.add(ELU())
+
 model.add(Dense(1))
 
-model.compile('adam', 'mse', ['accuracy'])
+model.compile('adam', 'mse')
 
 
 """
@@ -100,10 +106,17 @@ if __name__ == "__main__":
 
     print("Training")
 
-    history = model.fit_generator(generate_arrays_from_file(
-        'data/driving_log.csv'), samples_per_epoch=8000, nb_epoch=3, verbose=2,)
+    history = model.fit_generator(
+        generate_arrays_from_file('driving_log.csv'),
+        samples_per_epoch=24000, nb_epoch=2, verbose=2,
+        validation_data=generate_arrays_from_file('validation_log2.csv'),
+        nb_val_samples=1150)
 
     """
-	Save model
-	"""
+    Save model
+    """
     model.save('my_model.h5')
+
+    model.summary()
+
+    # model.predict()
