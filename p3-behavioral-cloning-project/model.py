@@ -14,6 +14,7 @@ from keras.callbacks import ModelCheckpoint
 import matplotlib.gridspec as gridspec
 import matplotlib.image as mpimg
 import scipy.misc
+import random
 
 tf.python.control_flow_ops = tf
 
@@ -41,7 +42,9 @@ RECOVERY_OFFSET = .25
 # Preprocessing
 FEATURE_GENERATION_MULTIPLE = 2
 
-
+SEED = 8373
+custom_random = np.random.RandomState(seed=SEED)
+print(custom_random.randint(0, 100))  # Should return 91
 """
 Test suite
 """
@@ -111,6 +114,36 @@ def transform_image(img, ang_range, shear_range, trans_range):
 num_classes = 0
 track_angles = []
 
+
+def balance_data(data):
+
+    line_number = custom_random.randint(len(data))
+    line = data[line_number]
+    steering_angle = line[3]
+    uniform_min = (custom_random.uniform(0.001, .01))
+    uniform_max = (custom_random.uniform(0.02, .3))
+    max_tries = 0
+
+    while True:
+
+        line_number = custom_random.randint(len(data))
+        line = data[line_number]
+        # print(line)
+        steering_angle = line[3]
+
+        if (abs(steering_angle) > uniform_min and abs(steering_angle) < uniform_max):
+            # print(line)
+            # print(steering_angle)
+            return line
+        else:
+            max_tries = max_tries + 1
+            if max_tries > 10000:
+                return line
+            continue
+
+    #print(steering_angle)
+
+
 def process_line(data):
 
     X_train = np.empty([0, 80, 320, 3])
@@ -123,103 +156,54 @@ def process_line(data):
     batch_size = 8  # batch_size * 15 = real batch size TODO refactor to be more direct
 
     for batch in range(batch_size):
-        # get a line number
-        line_number = np.random.randint(len(data))
-        # print("length of data", len(data))
-        # get a line object
-        line = data[line_number]
 
-        # Reject if angles less than abs(.1)
-        number_of_angles_rejected = 0
-        bias_counter = 0
-        steering_angle_test = line[3]
-        rejection_prob = .5  # %
-
-
-        """
-        bias = 1. / (bias_counter + 1.)
-        threshold = np.random.uniform()
-        # print(threshold)
-        # balance data
-        # Credit https://medium.com/@mohankarthik/cloning-a-car-to-mimic-human-driving-5c2f7e8d8aff#.k8w0jbmsm
-        while (abs(steering_angle_test + bias)) > threshold:
-            line_number = np.random.randint(len(data))  # get new line
-            line = data[line_number]
-            steering_angle_test = line[3]
-
-            if (abs(steering_angle_test + bias)) < threshold:
-                break
-            bias_counter = bias_counter + 1
-        """
-        # while steering angle close to 0 get a new line
-        while abs(steering_angle_test) < .0001:   # ~3600*3 samples
-
-            # Chance to not reject the angle
-            if np.random.random_sample(1) > rejection_prob:
-                break
-
-            line_number = np.random.randint(len(data))  # get new line
-            line = data[line_number]
-            steering_angle_test = line[3]  # check angle
-
-            # once we have correct angle, break out of loop  try  AND < .1
-            if abs(steering_angle_test) > .0001:
-                break
-
-            # print("Angles rejected ", number_of_angles_rejected)
-            number_of_angles_rejected = number_of_angles_rejected + 1
+        line = balance_data(data)
 
         for i in range(3):
 
             imgname = line[i].strip()
             X_single_sample = cv2.imread(imgname)
-
             # Credit https://github.com/navoshta/behavioral-cloning
             # print("X original  shape", X_single_sample.shape)
             top = int(.4 * X_single_sample.shape[0])
             bottom = int(.1 * X_single_sample.shape[0])
             X_single_sample = X_single_sample[top:-bottom, :]
-
             #print("X new shape", X_single_sample.shape)
-
-            """
-            save images for visualization if required
-            """
+            # save images for visualization if required
             # scipy.misc.imsave('figs/orginal' +
                               # str(np.random.randint(999)) + '.jpg', X_single_sample)
-
             X_train = np.append(X_train, [X_single_sample], axis=0)
 
             y_single_sample = line[3]
+            # print(y_single_sample)
             # Adjust steering angles
-            if i == 1:  # left
-                steering_adjust = +.25
+            if i == 1:  # left are negative angles, positive to return to center
+                steering_adjust = +(custom_random.uniform(.25, .3))
+                steering_correction = min(1, y_single_sample + steering_adjust)
+                assert steering_correction != 1.01, steering_correction != -1
+                #print(steering_correction)
             elif i == 2:  # right
-                steering_adjust = -.25
+                steering_adjust = -(custom_random.uniform(.25, .3))
+                steering_correction = max(-1, y_single_sample + steering_adjust)
+                #print(steering_correction)
+                assert steering_correction != -1.01, steering_correction != +1
             else:
-                steering_adjust = 0
+                steering_correction = y_single_sample
 
-            y_single_sample = [y_single_sample + steering_adjust]
+            y_single_sample = [steering_correction]
             track_angles.append(y_single_sample)
             y_train = np.append(y_train, [y_single_sample], axis=0)
 
-
-            # print(X_train.shape, y_train.shape)
-
-    # Check_text = "Before image generation, shapes: "
-    # check_Shape(Check_text, X_train, y_train)
-
-    # Credit https://github.com/navoshta/behavioral-cloning
-    #flip_indices = random.sample(range(X_train.shape[0]), int(X_train.shape[0] / 2))
-    #X_train[flip_indices] = X_train[flip_indices, :, ::-1, :]
-    #y_train[flip_indices] = -y_train[flip_indices]
+    #print(X_train.shape, y_train.shape)
+    #Check_text = "Before image generation, shapes: "
+    #check_Shape(Check_text, X_train, y_train)
 
     new_features = []
     new_labels = []
 
     for i in range(2):
         for feature in X_train:
-            new_features.append(transform_image(feature, 15, 3, 2))
+            new_features.append(transform_image(feature, 5, 1, 2))
             # save images
             # scipy.misc.imsave('figs/gen' +
                              # str(np.random.randint(999)) + '.jpg', new_features[i])
@@ -231,8 +215,8 @@ def process_line(data):
     X_train = np.append(X_train, new_features, axis=0)
     y_train = np.append(y_train, new_labels, axis=0)
 
-    Check_text = "After image generation, shapes: "
-    check_Shape(Check_text, X_train, y_train)
+    # Check_text = "After image generation, shapes: "
+    # check_Shape(Check_text, X_train, y_train)
 
     return X_train, y_train
 
@@ -244,11 +228,14 @@ Data generator
 
 
 def generate_arrays_from_file(path):
+    batch_tracker = 0
     while True:
         # load the labels and file paths to images
         data = read_csv(path).values
         # All pre processing including batch size and number of generated
         # images.
+        #print(batch_tracker)
+        batch_tracker = batch_tracker + 1
         X_train, y_train = process_line(data)
         # Yied results back to fit_generator
         yield X_train, y_train
@@ -293,26 +280,25 @@ model.add(ELU())
 
 
 model.add(Flatten())
-model.add(Dropout(.5))
+model.add(Dropout(.2))
 
-model.add(Dense(256,
-                bias=True,
+model.add(Dense(512,
                 init=init_type
                 ))
 model.add(ELU())
-model.add(Dropout(.5))
+model.add(Dropout(.3))
 
-model.add(Dense(100, init=init_type))
+model.add(Dense(256, init=init_type))
 model.add(ELU())
-model.add(Dropout(.5))
+model.add(Dropout(.3))
+
+model.add(Dense(128, init=init_type))
+model.add(ELU())
+model.add(Dropout(.3))
 
 model.add(Dense(50, init=init_type))
 model.add(ELU())
-model.add(Dropout(.5))
-
-model.add(Dense(10, init=init_type))
-model.add(ELU())
-model.add(Dropout(.5))
+model.add(Dropout(.3))
 
 model.add(Dense(1))
 
@@ -320,7 +306,7 @@ model.add(Dense(1))
 optimizer_settings = Adam(lr=.0001)
 model.compile(optimizer=optimizer_settings, loss='mse')
 
-early_stopping = EarlyStopping(monitor='val_loss', patience=4)
+early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
 checkpointer = ModelCheckpoint(
     filepath="temp-model/weights.hdf5", verbose=1, save_best_only=True)
@@ -341,10 +327,10 @@ if __name__ == "__main__":
 
     history = model.fit_generator(
         generate_arrays_from_file('driving_log.csv'),
-        samples_per_epoch=3000, nb_epoch=20, verbose=2,
+        samples_per_epoch=7200, nb_epoch=3, verbose=2,
         callbacks=[early_stopping, checkpointer],
         validation_data=generate_arrays_from_file('validation_log2.csv'),
-        nb_val_samples=1000)
+        nb_val_samples=720)
 
     """
     Save model
@@ -353,32 +339,37 @@ if __name__ == "__main__":
 
     print("Model saved.")
    
-    model.summary()
+    # model.summary()
     print("Complete.")
 
     # model.predict()
     # summarize history for loss
+    plt_number = custom_random.randint(0, 1000)
+
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('model loss')
     plt.ylabel('loss')
     plt.xlabel('epoch')
     plt.legend(['train', 'test'], loc='upper left')
+    fig2 = plt.gcf()
     plt.show()
+    fig2.savefig('loss-history'+ str(plt_number) +'.png')
 
     #print(track_angles)
     track_angles = np.around((np.asarray(track_angles)), decimals=3)
     print(track_angles)
     print(num_classes)
 
-    plt.hist(track_angles)  # THIS WORKS OMG
+    #bins = np.linspace(-1, 1, 100)
+    plt.hist(track_angles, bins='auto')  # THIS WORKS OMG
     plt.title("Gaussian Histogram")
     plt.xlabel("Value")
     plt.ylabel("Frequency")
 
     fig = plt.gcf()
     plt.show()
-    fig.savefig('foo.png')
+    fig.savefig('angle-histogram'+ str(plt_number) +'.png')
     
     print(min(track_angles))
     print(max(track_angles))
