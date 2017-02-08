@@ -24,33 +24,32 @@ print('Modules loaded.')
 Hyperparemters
 """
 # Nerual Network Training
-BATCH_SIZE = 8
-EPOCHS = 5
-SAMPLES_EPOCH = 30000
-VALIDATION_SAMPLES = 3000
-
-# Steering control
-CHANCE_REJECT_ZERO_ANGLE = .50
-MINIMUM_REJECT_ANGLE = .001
+BATCH_SIZE = 1
+EPOCHS = 1
+SAMPLES_EPOCH = 16000
+VALIDATION_SAMPLES = 1
 
 # Bias control
 BIAS_CONTROL = .01
 
 # Recovery control
-RECOVERY_OFFSET = .25
+RECOVERY_OFFSET = .3  # Float, handled as absolute value, valid range from 0 -> 1
 
 # Preprocessing
-FEATURE_GENERATION_MULTIPLE = 2
+FEATURE_GENERATION_MULTIPLE = 1
 
 SEED = 8373
 custom_random = np.random.RandomState(seed=SEED)
 print(custom_random.randint(0, 100))  # Should return 91
+
+
 """
 Test suite
 """
 
-# run_once credit 
+# run_once credit
 # http://stackoverflow.com/questions/4103773/efficient-way-of-having-a-function-only-execute-once-in-a-loop
+
 
 def run_once(f):
     def wrapper(*args, **kwargs):
@@ -71,6 +70,8 @@ Pre processing pipeline
 """
 
 # Credit forum fellow from P2
+
+
 def transform_image(img, ang_range, shear_range, trans_range):
     '''
     This function transforms images to generate new images.
@@ -84,14 +85,14 @@ def transform_image(img, ang_range, shear_range, trans_range):
 
     '''
     # Rotation
-    ang_rot = np.random.uniform(ang_range) - ang_range / 2
+    ang_rot = custom_random.uniform(ang_range) - ang_range / 2
     # updated to reflect gray pipeline
     rows, cols, ch = img.shape
     Rot_M = cv2.getRotationMatrix2D((cols / 2, rows / 2), ang_rot, 1)
 
     # Translation
-    tr_x = trans_range * np.random.uniform() - trans_range / 2
-    tr_y = trans_range * np.random.uniform() - trans_range / 2
+    tr_x = trans_range * custom_random.uniform() - trans_range / 2
+    tr_y = trans_range * custom_random.uniform() - trans_range / 2
     Trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
 
     # Shear
@@ -111,8 +112,41 @@ def transform_image(img, ang_range, shear_range, trans_range):
     return img
 
 
-num_classes = 0
 track_angles = []
+
+
+def balance_bins(track_angles):
+
+    # print(track_angles)
+    # track_angles = np.around((np.asarray(track_angles)), decimals=3)
+    # track_unique = np.unique(track_angles, return_counts=True)
+
+    track_unique, unique_index = np.unique(track_angles, return_inverse=True)
+    unique_count = np.bincount(unique_index)
+    print("unique_count", unique_count)
+    count = np.max(unique_count)
+
+    out = np.empty((count * len(track_unique),) +
+                   track_angles.shape[1:], track_angles.dtype)
+
+    for j in range(len(track_unique)):
+
+        indices = np.random.choice(np.where(unique_index == j)[0], count)
+        out[j * count: (j + 1) * count] = track_angles[indices]
+
+    print(out)
+
+    plt.hist(np.unique(out), bins='auto')  # THIS WORKS OMG
+    plt.title("Gaussian Histogram")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+
+    fig = plt.gcf()
+    plt.show()
+    fig.savefig('unique-angles-out-histogram' + str(plt_number) + '.png')
+
+    # print("Negative angles:", np.where(track_angles>0).shape)
+    # print("Positive angles:", np.where(track_angles<0).shape)
 
 
 def balance_data(data):
@@ -120,9 +154,11 @@ def balance_data(data):
     line_number = custom_random.randint(len(data))
     line = data[line_number]
     steering_angle = line[3]
-    uniform_min = (custom_random.uniform(0.001, .01))
-    uniform_max = (custom_random.uniform(0.02, .3))
-    max_tries = 0
+    uniform_test_min = -.20
+    uniform_text_max = .20
+    uniform_test = (custom_random.uniform(uniform_test_min, uniform_text_max))
+    max_tries = 1
+    zero_reject_weight = SAMPLES_EPOCH * 2
 
     while True:
 
@@ -131,100 +167,155 @@ def balance_data(data):
         # print(line)
         steering_angle = line[3]
 
-        if (abs(steering_angle) > uniform_min and abs(steering_angle) < uniform_max):
+        if steering_angle == 0.0 and custom_random.random_sample(1) < (1 / zero_reject_weight):
+            return line
+
+        if (abs(steering_angle) <= uniform_test and steering_angle >= uniform_test_min and steering_angle <= uniform_text_max):
             # print(line)
             # print(steering_angle)
-            return line
+            # if steering_angle > 0 or custom_random.randint(1) > (1 / (2 +
+            # max_tries)):
+            if steering_angle != 0:
+                return line
+            else:
+                continue
+            # else:
+                # continue
         else:
             max_tries = max_tries + 1
-            if max_tries > 10000:
-                return line
+            if max_tries > 5000:
+                uniform_test = (custom_random.uniform(
+                    uniform_test_min, uniform_text_max))
+                # print("Trying new uniform test for: ", steering_angle)
+                continue
+
+                if max_tries > len(data):
+                    print("Exceeded search time, skipping angle:",
+                          steering_angle, "Data length:", len(data))
+                    return line
             continue
 
-    #print(steering_angle)
 
+def recovery(line):
 
-def process_line(data):
-
-    X_train = np.empty([0, 80, 320, 3])
     y_train = np.empty([0, 1])
 
-    # each batch will contain 3 images from data and 3 generated images
-    # so a batch of 1 will contain 6 images
-    # and a batch of 2 will contain 12 etc
+    y_single_sample = line[3]
+    assert type(y_single_sample) == float
+    # print(type(y_single_sample))
+    # print(y_single_sample)
+    new_labels = []
 
-    batch_size = 8  # batch_size * 15 = real batch size TODO refactor to be more direct
+    for i in range(3):
 
-    for batch in range(batch_size):
+        if i == 1:  # left are negative angles, positive to return to center
+            # print("Left", line[i])   #Refactor to an ASSERT
+            steering_adjust = +RECOVERY_OFFSET  # normally .25
+            # print(type(steering_adjust))
+            # print(type(y_single_sample))
+            steering_correction = min(1, y_single_sample + steering_adjust)
+            assert steering_correction != 1.01, steering_correction != -1
+            # print(steering_correction)
+        elif i == 2:  # right
+            # print("Right", line[i])
+            steering_adjust = -RECOVERY_OFFSET
+            steering_correction = max(-1,
+                                      y_single_sample + steering_adjust)
+            # print(steering_correction)
+            assert steering_correction != -1.01, steering_correction != +1
+        elif i == 0:
+            # print("Center", line[i])
+            steering_correction = y_single_sample
 
-        line = balance_data(data)
+        track_angles.append(steering_correction)
+        new_labels.append([steering_correction])
 
-        for i in range(3):
+    # print("new labels", new_labels)
+    y_train = np.append(y_train, new_labels, axis=0)
+    # print(y_train)
 
-            imgname = line[i].strip()
-            X_single_sample = cv2.imread(imgname)
-            # Credit https://github.com/navoshta/behavioral-cloning
-            # print("X original  shape", X_single_sample.shape)
-            top = int(.4 * X_single_sample.shape[0])
-            bottom = int(.1 * X_single_sample.shape[0])
-            X_single_sample = X_single_sample[top:-bottom, :]
-            #print("X new shape", X_single_sample.shape)
-            # save images for visualization if required
-            # scipy.misc.imsave('figs/orginal' +
-                              # str(np.random.randint(999)) + '.jpg', X_single_sample)
-            X_train = np.append(X_train, [X_single_sample], axis=0)
+    return y_train
 
-            y_single_sample = line[3]
-            # print(y_single_sample)
-            # Adjust steering angles
-            if i == 1:  # left are negative angles, positive to return to center
-                steering_adjust = +(custom_random.uniform(.25, .3))
-                steering_correction = min(1, y_single_sample + steering_adjust)
-                assert steering_correction != 1.01, steering_correction != -1
-                #print(steering_correction)
-            elif i == 2:  # right
-                steering_adjust = -(custom_random.uniform(.25, .3))
-                steering_correction = max(-1, y_single_sample + steering_adjust)
-                #print(steering_correction)
-                assert steering_correction != -1.01, steering_correction != +1
-            else:
-                steering_correction = y_single_sample
 
-            y_single_sample = [steering_correction]
-            track_angles.append(y_single_sample)
-            y_train = np.append(y_train, [y_single_sample], axis=0)
+def chop_images(line):
 
-    #print(X_train.shape, y_train.shape)
-    #Check_text = "Before image generation, shapes: "
-    #check_Shape(Check_text, X_train, y_train)
+    X_train = np.empty([0, 80, 320, 3])
+
+    for i in range(3):
+
+        imgname = line[i].strip()
+        X_single_sample = cv2.imread(imgname)
+        # Credit https://github.com/navoshta/behavioral-cloning
+        # print("X original  shape", X_single_sample.shape)
+        top = int(.4 * X_single_sample.shape[0])
+        bottom = int(.1 * X_single_sample.shape[0])
+        X_single_sample = X_single_sample[top:-bottom, :]
+        # print("X new shape", X_single_sample.shape)
+        # save images for visualization if required
+        # scipy.misc.imsave(
+        # 'figs/orginal' + str(np.random.randint(999)) + '.jpg', X_single_sample)
+        X_train = np.append(X_train, [X_single_sample], axis=0)
+
+    return X_train
+
+
+def generate_features(X_train, y_train):
 
     new_features = []
     new_labels = []
 
-    for i in range(2):
+    for i in range(FEATURE_GENERATION_MULTIPLE):
+
         for feature in X_train:
-            new_features.append(transform_image(feature, 5, 1, 2))
+            feature = transform_image(feature, 1, 2, 2)
+
+            # credit https://github.com/navoshta/behavioral-cloning
+            # switched to used custom random function
+            h, w = feature.shape[0], feature.shape[1]
+            [x1, x2] = custom_random.choice(w, 2, replace=False)
+            k = h / (x2 - x1)
+            b = - k * x1
+            for j in range(h):
+                c = int((j - b) / k)
+                feature[j, :c, :] = (feature[j, :c, :] * .4).astype(np.int32)
+
+            new_features.append(feature)
             # save images
-            # scipy.misc.imsave('figs/gen' +
-                             # str(np.random.randint(999)) + '.jpg', new_features[i])
+            # scipy.misc.imsave(
+            # 'figs/gen' + str(np.random.randint(999)) + '.jpg', new_features[i])
         for label in y_train:
             new_labels.append(label)
             track_angles.append(label)
-            # print(label)
 
     X_train = np.append(X_train, new_features, axis=0)
     y_train = np.append(y_train, new_labels, axis=0)
 
-    # Check_text = "After image generation, shapes: "
-    # check_Shape(Check_text, X_train, y_train)
-
     return X_train, y_train
 
 
-"""
-Data generator
-# https://keras.io/models/model/
-"""
+def process_line(data):
+
+    batch_size = BATCH_SIZE
+
+    for batch in range(batch_size):
+
+        balanced_line = balance_data(data)
+
+        X_train = chop_images(balanced_line)
+        y_train = recovery(balanced_line)
+
+        # Check_text = "Before image generation, shapes: "
+        # check_Shape(Check_text, X_train, y_train)
+
+        X_train, y_train = generate_features(X_train, y_train)
+
+        Check_text = "After image generation, shapes: "
+        check_Shape(Check_text, X_train, y_train)
+
+        X_train = np.append(X_train, X_train, axis=0)
+        y_train = np.append(y_train, y_train, axis=0)
+
+    return X_train, y_train
 
 
 def generate_arrays_from_file(path):
@@ -232,12 +323,9 @@ def generate_arrays_from_file(path):
     while True:
         # load the labels and file paths to images
         data = read_csv(path).values
-        # All pre processing including batch size and number of generated
-        # images.
-        #print(batch_tracker)
+        # print(batch_tracker)
         batch_tracker = batch_tracker + 1
         X_train, y_train = process_line(data)
-        # Yied results back to fit_generator
         yield X_train, y_train
 
 
@@ -257,7 +345,7 @@ model.add(Convolution2D(24, 5, 5,
                         subsample=(2, 2),
                         border_mode="valid",
                         init=init_type))
-#convout1 = ELU()
+# convout1 = ELU()
 model.add(ELU())
 
 model.add(Convolution2D(36, 5, 5,
@@ -286,19 +374,17 @@ model.add(Dense(512,
                 init=init_type
                 ))
 model.add(ELU())
-model.add(Dropout(.3))
+model.add(Dropout(.5))
 
 model.add(Dense(256, init=init_type))
 model.add(ELU())
-model.add(Dropout(.3))
 
 model.add(Dense(128, init=init_type))
 model.add(ELU())
-model.add(Dropout(.3))
 
 model.add(Dense(50, init=init_type))
 model.add(ELU())
-model.add(Dropout(.3))
+
 
 model.add(Dense(1))
 
@@ -324,13 +410,12 @@ if __name__ == "__main__":
     Credit https://keras.io/callbacks/#create-a-callback
     '''
 
-
     history = model.fit_generator(
         generate_arrays_from_file('driving_log.csv'),
-        samples_per_epoch=7200, nb_epoch=3, verbose=2,
+        samples_per_epoch=SAMPLES_EPOCH, nb_epoch=EPOCHS, verbose=2,
         callbacks=[early_stopping, checkpointer],
         validation_data=generate_arrays_from_file('validation_log2.csv'),
-        nb_val_samples=720)
+        nb_val_samples=VALIDATION_SAMPLES)
 
     """
     Save model
@@ -338,7 +423,7 @@ if __name__ == "__main__":
     model.save('my_model.h5')
 
     print("Model saved.")
-   
+
     # model.summary()
     print("Complete.")
 
@@ -354,22 +439,42 @@ if __name__ == "__main__":
     plt.legend(['train', 'test'], loc='upper left')
     fig2 = plt.gcf()
     plt.show()
-    fig2.savefig('loss-history'+ str(plt_number) +'.png')
+    fig2.savefig('loss-history' + str(plt_number) + '.png')
 
-    #print(track_angles)
+    # print(track_angles)
     track_angles = np.around((np.asarray(track_angles)), decimals=3)
-    print(track_angles)
-    print(num_classes)
+    # print("Negative angles:", np.where(track_angles>0).shape)
 
-    #bins = np.linspace(-1, 1, 100)
-    plt.hist(track_angles, bins='auto')  # THIS WORKS OMG
+    # print(track_angles)
+
+    # bins = np.linspace(-1, 1, 100)
+    plt.hist(track_angles, bins='auto')
     plt.title("Gaussian Histogram")
     plt.xlabel("Value")
     plt.ylabel("Frequency")
 
     fig = plt.gcf()
     plt.show()
-    fig.savefig('angle-histogram'+ str(plt_number) +'.png')
-    
+    fig.savefig('angle-histogram' + str(plt_number) + '.png')
+
     print(min(track_angles))
     print(max(track_angles))
+
+    np_angles_and_counts = np.unique(track_angles, return_counts=True)
+    print(np_angles_and_counts)
+
+    # for x in np_angles_and_counts:
+    # print(x[0], x[1])
+
+    print(len(np.unique(track_angles)))
+
+    plt.hist(np.unique(track_angles), bins='auto')
+    plt.title("Gaussian Histogram")
+    plt.xlabel("Value")
+    plt.ylabel("Frequency")
+
+    fig = plt.gcf()
+    plt.show()
+    fig.savefig('unique-angles-histogram' + str(plt_number) + '.png')
+
+    # balance_bins(track_angles)
