@@ -24,9 +24,9 @@ print('Modules loaded.')
 Hyperparemters
 """
 # Nerual Network Training
-BATCH_SIZE = 64
-EPOCHS = 1
-SAMPLES_EPOCH = 3840
+BATCH_SIZE = 1  # BUG in batch size
+EPOCHS = 2
+SAMPLES_EPOCH = 4000
 VALIDATION_SAMPLES = 64
 LEARNING_RATE = .0001
 
@@ -35,15 +35,16 @@ LEARNING_RATE = .0001
 
 # Recovery control
 # Float, handled as absolute value, valid range from 0 -> 1
-RECOVERY_OFFSET = .20  # .25 seems to work best
+RECOVERY_OFFSET = .25
 
 # Preprocessing
 FEATURE_GENERATION_MULTIPLE = 1
 
 # Data balancing
 # .4 seems to work well
-UNIFORM_TEST_MAX = .5  # Max absolute value of data balanced
-ZEROS = .10  # Percent chance of getting zeros, higher more zeros
+UNIFORM_TEST_MAX = .42  # Max absolute value of data balanced
+ZEROS = 1  # Percent chance of getting zeros, higher chance of getting zeros
+# ANGLES = 1  # lower means more zeros
 
 SEED = 8373
 custom_random = np.random.RandomState(seed=SEED)
@@ -85,11 +86,15 @@ def balance_data(data):
     max_tries = 1
     # length_unique = ((len(np.unique(track_angles))))
     zero_flag = False
+    angle_flag = False
     data_length = len(data)
 
     # Test if zeros are in line with other numbers
     if custom_random.random_sample(1) <= ZEROS:
         zero_flag = True
+
+    # if custom_random.random_sample(1) <= ANGLES:
+       # zero_flag = True
 
     while True:
 
@@ -106,16 +111,24 @@ def balance_data(data):
             else:
                 continue
 
-        # Handle non-zero angles
-        if steering_angle != 0 and abs(steering_angle) <= uniform_test:
-            return line
-        else:  # Handle exceptions
-            if max_tries > data_length:
-                print("Exceeded search time, skipping angle:",
-                      steering_angle, "Data length:", data_length)
+        # this may work to double up nicely
+        # REFACTOR for better zero control very greater than 1
+        if steering_angle == 0:
+            continue
+        else:
+            # Handle non-zero angles
+            if steering_angle != 0 and abs(steering_angle) <= uniform_test:
+                # if angle_flag is True:
                 return line
-            else:
-                continue
+                # else:
+                # continue
+            else:  # Handle exceptions
+                if max_tries > data_length:
+                    print("Exceeded search time, skipping angle:",
+                          steering_angle, "Data length:", data_length)
+                    return line
+                else:
+                    continue
 
 
 def recovery(line):
@@ -138,14 +151,13 @@ def recovery(line):
             steering_adjust = +RECOVERY_OFFSET  # normally .25
             # print(type(steering_adjust))
             # print(type(y_single_sample))
-            steering_correction = min(
-                UNIFORM_TEST_MAX, y_single_sample + steering_adjust)
+            steering_correction = min(1, y_single_sample + steering_adjust)
             assert steering_correction != 1.01, steering_correction != -1
             # print(steering_correction)
         elif i == 2:  # right
             # print("Right", line[i])
             steering_adjust = -RECOVERY_OFFSET
-            steering_correction = max(-UNIFORM_TEST_MAX,
+            steering_correction = max(-1,
                                       y_single_sample + steering_adjust)
             assert steering_correction != -1.01, steering_correction != +1
         elif i == 0:
@@ -164,14 +176,14 @@ def recovery(line):
 
 def chop_images(line):
 
-    X_train = np.empty([0, 80, 320, 3])
+    X_train = np.empty([0, 72, 320, 3])
 
     for i in range(3):
 
         imgname = line[i].strip()
         X_single_sample = cv2.imread(imgname)
         # print("X original  shape", X_single_sample.shape)
-        top = int(.4 * X_single_sample.shape[0])
+        top = int(.45 * X_single_sample.shape[0])
         bottom = int(.1 * X_single_sample.shape[0])
         X_single_sample = X_single_sample[top:-bottom, :]
         # print("X new shape", X_single_sample.shape)
@@ -256,10 +268,10 @@ def generate_arrays_from_file(path):
 """
 Model architecture
 """
-init_type = "glorot_uniform"
+init_type = "uniform"
 border_mode_type = "valid"
 
-row, col, ch = 80, 320, 3
+row, col, ch = 72, 320, 3
 model = Sequential()
 model.add(Lambda(lambda X_train: X_train / 127.5 - 1,
                  input_shape=(row, col, ch),
@@ -283,22 +295,13 @@ model.add(Convolution2D(64, 3, 3,
                         border_mode="valid",
                         init=init_type))
 model.add(ELU())
-
-model.add(Convolution2D(128, 3, 3,
-                        subsample=(1, 1),
-                        border_mode="valid",
-                        init=init_type))
-model.add(ELU())
-
-
 model.add(Flatten())
-model.add(Dropout(.2))
 
-model.add(Dense(1028,
+
+model.add(Dense(512,
                 init=init_type
                 ))
 model.add(ELU())
-model.add(Dropout(.3))
 
 model.add(Dense(128, init=init_type))
 model.add(ELU())
