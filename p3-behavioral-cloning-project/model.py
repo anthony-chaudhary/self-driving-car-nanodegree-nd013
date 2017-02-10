@@ -24,19 +24,26 @@ print('Modules loaded.')
 Hyperparemters
 """
 # Nerual Network Training
-BATCH_SIZE = 1
+BATCH_SIZE = 64
 EPOCHS = 1
-SAMPLES_EPOCH = 16000
-VALIDATION_SAMPLES = 1
+SAMPLES_EPOCH = 3840
+VALIDATION_SAMPLES = 64
+LEARNING_RATE = .0001
 
 # Bias control
-BIAS_CONTROL = .01
+# BIAS_CONTROL = .01
 
 # Recovery control
-RECOVERY_OFFSET = .3  # Float, handled as absolute value, valid range from 0 -> 1
+# Float, handled as absolute value, valid range from 0 -> 1
+RECOVERY_OFFSET = .20  # .25 seems to work best
 
 # Preprocessing
 FEATURE_GENERATION_MULTIPLE = 1
+
+# Data balancing
+# .4 seems to work well
+UNIFORM_TEST_MAX = .5  # Max absolute value of data balanced
+ZEROS = .10  # Percent chance of getting zeros, higher more zeros
 
 SEED = 8373
 custom_random = np.random.RandomState(seed=SEED)
@@ -69,131 +76,46 @@ def check_Shape(check_text, X_train, y_train):
 Pre processing pipeline
 """
 
-# Credit forum fellow from P2
-
-
-def transform_image(img, ang_range, shear_range, trans_range):
-    '''
-    This function transforms images to generate new images.
-    The function takes in following arguments,
-    1- Image
-    2- ang_range: Range of angles for rotation
-    3- shear_range: Range of values to apply affine transform to
-    4- trans_range: Range of values to apply translations over.
-
-    A Random uniform distribution is used to generate different parameters for transformation
-
-    '''
-    # Rotation
-    ang_rot = custom_random.uniform(ang_range) - ang_range / 2
-    # updated to reflect gray pipeline
-    rows, cols, ch = img.shape
-    Rot_M = cv2.getRotationMatrix2D((cols / 2, rows / 2), ang_rot, 1)
-
-    # Translation
-    tr_x = trans_range * custom_random.uniform() - trans_range / 2
-    tr_y = trans_range * custom_random.uniform() - trans_range / 2
-    Trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
-
-    # Shear
-    pts1 = np.float32([[5, 5], [20, 5], [5, 20]])
-
-    pt1 = 5 + shear_range * np.random.uniform() - shear_range / 2
-    pt2 = 20 + shear_range * np.random.uniform() - shear_range / 2
-
-    pts2 = np.float32([[pt1, 5], [pt2, pt1], [5, pt2]])
-
-    shear_M = cv2.getAffineTransform(pts1, pts2)
-
-    img = cv2.warpAffine(img, Rot_M, (cols, rows))
-    img = cv2.warpAffine(img, Trans_M, (cols, rows))
-    img = cv2.warpAffine(img, shear_M, (cols, rows))
-
-    return img
-
-
 track_angles = []
-
-
-def balance_bins(track_angles):
-
-    # print(track_angles)
-    # track_angles = np.around((np.asarray(track_angles)), decimals=3)
-    # track_unique = np.unique(track_angles, return_counts=True)
-
-    track_unique, unique_index = np.unique(track_angles, return_inverse=True)
-    unique_count = np.bincount(unique_index)
-    print("unique_count", unique_count)
-    count = np.max(unique_count)
-
-    out = np.empty((count * len(track_unique),) +
-                   track_angles.shape[1:], track_angles.dtype)
-
-    for j in range(len(track_unique)):
-
-        indices = np.random.choice(np.where(unique_index == j)[0], count)
-        out[j * count: (j + 1) * count] = track_angles[indices]
-
-    print(out)
-
-    plt.hist(np.unique(out), bins='auto')  # THIS WORKS OMG
-    plt.title("Gaussian Histogram")
-    plt.xlabel("Value")
-    plt.ylabel("Frequency")
-
-    fig = plt.gcf()
-    plt.show()
-    fig.savefig('unique-angles-out-histogram' + str(plt_number) + '.png')
-
-    # print("Negative angles:", np.where(track_angles>0).shape)
-    # print("Positive angles:", np.where(track_angles<0).shape)
 
 
 def balance_data(data):
 
-    line_number = custom_random.randint(len(data))
-    line = data[line_number]
-    steering_angle = line[3]
-    uniform_test_min = -.20
-    uniform_text_max = .20
-    uniform_test = (custom_random.uniform(uniform_test_min, uniform_text_max))
+    uniform_test_max = UNIFORM_TEST_MAX
     max_tries = 1
-    zero_reject_weight = SAMPLES_EPOCH * 2
+    # length_unique = ((len(np.unique(track_angles))))
+    zero_flag = False
+    data_length = len(data)
+
+    # Test if zeros are in line with other numbers
+    if custom_random.random_sample(1) <= ZEROS:
+        zero_flag = True
 
     while True:
 
+        uniform_test = (custom_random.uniform(0, uniform_test_max))
         line_number = custom_random.randint(len(data))
         line = data[line_number]
-        # print(line)
         steering_angle = line[3]
 
-        if steering_angle == 0.0 and custom_random.random_sample(1) < (1 / zero_reject_weight):
-            return line
-
-        if (abs(steering_angle) <= uniform_test and steering_angle >= uniform_test_min and steering_angle <= uniform_text_max):
-            # print(line)
-            # print(steering_angle)
-            # if steering_angle > 0 or custom_random.randint(1) > (1 / (2 +
-            # max_tries)):
-            if steering_angle != 0:
+        # Handle 0s.
+        if steering_angle == 0:
+            if zero_flag is True:
+                # print("Zero test passed")
                 return line
             else:
                 continue
-            # else:
-                # continue
-        else:
-            max_tries = max_tries + 1
-            if max_tries > 5000:
-                uniform_test = (custom_random.uniform(
-                    uniform_test_min, uniform_text_max))
-                # print("Trying new uniform test for: ", steering_angle)
-                continue
 
-                if max_tries > len(data):
-                    print("Exceeded search time, skipping angle:",
-                          steering_angle, "Data length:", len(data))
-                    return line
-            continue
+        # Handle non-zero angles
+        if steering_angle != 0 and abs(steering_angle) <= uniform_test:
+            return line
+        else:  # Handle exceptions
+            if max_tries > data_length:
+                print("Exceeded search time, skipping angle:",
+                      steering_angle, "Data length:", data_length)
+                return line
+            else:
+                continue
 
 
 def recovery(line):
@@ -201,6 +123,9 @@ def recovery(line):
     y_train = np.empty([0, 1])
 
     y_single_sample = line[3]
+    # print(y_single_sample)
+    y_single_sample = round(y_single_sample, 3)
+    # print(y_single_sample)
     assert type(y_single_sample) == float
     # print(type(y_single_sample))
     # print(y_single_sample)
@@ -213,15 +138,15 @@ def recovery(line):
             steering_adjust = +RECOVERY_OFFSET  # normally .25
             # print(type(steering_adjust))
             # print(type(y_single_sample))
-            steering_correction = min(1, y_single_sample + steering_adjust)
+            steering_correction = min(
+                UNIFORM_TEST_MAX, y_single_sample + steering_adjust)
             assert steering_correction != 1.01, steering_correction != -1
             # print(steering_correction)
         elif i == 2:  # right
             # print("Right", line[i])
             steering_adjust = -RECOVERY_OFFSET
-            steering_correction = max(-1,
+            steering_correction = max(-UNIFORM_TEST_MAX,
                                       y_single_sample + steering_adjust)
-            # print(steering_correction)
             assert steering_correction != -1.01, steering_correction != +1
         elif i == 0:
             # print("Center", line[i])
@@ -245,7 +170,6 @@ def chop_images(line):
 
         imgname = line[i].strip()
         X_single_sample = cv2.imread(imgname)
-        # Credit https://github.com/navoshta/behavioral-cloning
         # print("X original  shape", X_single_sample.shape)
         top = int(.4 * X_single_sample.shape[0])
         bottom = int(.1 * X_single_sample.shape[0])
@@ -267,17 +191,18 @@ def generate_features(X_train, y_train):
     for i in range(FEATURE_GENERATION_MULTIPLE):
 
         for feature in X_train:
-            feature = transform_image(feature, 1, 2, 2)
+            # feature = transform_image(feature, 1, 1, 1)
 
             # credit https://github.com/navoshta/behavioral-cloning
             # switched to used custom random function
+            # Adding shadows
             h, w = feature.shape[0], feature.shape[1]
             [x1, x2] = custom_random.choice(w, 2, replace=False)
             k = h / (x2 - x1)
             b = - k * x1
             for j in range(h):
                 c = int((j - b) / k)
-                feature[j, :c, :] = (feature[j, :c, :] * .4).astype(np.int32)
+                feature[j, :c, :] = (feature[j, :c, :] * .5).astype(np.int32)
 
             new_features.append(feature)
             # save images
@@ -295,9 +220,7 @@ def generate_features(X_train, y_train):
 
 def process_line(data):
 
-    batch_size = BATCH_SIZE
-
-    for batch in range(batch_size):
+    for batch in range(BATCH_SIZE):
 
         balanced_line = balance_data(data)
 
@@ -307,7 +230,8 @@ def process_line(data):
         # Check_text = "Before image generation, shapes: "
         # check_Shape(Check_text, X_train, y_train)
 
-        X_train, y_train = generate_features(X_train, y_train)
+        # TODO testing with no image generation.
+        # X_train, y_train = generate_features(X_train, y_train)
 
         Check_text = "After image generation, shapes: "
         check_Shape(Check_text, X_train, y_train)
@@ -320,7 +244,7 @@ def process_line(data):
 
 def generate_arrays_from_file(path):
     batch_tracker = 0
-    while True:
+    while 1:
         # load the labels and file paths to images
         data = read_csv(path).values
         # print(batch_tracker)
@@ -354,13 +278,13 @@ model.add(Convolution2D(36, 5, 5,
                         init=init_type))
 model.add(ELU())
 
-model.add(Convolution2D(48, 3, 3,
+model.add(Convolution2D(64, 3, 3,
                         subsample=(2, 2),
                         border_mode="valid",
                         init=init_type))
 model.add(ELU())
 
-model.add(Convolution2D(64, 3, 3,
+model.add(Convolution2D(128, 3, 3,
                         subsample=(1, 1),
                         border_mode="valid",
                         init=init_type))
@@ -370,29 +294,30 @@ model.add(ELU())
 model.add(Flatten())
 model.add(Dropout(.2))
 
-model.add(Dense(512,
+model.add(Dense(1028,
                 init=init_type
                 ))
 model.add(ELU())
-model.add(Dropout(.5))
-
-model.add(Dense(256, init=init_type))
-model.add(ELU())
+model.add(Dropout(.3))
 
 model.add(Dense(128, init=init_type))
 model.add(ELU())
 
-model.add(Dense(50, init=init_type))
+
+model.add(Dense(64, init=init_type))
+model.add(ELU())
+
+model.add(Dense(32, init=init_type))
 model.add(ELU())
 
 
 model.add(Dense(1))
 
 
-optimizer_settings = Adam(lr=.0001)
+optimizer_settings = Adam(lr=LEARNING_RATE)
 model.compile(optimizer=optimizer_settings, loss='mse')
 
-early_stopping = EarlyStopping(monitor='val_loss', patience=2)
+early_stopping = EarlyStopping(monitor='val_loss', patience=99)
 
 checkpointer = ModelCheckpoint(
     filepath="temp-model/weights.hdf5", verbose=1, save_best_only=True)
@@ -429,8 +354,9 @@ if __name__ == "__main__":
 
     # model.predict()
     # summarize history for loss
-    plt_number = custom_random.randint(0, 1000)
+    plt_number = custom_random.randint(0, 10000)
 
+    """
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
     plt.title('model loss')
@@ -439,15 +365,13 @@ if __name__ == "__main__":
     plt.legend(['train', 'test'], loc='upper left')
     fig2 = plt.gcf()
     plt.show()
-    fig2.savefig('loss-history' + str(plt_number) + '.png')
+    fig2.savefig('testing-figures/loss-history' + str(plt_number) + '.png')
+    """
 
     # print(track_angles)
     track_angles = np.around((np.asarray(track_angles)), decimals=3)
     # print("Negative angles:", np.where(track_angles>0).shape)
 
-    # print(track_angles)
-
-    # bins = np.linspace(-1, 1, 100)
     plt.hist(track_angles, bins='auto')
     plt.title("Gaussian Histogram")
     plt.xlabel("Value")
@@ -455,18 +379,20 @@ if __name__ == "__main__":
 
     fig = plt.gcf()
     plt.show()
-    fig.savefig('angle-histogram' + str(plt_number) + '.png')
+    fig.savefig('testing-figures/angle-histogram' + str(plt_number) + '.png')
 
     print(min(track_angles))
     print(max(track_angles))
 
     np_angles_and_counts = np.unique(track_angles, return_counts=True)
     print(np_angles_and_counts)
+    zeros_counter = len(track_angles) - (np.count_nonzero(track_angles))
+    print("Number of zeros: ", zeros_counter)
 
     # for x in np_angles_and_counts:
     # print(x[0], x[1])
 
-    print(len(np.unique(track_angles)))
+    print("Length of unique angle array:", len(np.unique(track_angles)))
 
     plt.hist(np.unique(track_angles), bins='auto')
     plt.title("Gaussian Histogram")
@@ -475,6 +401,7 @@ if __name__ == "__main__":
 
     fig = plt.gcf()
     plt.show()
-    fig.savefig('unique-angles-histogram' + str(plt_number) + '.png')
+    fig.savefig('testing-figures/unique-angles-histogram' +
+                str(plt_number) + '.png')
 
     # balance_bins(track_angles)
