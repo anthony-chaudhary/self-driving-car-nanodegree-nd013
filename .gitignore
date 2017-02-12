@@ -102,3 +102,4 @@ figs/
 figs2/
 CarND-Transfer-Learning-Lab/inception_cifar10_100_bottleneck_features_train.p
 *.p
+old-testing-file-py-backups/

@@ -9,44 +9,42 @@ import cv2
 import matplotlib.pyplot as plt
 from pandas.io.parsers import read_csv
 from keras.callbacks import EarlyStopping
-tf.python.control_flow_ops = tf
 from keras.callbacks import ModelCheckpoint
-import matplotlib.gridspec as gridspec
-import matplotlib.image as mpimg
-import scipy.misc
-import random
-
 tf.python.control_flow_ops = tf
-
 print('Modules loaded.')
 
 """
 Hyperparemters
 """
 # Nerual Network Training
-BATCH_SIZE = 2  # BUG in batch size # 2 works to have accurate number of total samples
-EPOCHS = 10
-SAMPLES_EPOCH = 12000
-VALIDATION_SAMPLES = 2000
+EPOCHS = 12
+SAMPLES_EPOCH = 10000
+VALIDATION_SAMPLES = 3000
 LEARNING_RATE = .0001
+
+BATCH_SIZE = 2  # Size of batch
+# 3*BATCH_SIZE*FEATURE_GENERATION_MULTIPLE == total_batch size
 
 # Recovery control
 # Float, handled as absolute value, valid range from 0 -> 1
 RECOVERY_OFFSET = .25
 
 # Preprocessing
-FEATURE_GENERATION_MULTIPLE = 2
+FEATURE_GENERATION_MULTIPLE = 1
 
 # Data balancing
-# .4 seems to work well
-UNIFORM_TEST_MAX = .5  # Max absolute value of data balanced
-ZEROS = .60  # Percent chance of getting zeros, higher chance of getting zeros
+UNIFORM_TEST_MAX = .7  # Max absolute value of data balanced
+ZEROS = .50  # Percent chance of getting zeros, higher chance of getting zeros
 # NOTE as we add (+/-) for recover angles, the net number of zeros
 # will be ~ ZEROS / 3 ie .5 zeros setting will result in ~.16
 
+# The program relies on a variety of random functions
+# For detailed testing, use the seed value as needed
+# A seed of 8373 should return 91 on the test below
+
 SEED = 8373
 custom_random = np.random.RandomState(seed=SEED)
-print(custom_random.randint(0, 100))  # Should return 91
+print(custom_random.randint(0, 100))
 
 
 """
@@ -70,18 +68,25 @@ def run_once(f):
 def check_Shape(check_text, X_train, y_train):
     print(check_text, X_train.shape, y_train.shape)
 
+# TODO add further testing functions here
+
 
 """
 Pre processing pipeline
 """
 
+# Track angles is used to help keep track of angles generated throughout
 track_angles = []
-
-# credit
-# https://medium.com/@vivek.yadav/improved-performance-of-deep-learning-neural-network-models-on-traffic-sign-classification-using-6355346da2dc#.llnuj74vg
 
 
 def augment_brightness_camera_images(image):
+    """
+    Purpose: Adjust brightness of image
+    Inputs: A 3D matrix, generall in the form [x,y,colours]
+    Outputs: Same
+    """
+    # credit https://medium.com/@vivek.yadav
+
     image = image.astype(np.uint8)
     image1 = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
     random_bright = .25 + np.random.uniform()
@@ -100,7 +105,8 @@ def transform_image(img, ang_range, shear_range, trans_range):
     3- shear_range: Range of values to apply affine transform to
     4- trans_range: Range of values to apply translations over.
 
-    A Random uniform distribution is used to generate different parameters for transformation
+    A Random uniform distribution is used to generate different parameters 
+    for transformation
 
     '''
     # Rotation
@@ -135,23 +141,39 @@ def transform_image(img, ang_range, shear_range, trans_range):
 
 
 def balance_data(data):
+    """
+    Purpose: Balance the data given a random distribution
+    Inputs: A CSV file
+    Outputs: A line of the data file
+
+    This format allow for a sigfnicant amount of flexablity,
+    for example, it takes an arbitrary length of data
+    and returns a randomized line, following the settings
+    specified by the user. Additionally, the user
+    could fairly easily change "uniform" to another
+    numpy distribution to test how different distributions
+    effect results.
+    """
 
     uniform_test_max = UNIFORM_TEST_MAX
-    max_tries = 1
+    max_tries = 1  # This is a starting value for a timeout function
     zero_flag = False
     data_length = len(data)
 
-    # Test if zeros are in line with other numbers
+    # Test if zero is less than flag set in settings
     if custom_random.random_sample(1) <= ZEROS:
         zero_flag = True
 
+    # Main loop entry
     while True:
 
+        # This block performs balance test and selects steering angle
         uniform_test = (custom_random.uniform(0, uniform_test_max))
         line_number = custom_random.randint(len(data))
         line = data[line_number]
         steering_angle = line[3]
 
+        # Return steering angle if zero flag is true, else resume loop
         if zero_flag is True:
             if steering_angle == 0:
                 return line
@@ -171,10 +193,16 @@ def balance_data(data):
 
 
 def recovery(line):
+    """
+    Purpose: Create a "recovery" angle based off left/right images
+    Inputs: A line, preferably given by balance_data()
+    Outputs: Y_train, a [3, 1] matrix
+    """
 
-    y_train = np.empty([0, 1])
-    y_single_sample = line[3]
-    y_single_sample = round(y_single_sample, 3)
+    y_train = np.empty([0, 1])  # Create a new placeholder matrix
+    y_single_sample = line[3]  # Select a line from the data
+    y_single_sample = round(y_single_sample, 3)  # Round sample to smooth data
+
     # print(y_single_sample)
     assert type(y_single_sample) == float
     # print(type(y_single_sample))
@@ -182,20 +210,25 @@ def recovery(line):
 
     for i in range(3):
 
-        if i == 1:  # left are negative angles, positive to return to center
+        # left angles
+        if i == 1:
             # print("Left", line[i])   #Refactor to an ASSERT
-            steering_adjust = +RECOVERY_OFFSET  # normally .25
+            steering_adjust = +RECOVERY_OFFSET
             # print(type(steering_adjust))
             steering_correction = min(
                 1, y_single_sample + steering_adjust)
             assert steering_correction != 1.01, steering_correction != -1
             # print(steering_correction)
-        elif i == 2:  # right
+
+        # Right angles
+        elif i == 2:
             # print("Right", line[i])
             steering_adjust = -RECOVERY_OFFSET
             steering_correction = max(-1,
                                       y_single_sample + steering_adjust)
             assert steering_correction != -1.01, steering_correction != +1
+
+        # Center angles
         elif i == 0:
             # print("Center", line[i])
             steering_correction = y_single_sample
@@ -211,27 +244,46 @@ def recovery(line):
 
 
 def chop_images(line):
+    """
+    Purpose: Discard less important information
+    Inputs: A line, preferably given by balance_data()
+    Outputs: X_train, a [3, 80, 320, 3] tensor
+    """
 
-    X_train = np.empty([0, 80, 320, 3])
+    X_train = np.empty([0, 80, 320, 3])  # Create a new placeholder tensor
 
     for i in range(3):
 
-        imgname = line[i].strip()
-        X_single_sample = cv2.imread(imgname)
+        imgname = line[i].strip()  # Use strip to fix whitespace issue
+
+        X_single_sample = cv2.imread(imgname)  # open image with CV2
+
+        # IMPORTANT. CV2 will read teh image in BGR colour space
+
+        # Uncomment to test x shape
         # print("X original  shape", X_single_sample.shape)
+
+        # Perform chop, 40% off the top, 10% off the bottom.
         top = int(.4 * X_single_sample.shape[0])
         bottom = int(.1 * X_single_sample.shape[0])
         X_single_sample = X_single_sample[top:-bottom, :]
         # print("X new shape", X_single_sample.shape)
+
         # save images for visualization if required
         # scipy.misc.imsave(
         # 'figs/orginal' + str(np.random.randint(999)) + '.jpg', X_single_sample)
+
         X_train = np.append(X_train, [X_single_sample], axis=0)
 
     return X_train
 
 
 def adjust_colours(X_train):
+    """
+    Purpose: Change colour space to RGB
+    Inputs: X_train, a [3, 80, 320, 3] tensor
+    Outputs: X_train, a [3, 80, 320, 3] tensor
+    """
 
     for feature in X_train:
 
@@ -244,6 +296,13 @@ def adjust_colours(X_train):
 
 
 def flip_images(X_train, y_train):
+    """
+    Purpose: Flip images left to right and invert angles
+    This is to help the model generalize better.
+
+    Inputs: X_train, a [3, 80, 320, 3] tensor and y_train, a [3, 1] matrix
+    Outputs: X_train, a [3, 80, 320, 3] tensor and y_train, a [3, 1] matrix
+    """
 
     for feature in X_train:
         feature = np.fliplr(feature)
@@ -255,14 +314,21 @@ def flip_images(X_train, y_train):
 
 
 def generate_features(X_train, y_train):
+    """
+    Purpose: Generate new features
+    Inputs: X_train, a [3, 80, 320, 3] tensor and y_train, a [3, 1] matrix
+    Outputs: X_train, a [ZZZ, 80, 320, 3] tensor and y_train, a [ZZZ, 1] matrix
+    Where ZZZ = (FEATURE_GENERATION_MULTIPLE * 3) + 3
+    """
 
-    new_features = []
+    new_features = []  # Create placeholder arrays
     new_labels = []
 
     for i in range(FEATURE_GENERATION_MULTIPLE):
 
         for feature in X_train:
-            feature = transform_image(feature, 10, 2, 2)
+            # Settings for transofmr images function
+            feature = transform_image(feature, 10, 1, 1)
 
             # credit https://github.com/navoshta/behavioral-cloning
             # switched to used custom random function
@@ -289,14 +355,20 @@ def generate_features(X_train, y_train):
 
 
 def process_line(data):
+    """
+    Purpose: Main entry point for processing intial data
+    Inputs: A CSV file of data.
+    Outputs: X_train, a [3, 80, 320, 3] tensor and y_train, a [3, 1] matrix
+    """
 
+    # Please see functions above for further definition
     balanced_line = balance_data(data)
     X_train = chop_images(balanced_line)
     X_train = adjust_colours(X_train)
     y_train = recovery(balanced_line)
-
-    if custom_random.random_sample(1) <= .5:
+    if custom_random.random_sample(1) <= .6:
         flip_images(X_train, y_train)
+
     # Check_text = "After image generation, shapes: "
     # check_Shape(Check_text, X_train, y_train)
 
@@ -304,12 +376,19 @@ def process_line(data):
 
 
 def generate_arrays_from_file(path):
+    """
+    Purpose: Yield tensor batches to fit_generator function
+    Inputs: A file path
+    Outputs: X_train, a [AHH, 80, 320, 3] tensor and y_train, a [AHH, 1] matrix
+    Where AHH = ((FEATURE_GENERATION_MULTIPLE * 3) + 3) * BATCH_SIZE
+    """
     batch_tracker = 0
     while 1:
         for batch in range(BATCH_SIZE):
             # load the labels and file paths to images
             data = read_csv(path).values
-            X_train, y_train = process_line(data)
+
+            X_train, y_train = process_line(data)  # Process existing data
             X_train, y_train = generate_features(X_train, y_train)
 
             X_train = np.append(X_train, X_train, axis=0)
@@ -326,12 +405,32 @@ def generate_arrays_from_file(path):
 
 """
 Model architecture
+
+This model generally follows the Nvidia architecture as described here:
+https://arxiv.org/abs/1604.07316
+
+Using glorot_uniform based on this research:
+https://github.com/fchollet/keras/issues/52
+
+Decided to use expontential linear units for activation based on
+https://github.com/commaai/research/blob/master/train_steering_model.py
+and further reading of
+https://arxiv.org/abs/1511.07289
+
+Dropout is used to help generalize the network.
 """
+
+# Use this control to easil test different intializations.
 init_type = "glorot_uniform"
 border_mode_type = "valid"
 
 row, col, ch = 80, 320, 3
+
 model = Sequential()
+
+# Normalization
+# Can use a negative range thanks to ELU
+
 model.add(Lambda(lambda X_train: X_train / 127.5 - 1,
                  input_shape=(row, col, ch),
                  output_shape=(row, col, ch)))
@@ -341,7 +440,6 @@ model.add(Convolution2D(24, 5, 5,
                         subsample=(2, 2),
                         border_mode=border_mode_type,
                         init=init_type))
-# convout1 = ELU()
 model.add(ELU())
 
 model.add(Convolution2D(36, 5, 5,
@@ -370,9 +468,11 @@ model.add(ELU())
 
 model.add(Flatten())
 
+model.add(Dropout(.2))
 model.add(Dense(1164, init=init_type))
 model.add(ELU())
 
+model.add(Dropout(.3))
 model.add(Dense(100, init=init_type))
 model.add(ELU())
 
@@ -384,27 +484,34 @@ model.add(ELU())
 
 model.add(Dense(1))
 
-
+# Using the ADAM optimizer with a custom starting learning rate
 optimizer_settings = Adam(lr=LEARNING_RATE)
+
+# As this is a continous regression problem we are using mean squared error
 model.compile(optimizer=optimizer_settings, loss='mse')
 
+# Early stopping to help test longer epochs
 early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
+# saves the model weights after each epoch if the validation loss decreased
+# https://keras.io/callbacks/#create-a-callback
 checkpointer = ModelCheckpoint(
     filepath="temp-model/weights.hdf5", verbose=1, save_best_only=True)
 
-"""
-Train architecture
-"""
 
 if __name__ == "__main__":
 
     print("Training")
 
-    '''
-    saves the model weights after each epoch if the validation loss decreased
-    Credit https://keras.io/callbacks/#create-a-callback
-    '''
+    """
+    Train architecture
+
+    Using fit_generator allows the CPU to process images "on demand"
+    while the GPU is processing the network.
+
+    We are using a validation set to help understand the networks
+    ability to generalize.
+    """
 
     history = model.fit_generator(
         generate_arrays_from_file('driving_log.csv'),
@@ -417,16 +524,16 @@ if __name__ == "__main__":
     Save model
     """
     model.save('my_model.h5')
-
     print("Model saved.")
 
+    # This presents a summary of stats from Keras
     model.summary()
     print("Complete.")
 
-    # model.predict()
-    # summarize history for loss
     plt_number = custom_random.randint(0, 10000)
 
+    """
+    Graph model training and validation loss performance. 
     """
     plt.plot(history.history['loss'])
     plt.plot(history.history['val_loss'])
@@ -437,11 +544,11 @@ if __name__ == "__main__":
     fig2 = plt.gcf()
     plt.show()
     fig2.savefig('testing-figures/loss-history' + str(plt_number) + '.png')
-    """
 
-    # print(track_angles)
+    """
+    Graph steering angles used by the model 
+    """
     track_angles = np.asarray(track_angles)
-    # print("Negative angles:", np.where(track_angles>0).shape)
     print("Length of track angles: ", len(track_angles))
 
     plt.hist(track_angles, bins='auto')
@@ -462,28 +569,21 @@ if __name__ == "__main__":
     np_unique_angles, np_unique_counts = np.unique(
         track_angles, return_counts=True)
 
-    # for angle in np_unique_angles:
-    # print(angle, np_unique_counts[angle])
-
+    # Provide stats
     print("Non zero angles:", non_zero_count)
     print("Number of zeros: ", zeros_counter)
     print("Percent zero angle", zeros_counter / len(track_angles))
     print("Number of original zeros (Before Recovery +/-): ", zeros_counter * 3)
     print("Unique angles, non recovery:", len(np.unique(track_angles)) / 3)
-
     print("Non zero, non recovery angles:", len(
         track_angles) - zeros_counter * 3)
-
     print(np_unique_angles, np_unique_counts)
 
     plt.hist(np.unique(track_angles), bins='auto')
     plt.title("Gaussian Histogram")
     plt.xlabel("Value")
     plt.ylabel("Frequency")
-
     fig = plt.gcf()
     plt.show()
     fig.savefig('testing-figures/unique-angles-histogram' +
                 str(plt_number) + '.png')
-
-    # balance_bins(track_angles)
