@@ -44,11 +44,11 @@ def telemetry(sid, data):
             image_array[None, :, :, :], batch_size=1))
 
         min_speed = 8
-        max_speed = 25
+        max_speed = 20
         if float(speed) < min_speed:
-            throttle = 1.0
+            throttle = .3
         elif float(speed) > max_speed:
-            throttle = -1.0
+            throttle = -.3
         else:
             throttle = 0.2
 
