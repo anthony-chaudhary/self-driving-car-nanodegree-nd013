@@ -1,7 +1,5 @@
 #**Behavioral Cloning** 
 
-##Writeup Template
-
 ###Abstract
 Our goal is to clone human driving into a computer program using a simulator and deep neural networks. This project is part of the Udacity Self Driving Car Nano Degree program. The simulator and project guidelines are supplied by Udacity.
 
@@ -9,7 +7,6 @@ Our goal is to clone human driving into a computer program using a simulator and
 
 **Behavrioal Cloning Project**
 
-The goals / steps of this project are the following:
 * Use the simulator to collect data of good driving behavior
 * Build, a convolution neural network in Keras that predicts steering angles from images
 * Train and validate the model with a training and validation set
@@ -27,13 +24,13 @@ The goals / steps of this project are the following:
 My project includes the following files:
 * model.py containing the script to create and train the model
 * drive.py for driving the car in autonomous mode
-* model.h5 containing a trained convolution neural network 
+* my_model.h5 containing a trained convolution neural network 
 * writeup_report.md or writeup_report.pdf summarizing the results
 
 ####2. Submssion includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
 ```sh
-python drive.py model.h5
+python drive.py my_model.h5
 ```
 
 ####3. Submssion code is usable and readable
@@ -42,7 +39,7 @@ The model.py file contains the code for training and saving the convolution neur
 
 ###Model Architecture and Training Strategy
 
-####1. An appropriate model arcthiecture has been employed
+####1. An appropriate model architecture has been employed
 
 My model consists of a convolution neural network with 5x5 and 3x3 filter sizes and depths between 24 and 64. 
 
@@ -70,27 +67,29 @@ For details about how I created the training data, see the next section.
 
 ####1. Solution Design Approach and Final Model Architecture
 
-First we must balance_data()
+#First we use balance_data()
 This format allow for a significant amount of flexibility,    for example, it takes an arbitrary length of data   and returns a randomized line, following the settings   specified by the user. Additionally, the user  could fairly easily change "uniform" to another  numpy distribution to test how different distributions  affect results.  Further it creates a very flexible testing environment   In a sense, the data is "shuffled" after every batch    And, an arbitrary sample size can be selected.
 
 We can then discard less important information using chop_images()
 
-Create recovery definition
+#Create recovery definition
 First, we expect that the car may for various reasons be outside of the ideal centre of the lane. For example, even if the algorithm was perfect, one can imagine that a car in real life has to somehow get to the centre of the lane. Further, valid reasons such as ice, obstructions, emergency maneuvers, gravel, algorithm errors, sensor errors, etc. will routinely push the car outside of an ideal range.
 The theory is that by using images mounted from a different perspective, with an offset to the associated steering angle, help train the model to correct itself.
 
-Generate new images
+#Generate new images
 To help build a robustness to the model, we generate images with various artificial warping and artifacts. 
 
-Convolution, fro example: (24, 5, 5) Stride of (2, 2) Exponential Linear Unit activation (ELU)
+Convolution, for example: (24, 5, 5) Stride of (2, 2) Exponential Linear Unit activation (ELU)
 Abstract. A convolutional layer “scans” an image selecting sub features. The 24 is the number of “scans” to be outputted. The 5x5 is the size (of pixels in this case) of the scan. And the 2x2 is how many pixels should be skipped in between cans.
 
 The Exponential Linear Unit is an “advanced” activation that handles negatives better than a Rectified Linear Unit (ReLU). 
 
 Neural network outline:
 
+
 Layer (type)                     Output Shape          Param #     Connected to                     
-====================================================================================================
+
+
 lambda_1 (Lambda)                (None, 80, 320, 3)    0           lambda_input_1[0][0]             
 ____________________________________________________________________________________________________
 convolution2d_1 (Convolution2D)  (None, 38, 158, 24)   1824        lambda_1[0][0]                   
@@ -135,11 +134,9 @@ dense_4 (Dense)                  (None, 10)            510         elu_8[0][0]
 ____________________________________________________________________________________________________
 elu_9 (ELU)                      (None, 10)            0           dense_4[0][0]                    
 ____________________________________________________________________________________________________
-dense_5 (Dense)                  (None, 1)             11          elu_9[0][0]                      
-====================================================================================================
+dense_5 (Dense)                  (None, 1)             11          elu_9[0][0]      
+
 Total params: 850,551
-Trainable params: 850,551
-Non-trainable params: 0
 _______________________
 
 
@@ -147,21 +144,21 @@ _______________________
 
 Here is an example image of center lane driving:
 
-![alt text][./examples/center_2016_12_01_13_30_48_287.jpg]
+[./examples/center_2016_12_01_13_30_48_287.jpg]
 
 I then used the left and right lanes to generate recovery data:
 
-![alt text][./examples/left_2016_12_01_13_34_03_716.jpg]
-![alt text][./examples/right_2016_12_01_13_36_10_800.jpg]
+[./examples/left_2016_12_01_13_34_03_716.jpg]
+[./examples/right_2016_12_01_13_36_10_800.jpg]
 
 Some examples of augmented images:
 
-![alt text][./examples/gen-features4123.jpg]
-![alt text][./examples/gen-features4072.jpg]
+[./examples/gen-features4123.jpg]
+[./examples/gen-features4072.jpg]
 
 Loss history example:
-![alt text][./examples/loss-history8289.png]
+[./examples/loss-history8289.png]
 
 
 Angle balancing example:
-![alt text][./examples/unique-angles-histogram2815.png]
+[./examples/unique-angles-histogram2815.png]
