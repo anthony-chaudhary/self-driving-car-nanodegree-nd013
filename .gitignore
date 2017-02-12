@@ -95,3 +95,10 @@ data/
 udacity-sdc-udacity-self-driving-car-simulator-dominique-default-windows-desktop-64-bit-4/
 carND-Keras-Lab/CarND-Keras-Lab-master/train.p
 carND-Keras-Lab/CarND-Keras-Lab-master/test.p
+IMG/
+testing-figures/
+sim/
+figs/
+figs2/
+CarND-Transfer-Learning-Lab/inception_cifar10_100_bottleneck_features_train.p
+*.p
