@@ -24,27 +24,25 @@ print('Modules loaded.')
 Hyperparemters
 """
 # Nerual Network Training
-BATCH_SIZE = 1  # BUG in batch size
-EPOCHS = 2
-SAMPLES_EPOCH = 4000
-VALIDATION_SAMPLES = 64
+BATCH_SIZE = 2  # BUG in batch size # 2 works to have accurate number of total samples
+EPOCHS = 10
+SAMPLES_EPOCH = 12000
+VALIDATION_SAMPLES = 2000
 LEARNING_RATE = .0001
-
-# Bias control
-# BIAS_CONTROL = .01
 
 # Recovery control
 # Float, handled as absolute value, valid range from 0 -> 1
 RECOVERY_OFFSET = .25
 
 # Preprocessing
-FEATURE_GENERATION_MULTIPLE = 1
+FEATURE_GENERATION_MULTIPLE = 2
 
 # Data balancing
 # .4 seems to work well
-UNIFORM_TEST_MAX = .42  # Max absolute value of data balanced
-ZEROS = 1  # Percent chance of getting zeros, higher chance of getting zeros
-# ANGLES = 1  # lower means more zeros
+UNIFORM_TEST_MAX = .5  # Max absolute value of data balanced
+ZEROS = .60  # Percent chance of getting zeros, higher chance of getting zeros
+# NOTE as we add (+/-) for recover angles, the net number of zeros
+# will be ~ ZEROS / 3 ie .5 zeros setting will result in ~.16
 
 SEED = 8373
 custom_random = np.random.RandomState(seed=SEED)
@@ -79,22 +77,73 @@ Pre processing pipeline
 
 track_angles = []
 
+# credit
+# https://medium.com/@vivek.yadav/improved-performance-of-deep-learning-neural-network-models-on-traffic-sign-classification-using-6355346da2dc#.llnuj74vg
+
+
+def augment_brightness_camera_images(image):
+    image = image.astype(np.uint8)
+    image1 = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
+    random_bright = .25 + np.random.uniform()
+    # print(random_bright)
+    image1[:, :, 2] = image1[:, :, 2] * random_bright
+    image1 = cv2.cvtColor(image1, cv2.COLOR_HSV2RGB)
+    return image1
+
+
+def transform_image(img, ang_range, shear_range, trans_range):
+    '''
+    This function transforms images to generate new images.
+    The function takes in following arguments,
+    1- Image
+    2- ang_range: Range of angles for rotation
+    3- shear_range: Range of values to apply affine transform to
+    4- trans_range: Range of values to apply translations over.
+
+    A Random uniform distribution is used to generate different parameters for transformation
+
+    '''
+    # Rotation
+    ang_rot = np.random.uniform(ang_range) - ang_range / 2
+    # updated to reflect gray pipeline
+    rows, cols, ch = img.shape
+    Rot_M = cv2.getRotationMatrix2D((cols / 2, rows / 2), ang_rot, 1)
+
+    # Translation
+    tr_x = trans_range * np.random.uniform() - trans_range / 2
+    tr_y = trans_range * np.random.uniform() - trans_range / 2
+    Trans_M = np.float32([[1, 0, tr_x], [0, 1, tr_y]])
+
+    # Shear
+    pts1 = np.float32([[5, 5], [20, 5], [5, 20]])
+
+    pt1 = 5 + shear_range * np.random.uniform() - shear_range / 2
+    pt2 = 20 + shear_range * np.random.uniform() - shear_range / 2
+
+    pts2 = np.float32([[pt1, 5], [pt2, pt1], [5, pt2]])
+
+    shear_M = cv2.getAffineTransform(pts1, pts2)
+
+    img = cv2.warpAffine(img, Rot_M, (cols, rows))
+    img = cv2.warpAffine(img, Trans_M, (cols, rows))
+    img = cv2.warpAffine(img, shear_M, (cols, rows))
+
+    # added for brightness
+    img = augment_brightness_camera_images(img)
+
+    return img
+
 
 def balance_data(data):
 
     uniform_test_max = UNIFORM_TEST_MAX
     max_tries = 1
-    # length_unique = ((len(np.unique(track_angles))))
     zero_flag = False
-    angle_flag = False
     data_length = len(data)
 
     # Test if zeros are in line with other numbers
     if custom_random.random_sample(1) <= ZEROS:
         zero_flag = True
-
-    # if custom_random.random_sample(1) <= ANGLES:
-       # zero_flag = True
 
     while True:
 
@@ -103,25 +152,15 @@ def balance_data(data):
         line = data[line_number]
         steering_angle = line[3]
 
-        # Handle 0s.
-        if steering_angle == 0:
-            if zero_flag is True:
-                # print("Zero test passed")
+        if zero_flag is True:
+            if steering_angle == 0:
                 return line
             else:
                 continue
-
-        # this may work to double up nicely
-        # REFACTOR for better zero control very greater than 1
-        if steering_angle == 0:
-            continue
         else:
             # Handle non-zero angles
             if steering_angle != 0 and abs(steering_angle) <= uniform_test:
-                # if angle_flag is True:
                 return line
-                # else:
-                # continue
             else:  # Handle exceptions
                 if max_tries > data_length:
                     print("Exceeded search time, skipping angle:",
@@ -134,14 +173,11 @@ def balance_data(data):
 def recovery(line):
 
     y_train = np.empty([0, 1])
-
     y_single_sample = line[3]
-    # print(y_single_sample)
     y_single_sample = round(y_single_sample, 3)
     # print(y_single_sample)
     assert type(y_single_sample) == float
     # print(type(y_single_sample))
-    # print(y_single_sample)
     new_labels = []
 
     for i in range(3):
@@ -150,8 +186,8 @@ def recovery(line):
             # print("Left", line[i])   #Refactor to an ASSERT
             steering_adjust = +RECOVERY_OFFSET  # normally .25
             # print(type(steering_adjust))
-            # print(type(y_single_sample))
-            steering_correction = min(1, y_single_sample + steering_adjust)
+            steering_correction = min(
+                1, y_single_sample + steering_adjust)
             assert steering_correction != 1.01, steering_correction != -1
             # print(steering_correction)
         elif i == 2:  # right
@@ -176,14 +212,14 @@ def recovery(line):
 
 def chop_images(line):
 
-    X_train = np.empty([0, 72, 320, 3])
+    X_train = np.empty([0, 80, 320, 3])
 
     for i in range(3):
 
         imgname = line[i].strip()
         X_single_sample = cv2.imread(imgname)
         # print("X original  shape", X_single_sample.shape)
-        top = int(.45 * X_single_sample.shape[0])
+        top = int(.4 * X_single_sample.shape[0])
         bottom = int(.1 * X_single_sample.shape[0])
         X_single_sample = X_single_sample[top:-bottom, :]
         # print("X new shape", X_single_sample.shape)
@@ -195,6 +231,29 @@ def chop_images(line):
     return X_train
 
 
+def adjust_colours(X_train):
+
+    for feature in X_train:
+
+        feature = feature.astype(np.uint8)  # fix error 215
+        feature = cv2.cvtColor(feature, cv2.COLOR_BGR2RGB)
+        # scipy.misc.imsave(
+        #'figs2/adjust-colours' + str(np.random.randint(10000)) + '.jpg', feature)
+
+    return X_train
+
+
+def flip_images(X_train, y_train):
+
+    for feature in X_train:
+        feature = np.fliplr(feature)
+
+    for angle in y_train:
+        angle = -angle
+
+    return X_train, y_train
+
+
 def generate_features(X_train, y_train):
 
     new_features = []
@@ -203,7 +262,7 @@ def generate_features(X_train, y_train):
     for i in range(FEATURE_GENERATION_MULTIPLE):
 
         for feature in X_train:
-            # feature = transform_image(feature, 1, 1, 1)
+            feature = transform_image(feature, 10, 2, 2)
 
             # credit https://github.com/navoshta/behavioral-cloning
             # switched to used custom random function
@@ -216,10 +275,9 @@ def generate_features(X_train, y_train):
                 c = int((j - b) / k)
                 feature[j, :c, :] = (feature[j, :c, :] * .5).astype(np.int32)
 
+            # scipy.misc.imsave('figs2/gen-features' + str(np.random.randint(10000)) + '.jpg', feature)
             new_features.append(feature)
-            # save images
-            # scipy.misc.imsave(
-            # 'figs/gen' + str(np.random.randint(999)) + '.jpg', new_features[i])
+
         for label in y_train:
             new_labels.append(label)
             track_angles.append(label)
@@ -232,24 +290,15 @@ def generate_features(X_train, y_train):
 
 def process_line(data):
 
-    for batch in range(BATCH_SIZE):
+    balanced_line = balance_data(data)
+    X_train = chop_images(balanced_line)
+    X_train = adjust_colours(X_train)
+    y_train = recovery(balanced_line)
 
-        balanced_line = balance_data(data)
-
-        X_train = chop_images(balanced_line)
-        y_train = recovery(balanced_line)
-
-        # Check_text = "Before image generation, shapes: "
-        # check_Shape(Check_text, X_train, y_train)
-
-        # TODO testing with no image generation.
-        # X_train, y_train = generate_features(X_train, y_train)
-
-        Check_text = "After image generation, shapes: "
-        check_Shape(Check_text, X_train, y_train)
-
-        X_train = np.append(X_train, X_train, axis=0)
-        y_train = np.append(y_train, y_train, axis=0)
+    if custom_random.random_sample(1) <= .5:
+        flip_images(X_train, y_train)
+    # Check_text = "After image generation, shapes: "
+    # check_Shape(Check_text, X_train, y_train)
 
     return X_train, y_train
 
@@ -257,62 +306,81 @@ def process_line(data):
 def generate_arrays_from_file(path):
     batch_tracker = 0
     while 1:
-        # load the labels and file paths to images
-        data = read_csv(path).values
+        for batch in range(BATCH_SIZE):
+            # load the labels and file paths to images
+            data = read_csv(path).values
+            X_train, y_train = process_line(data)
+            X_train, y_train = generate_features(X_train, y_train)
+
+            X_train = np.append(X_train, X_train, axis=0)
+            y_train = np.append(y_train, y_train, axis=0)
+
         # print(batch_tracker)
         batch_tracker = batch_tracker + 1
-        X_train, y_train = process_line(data)
+
+        Check_text = "Batch shape: "
+        check_Shape(Check_text, X_train, y_train)
+
         yield X_train, y_train
 
 
 """
 Model architecture
 """
-init_type = "uniform"
+init_type = "glorot_uniform"
 border_mode_type = "valid"
 
-row, col, ch = 72, 320, 3
+row, col, ch = 80, 320, 3
 model = Sequential()
 model.add(Lambda(lambda X_train: X_train / 127.5 - 1,
                  input_shape=(row, col, ch),
                  output_shape=(row, col, ch)))
 
+
 model.add(Convolution2D(24, 5, 5,
                         subsample=(2, 2),
-                        border_mode="valid",
+                        border_mode=border_mode_type,
                         init=init_type))
 # convout1 = ELU()
 model.add(ELU())
 
 model.add(Convolution2D(36, 5, 5,
                         subsample=(2, 2),
-                        border_mode="valid",
+                        border_mode=border_mode_type,
+                        init=init_type))
+model.add(ELU())
+
+model.add(Convolution2D(48, 5, 5,
+                        subsample=(2, 2),
+                        border_mode=border_mode_type,
                         init=init_type))
 model.add(ELU())
 
 model.add(Convolution2D(64, 3, 3,
                         subsample=(2, 2),
-                        border_mode="valid",
+                        border_mode=border_mode_type,
                         init=init_type))
 model.add(ELU())
+
+model.add(Convolution2D(64, 3, 3,
+                        subsample=(2, 2),
+                        border_mode=border_mode_type,
+                        init=init_type))
+model.add(ELU())
+
 model.add(Flatten())
 
-
-model.add(Dense(512,
-                init=init_type
-                ))
+model.add(Dense(1164, init=init_type))
 model.add(ELU())
 
-model.add(Dense(128, init=init_type))
+model.add(Dense(100, init=init_type))
 model.add(ELU())
 
-
-model.add(Dense(64, init=init_type))
+model.add(Dense(50, init=init_type))
 model.add(ELU())
 
-model.add(Dense(32, init=init_type))
+model.add(Dense(10, init=init_type))
 model.add(ELU())
-
 
 model.add(Dense(1))
 
@@ -320,7 +388,7 @@ model.add(Dense(1))
 optimizer_settings = Adam(lr=LEARNING_RATE)
 model.compile(optimizer=optimizer_settings, loss='mse')
 
-early_stopping = EarlyStopping(monitor='val_loss', patience=99)
+early_stopping = EarlyStopping(monitor='val_loss', patience=2)
 
 checkpointer = ModelCheckpoint(
     filepath="temp-model/weights.hdf5", verbose=1, save_best_only=True)
@@ -352,7 +420,7 @@ if __name__ == "__main__":
 
     print("Model saved.")
 
-    # model.summary()
+    model.summary()
     print("Complete.")
 
     # model.predict()
@@ -372,8 +440,9 @@ if __name__ == "__main__":
     """
 
     # print(track_angles)
-    track_angles = np.around((np.asarray(track_angles)), decimals=3)
+    track_angles = np.asarray(track_angles)
     # print("Negative angles:", np.where(track_angles>0).shape)
+    print("Length of track angles: ", len(track_angles))
 
     plt.hist(track_angles, bins='auto')
     plt.title("Gaussian Histogram")
@@ -387,15 +456,25 @@ if __name__ == "__main__":
     print(min(track_angles))
     print(max(track_angles))
 
-    np_angles_and_counts = np.unique(track_angles, return_counts=True)
-    print(np_angles_and_counts)
-    zeros_counter = len(track_angles) - (np.count_nonzero(track_angles))
+    non_zero_count = (np.count_nonzero(track_angles))
+    zeros_counter = len(track_angles) - non_zero_count
+
+    np_unique_angles, np_unique_counts = np.unique(
+        track_angles, return_counts=True)
+
+    # for angle in np_unique_angles:
+    # print(angle, np_unique_counts[angle])
+
+    print("Non zero angles:", non_zero_count)
     print("Number of zeros: ", zeros_counter)
+    print("Percent zero angle", zeros_counter / len(track_angles))
+    print("Number of original zeros (Before Recovery +/-): ", zeros_counter * 3)
+    print("Unique angles, non recovery:", len(np.unique(track_angles)) / 3)
 
-    # for x in np_angles_and_counts:
-    # print(x[0], x[1])
+    print("Non zero, non recovery angles:", len(
+        track_angles) - zeros_counter * 3)
 
-    print("Length of unique angle array:", len(np.unique(track_angles)))
+    print(np_unique_angles, np_unique_counts)
 
     plt.hist(np.unique(track_angles), bins='auto')
     plt.title("Gaussian Histogram")
