@@ -12,37 +12,38 @@ import numpy as np
 import time
 #from keras.applications import vgg16
 from keras import backend as K
+import matplotlib.pyplot as plt
+import matplotlib
 
 # dimensions of the generated pictures for each filter.
 img_width = 80  # reversed
 img_height = 320
 
 # the name of the layer we want to visualize
-layer_name = 'convolution2d_2'
+layer_name = 'convolution2d_4'
 
 
 import h5py
-weights_path = 'temp-model/weights.hdf5'
+# weights_path = 'temp-model/weights.hdf5'
 
 from keras.models import load_model
 model = load_model('my_model.h5')
 
 
-def plot_filters(layer, x, y):
+def plot_filters(x, y):
 
-    filters = layer.W.get_value()   # return value of weights
+    # return value of weights
+    filters = layer_dict[layer_name].output
     fig = plt.figure()
-        for i in range(len(filters)):
-            ax = fig.add_subplot(y, x, i + 1)
-            # for filter [32, 1, 5, 5]  use [1] for 32, 32 #k anything between
-            # 0 to 31
-            ax.matshow(filters[i][0], cmap=matplotlib.cm.binary)
-            plt.xticks(np.array([]))
-            plt.yticks(np.array([]))
-        plt.tight_layout()
-        return plt
-
-plot_filters(model.layers[0], 4, 4)
+    for i in range(10):
+        ax = fig.add_subplot(y, x, i + 1)
+        # for filter [32, 1, 5, 5]  use [1] for 32, 32 #k anything between
+        # 0 to 31
+        ax.matshow(filters[i], cmap=matplotlib.cm.binary)
+        plt.xticks(np.array([]))
+        plt.yticks(np.array([]))
+    plt.tight_layout()
+    return plt
 
 
 def deprocess_image(x):
@@ -73,6 +74,9 @@ input_img = model.input
 
 # get the symbolic outputs of each "key" layer (we gave them unique names).
 layer_dict = dict([(layer.name, layer) for layer in model.layers[1:]])
+
+
+plot_filters(4, 4)
 
 
 def normalize(x):
