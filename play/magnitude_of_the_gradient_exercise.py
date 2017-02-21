@@ -38,6 +38,7 @@ def mag_thresh(img, sobel_kernel=3, mag_thresh=(0, 255)):
 
     return binary_output
 
+
 # Run the function
 mag_binary = mag_thresh(image, sobel_kernel=31, mag_thresh=(30, 100))
 # Plot the result
