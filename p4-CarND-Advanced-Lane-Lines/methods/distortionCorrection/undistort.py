@@ -11,7 +11,7 @@ import cv2
 # dist = dist_pickle["dist"]
 
 # Read in an image
-nx = 8  # the number of inside corners in x
+nx = 9  # the number of inside corners in x
 ny = 6  # the number of inside corners in y
 
 
