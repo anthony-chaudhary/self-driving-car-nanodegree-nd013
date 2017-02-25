@@ -15,7 +15,7 @@ import os
 [] Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 """
 
-#print(os.getcwd())
+# print(os.getcwd())
 image = mpimg.imread('../test_images/test1.jpg')
 
 # Choose a Sobel kernel size
@@ -28,9 +28,11 @@ gradx = absoluteSobelThreshold.abs_sobel_thresh(
 grady = absoluteSobelThreshold.abs_sobel_thresh(
     image, orient='y', sobel_kernel=ksize, thresh=(20, 100))
 
-mag_binary = magnitudeThreshold.mag_thresh(image, sobel_kernel=ksize, mag_thresh=(30, 100))
+mag_binary = magnitudeThreshold.mag_thresh(
+    image, sobel_kernel=ksize, mag_thresh=(30, 100))
 
-dir_binary = directionThreshold.dir_threshold(image, sobel_kernel=15, thresh=(0.7, 1.3))
+dir_binary = directionThreshold.dir_threshold(
+    image, sobel_kernel=15, thresh=(0.7, 1.3))
 
 combined = np.zeros_like(dir_binary)
 combined[((gradx == 1) & (grady == 1)) | (
@@ -47,7 +49,6 @@ ax2.set_title('Combined Image', fontsize=50)
 plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
 
 plt.show()
-
 
 
 top_down, perspective_M = corners_unwarp(img, nx, ny, mtx, dist)
