@@ -23,6 +23,8 @@ def find_window_centroids(image, window_width, window_height, margin):
 
     # Store the (left,right) window centroid positions per level
     window_centroids = []
+    l_center_points = []
+    r_center_points = []
     # Create our window template that we will use for convolutions
     window = np.ones(window_width)
 
@@ -63,10 +65,17 @@ def find_window_centroids(image, window_width, window_height, margin):
             conv_signal[r_min_index:r_max_index]) + r_min_index - offset
         # Add what we found for that layer
         window_centroids.append((l_center, r_center))
+        l_center_points.append(l_center)
+        r_center_points.append(r_center)
 
-    return window_centroids
+    # print(l_center)
+    # print(r_center)
+    # print("break")
+    print(window_centroids)
 
-window_centroids = find_window_centroids(
+    return window_centroids, l_center_points, r_center_points
+
+window_centroids, l_center_points, r_center_points = find_window_centroids(
     warped, window_width, window_height, margin)
 
 # If we found any window centers
@@ -106,7 +115,6 @@ else:
 # Display the final results
 plt.imshow(output)
 plt.title('window fitting results')
-
 # plt.show()
 
 
@@ -115,19 +123,27 @@ plt.title('window fitting results')
 
 import numpy as np
 import matplotlib.pyplot as plt
-# Generate some fake data to represent lane-line pixels
+
 ploty = np.linspace(0, 720 - 1, 720)  # to cover same y-range as image
 # print(leftx.shape)
 
 # leftx = leftx[::-1]  # Reverse to match top-to-bottom in y
 # rightx = rightx[::-1]  # Reverse to match top-to-bottom in y
 
-print(l_points.shape)
+x, y = zip(*window_centroids)
 
+print(l_center_points)
+print(r_center_points)
+
+# a wild hardcoded list appears! It's super fun!
+super_fun_y_points = [80, 160, 240, 320, 400, 480, 560, 640]
+super_fun_y_points.reverse()
+
+print(len(window_centroids))
 # Fit a second order polynomial to pixel positions in each lane line
-left_fit = np.polyfit(l_points[0], l_points[1], 2)
+left_fit = np.polyfit(super_fun_y_points, l_center_points, 2)
 left_fitx = left_fit[0] * ploty**2 + left_fit[1] * ploty + left_fit[2]
-right_fit = np.polyfit(r_points[0], r_points[1], 2)
+right_fit = np.polyfit(super_fun_y_points, r_center_points, 2)
 right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
 
 # Plot up the data
