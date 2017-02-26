@@ -19,7 +19,7 @@ def window_mask(width, height, img_ref, center, level):
     return output
 
 
-def find_window_centroids(image, window_width, window_height, margin):
+def find_window_centroids(warped, window_width, window_height, margin):
 
     # Store the (left,right) window centroid positions per level
     window_centroids = []
@@ -68,15 +68,13 @@ def find_window_centroids(image, window_width, window_height, margin):
         l_center_points.append(l_center)
         r_center_points.append(r_center)
 
-    # print(l_center)
-    # print(r_center)
-    # print("break")
     print(window_centroids)
 
     return window_centroids, l_center_points, r_center_points
 
 window_centroids, l_center_points, r_center_points = find_window_centroids(
     warped, window_width, window_height, margin)
+
 
 # If we found any window centers
 if len(window_centroids) > 0:
@@ -152,7 +150,6 @@ plt.ylim(0, 720)
 plt.plot(left_fitx, ploty, color='red', linewidth=3)
 plt.plot(right_fitx, ploty, color='red', linewidth=3)
 plt.gca().invert_yaxis()  # to visualize as we do the images
-
 plt.show()
 
 # Define y-value where we want radius of curvature

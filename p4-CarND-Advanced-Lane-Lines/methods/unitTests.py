@@ -313,14 +313,14 @@ def peakLaneHistogram():
     ax2.imshow(combined, cmap="gray")
     ax2.set_title('Birds eye image', fontsize=50)
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-    #plt.show()
+    # plt.show()
 
     histogram = np.sum(combined[combined.shape[0] / 2:, :], axis=0)
     plt.plot(histogram)
     plt.show()
 
     plt.imshow(combined, cmap="gray")
-    #plt.show()
+    # plt.show()
 
     import cv2
     #cv2.imwrite("test_combined.jpg", combined)
@@ -328,4 +328,87 @@ def peakLaneHistogram():
     return "success"
 
 
-peakLaneHistogram()
+# peakLaneHistogram()
+
+
+def testLandDetection():
+    """
+    Purpose:
+    Inputs: 
+    Outputs: 
+    """
+
+    from calibration import findPoints
+    imagesPath = "../camera_cal/calibration*.jpg"
+    objpoints, imgpoints = findPoints.findPoints(imagesPath)
+
+    import matplotlib.image as mpimg
+    image = mpimg.imread('../test_images/test1.jpg')
+
+    from calibration import calibrate
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
+        image, objpoints, imgpoints)
+
+    from distortionCorrection import undistort
+    undistort, src, dst = undistort.birdsEyeView(image, mtx, dist)
+
+    from perspectiveTransform import perspectiveTransform
+    transformMatrix, warpedImage = perspectiveTransform.perspectiveTransform(
+        image, src, dst)
+
+    from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect
+    import numpy as np
+    image = undistort
+    ksize = 27
+    gradx = absoluteSobelThreshold.abs_sobel_thresh(
+        warpedImage, orient='x', sobel_kernel=ksize, thresh=(30, 90))
+    grady = absoluteSobelThreshold.abs_sobel_thresh(
+        warpedImage, orient='y', sobel_kernel=ksize, thresh=(30, 90))
+    mag_binary = magnitudeThreshold.mag_thresh(
+        warpedImage, sobel_kernel=ksize, mag_thresh=(30, 90))
+    dir_binary = directionThreshold.dir_threshold(
+        warpedImage, sobel_kernel=15, thresh=(0.7, 1.3))
+    hls_select = hlsSelect.hlsSelect(warpedImage)
+    combined = np.zeros_like(dir_binary)
+    combined[((gradx == 1) & (grady == 1)) | (
+        (mag_binary == 1) & (dir_binary == 1)) | (hls_select == 1)] = 1
+
+    from laneDetection import regionOfInterest
+    combined, vertices = regionOfInterest.region_of_interest(combined)
+
+    window_width = 50
+    window_height = 80
+    margin = 100
+
+    ploty = np.linspace(0, 720 - 1, 720)
+
+    from laneDetection import centriods
+    window_centroids, l_center_points, r_center_points = centriods.find_window_centroids(
+        combined, window_width, window_height, margin)
+
+    output = centriods.prettyPrintCentriods(
+        combined, window_centroids, window_width, window_height)
+
+    from laneDetection import customPolyFit
+    left_fitx, right_fitx, super_fun_y_points = customPolyFit.poly(
+        l_center_points, r_center_points, window_height)
+
+    import matplotlib.pyplot as plt
+    # Plot up the data
+
+    # plt.plot(vertices[0])
+    plt.imshow(combined, cmap="gray")
+    plt.show()
+
+    plt.imshow(output)
+    plt.title('window fitting results')
+    plt.xlim(0, 1280)
+    plt.ylim(0, 720)
+    plt.plot(left_fitx, ploty, color='red', linewidth=3)
+    plt.plot(right_fitx, ploty, color='blue', linewidth=3)
+    plt.gca().invert_yaxis()  # to visualize as we do the images
+    plt.show()
+
+    return "success"
+
+testLandDetection()
