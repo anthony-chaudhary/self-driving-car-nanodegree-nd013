@@ -329,7 +329,7 @@ def peakLaneHistogram():
 # peakLaneHistogram()
 
 
-def testLandDetection():
+def testLaneDetection():
     """
     Purpose:
     Inputs: 
@@ -341,7 +341,7 @@ def testLandDetection():
     objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
     import matplotlib.image as mpimg
-    image = mpimg.imread('../test_images/test1.jpg')
+    image = mpimg.imread('../test_images/test5.jpg')
 
     from calibration import calibrate
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
@@ -414,6 +414,49 @@ def testLandDetection():
     plt.imshow(result)
     plt.show()
 
+    from laneDetection import curveCalculations
+    left_curverad, right_curverad = curveCalculations.radiusOfCurvature(
+        ploty, l_center_points, r_center_points, super_fun_y_points)
+
     return "success"
 
-testLandDetection()
+# testLaneDetection()
+
+
+########### BULK TEST IMAGES ############
+"""
+    Collects test images, creates folder to put them in, runs pipeline, and saves images.
+"""
+
+
+def testAllImages():
+    import matplotlib.image as mpimg
+    import cv2
+    import os
+    import shutil
+    from processImage import process_image
+
+    test_images = os.listdir("../test_images/")
+
+    try:
+        processed_images = os.listdir("../test_images/processed_images/")
+    except FileNotFoundError:
+        print("File not found")
+
+    # Delete and recreate directory
+    if processed_images:
+        shutil.rmtree("../test_images/processed_images/", ignore_errors=True)
+        os.mkdir("../test_images/processed_images/")
+
+    for img in test_images:
+        if '.jpg' in img:
+            image = mpimg.imread("../test_images/%(filename)s" %
+                                 {"filename": img})
+
+            result = process_image(image)
+            result_color_fix = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_processed.jpg" %
+                        {"filename": img.replace(".jpg", "")}, result_color_fix)
+
+testAllImages()
