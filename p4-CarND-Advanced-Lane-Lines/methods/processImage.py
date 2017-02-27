@@ -1,8 +1,6 @@
 import imageio
 from moviepy.editor import VideoFileClip
-import matplotlib.image as mpimg
 import numpy as np
-import matplotlib.pyplot as plt
 import cv2
 
 from calibration import findPoints
@@ -15,21 +13,36 @@ from laneDetection import centriods
 from laneDetection import customPolyFit
 from drawing import draw
 
-imageio.plugins.ffmpeg.download()
+# imageio.plugins.ffmpeg.download()
 
 imagesPath = "../camera_cal/calibration*.jpg"
 objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
+ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
+
+# Define 4 source points as src
+src = np.float32([[610, 450], [720, 450],
+                  [300, 680], [1080, 670]])
+
+# Define 4 destination points dst
+dst = np.float32([[300, 0], [900, 0],
+                  [300, 710], [900, 710]])
+
+Minv = cv2.getPerspectiveTransform(dst, src)
+
+window_width = 50
+window_height = 80
+margin = 100
+
+ploty = np.linspace(0, 720 - 1, 720)
+
 
 def process_image(image):
 
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
-
     # From this point on "image" is the undistorted image
-    image, src, dst = undistort.birdsEyeView(image, mtx, dist)
+    image = undistort.birdsEyeView(image, mtx, dist)
 
-    transformMatrix, warpedImage = perspectiveTransform.perspectiveTransform(
+    warpedImage = perspectiveTransform.perspectiveTransform(
         image, src, dst)
 
     ksize = 27
@@ -48,12 +61,6 @@ def process_image(image):
 
     combined, vertices = regionOfInterest.region_of_interest(combined)
 
-    window_width = 50
-    window_height = 80
-    margin = 100
-
-    ploty = np.linspace(0, 720 - 1, 720)
-
     window_centroids, l_center_points, r_center_points = centriods.find_window_centroids(
         combined, window_width, window_height, margin)
 
@@ -63,17 +70,14 @@ def process_image(image):
     left_fitx, right_fitx, super_fun_y_points = customPolyFit.poly(
         l_center_points, r_center_points, window_height)
 
-    # insert image drawing
-    print(combined.shape)
-    Minv = cv2.getPerspectiveTransform(dst, src)
     result = draw.drawLane(combined, left_fitx,
                            right_fitx, ploty, image, Minv)
 
     return result
 
 
-project_video_output = 'AAOUTproject_video.mp4'
-clip1 = VideoFileClip("../project_video.mp4")
+project_video_output = 'attempt1_challenge_video.mp4'
+clip1 = VideoFileClip("../challenge_video.mp4")
 # NOTE: this function expects color images!!
 clip = clip1.fl_image(process_image)
 clip.write_videofile(project_video_output, audio=False)

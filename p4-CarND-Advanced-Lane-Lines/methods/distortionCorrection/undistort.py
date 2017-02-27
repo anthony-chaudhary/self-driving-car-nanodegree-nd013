@@ -25,15 +25,7 @@ def birdsEyeView(img, mtx, dist):
     # Undistort using mtx and dist
     undistort = cv2.undistort(img, mtx, dist, None, mtx)
 
-    # Define 4 source points as src
-    src = np.float32([[610, 450], [720, 450],
-                      [300, 680], [1080, 670]])
-
-    # Define 4 destination points dst
-    dst = np.float32([[300, 0], [900, 0],
-                      [300, 710], [900, 710]])
-
-    return undistort, src, dst
+    return undistort
 
 
 def chessBoardTest(img, nx, ny, mtx, dist):

@@ -92,6 +92,14 @@ def testDrawChessBoardCorners():
 
 # testDrawChessBoardCorners()
 
+import numpy as np
+src = np.float32([[610, 450], [720, 450],
+                  [300, 680], [1080, 670]])
+
+# Define 4 destination points dst
+dst = np.float32([[300, 0], [900, 0],
+                  [300, 710], [900, 710]])
+
 
 def testUndistort():
     """
@@ -108,11 +116,10 @@ def testUndistort():
     image = mpimg.imread('../test_images/test1.jpg')
 
     from calibration import calibrate
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort, src, dst = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.birdsEyeView(image, mtx, dist)
 
     import matplotlib.pyplot as plt
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
@@ -145,16 +152,15 @@ def testBirdsEyeView():
     image = mpimg.imread('../test_images/test5.jpg')
 
     from calibration import calibrate
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort, src, dst = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.birdsEyeView(image, mtx, dist)
 
     print(src)
 
     from perspectiveTransform import perspectiveTransform
-    transformMatrix, warpedImage = perspectiveTransform.perspectiveTransform(
+    warpedImage = perspectiveTransform.perspectiveTransform(
         image, src, dst)
 
     import matplotlib.pyplot as plt
@@ -188,14 +194,13 @@ def testThresholds():
     image = mpimg.imread('../test_images/test5.jpg')
 
     from calibration import calibrate
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort, src, dst = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.birdsEyeView(image, mtx, dist)
 
     from perspectiveTransform import perspectiveTransform
-    transformMatrix, warpedImage = perspectiveTransform.perspectiveTransform(
+    warpedImage = perspectiveTransform.perspectiveTransform(
         image, src, dst)
 
     from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect
@@ -277,14 +282,13 @@ def peakLaneHistogram():
     image = mpimg.imread('../test_images/test5.jpg')
 
     from calibration import calibrate
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort, src, dst = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.birdsEyeView(image, mtx, dist)
 
     from perspectiveTransform import perspectiveTransform
-    transformMatrix, warpedImage = perspectiveTransform.perspectiveTransform(
+    warpedImage = perspectiveTransform.perspectiveTransform(
         image, src, dst)
 
     from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect
@@ -306,6 +310,10 @@ def peakLaneHistogram():
 
     import matplotlib.pyplot as plt
 
+    histogram = np.sum(combined[combined.shape[0] / 2:, :], axis=0)
+    plt.plot(histogram)
+    plt.show()
+
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
     f.tight_layout()
     ax1.imshow(undistort)
@@ -313,17 +321,7 @@ def peakLaneHistogram():
     ax2.imshow(combined, cmap="gray")
     ax2.set_title('Birds eye image', fontsize=50)
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
-    # plt.show()
-
-    histogram = np.sum(combined[combined.shape[0] / 2:, :], axis=0)
-    plt.plot(histogram)
     plt.show()
-
-    plt.imshow(combined, cmap="gray")
-    # plt.show()
-
-    import cv2
-    #cv2.imwrite("test_combined.jpg", combined)
 
     return "success"
 
@@ -346,15 +344,13 @@ def testLandDetection():
     image = mpimg.imread('../test_images/test1.jpg')
 
     from calibration import calibrate
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort, src, dst = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.birdsEyeView(image, mtx, dist)
 
     from perspectiveTransform import perspectiveTransform
-    transformMatrix, warpedImage = perspectiveTransform.perspectiveTransform(
-        image, src, dst)
+    warpedImage = perspectiveTransform.perspectiveTransform(image, src, dst)
 
     from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect
     import numpy as np
@@ -407,6 +403,15 @@ def testLandDetection():
     plt.plot(left_fitx, ploty, color='red', linewidth=3)
     plt.plot(right_fitx, ploty, color='blue', linewidth=3)
     plt.gca().invert_yaxis()  # to visualize as we do the images
+    plt.show()
+
+    from drawing import draw
+    import cv2
+    Minv = cv2.getPerspectiveTransform(dst, src)
+    result = draw.drawLane(combined, left_fitx,
+                           right_fitx, ploty, image, Minv)
+
+    plt.imshow(result)
     plt.show()
 
     return "success"

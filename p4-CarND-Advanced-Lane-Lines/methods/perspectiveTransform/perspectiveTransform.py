@@ -18,4 +18,4 @@ def perspectiveTransform(img, src, dst):
     warpedImage = cv2.warpPerspective(
         img, transformMatrix, img_size, flags=cv2.INTER_LINEAR)
 
-    return transformMatrix, warpedImage
+    return warpedImage
