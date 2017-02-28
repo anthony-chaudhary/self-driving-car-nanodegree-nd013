@@ -29,7 +29,7 @@ objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
 ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
-src = np.float32([[576, 450], [704, 450],
+src = np.float32([[544, 470], [736, 470],
                   [128, 700], [1152, 700]])
 
 dst = np.float32([[256, 128], [1024, 128],
@@ -37,9 +37,9 @@ dst = np.float32([[256, 128], [1024, 128],
 
 Minv = cv2.getPerspectiveTransform(dst, src)
 
-window_width = 40
-window_height = 120
-margin = 50
+window_width = 30
+window_height = 130
+margin = 15
 
 ploty = np.linspace(0, 720 - 1, 720)
 
@@ -60,13 +60,13 @@ def process_image(image, testing_flag=False):
 
     ksize = 27
     gradx = absoluteSobelThreshold.abs_sobel_thresh(
-        warpedImage, orient='x', sobel_kernel=ksize, thresh=(30, 90))
+        warpedImage, orient='x', sobel_kernel=ksize, thresh=(10, 120))
     grady = absoluteSobelThreshold.abs_sobel_thresh(
-        warpedImage, orient='y', sobel_kernel=ksize, thresh=(30, 90))
+        warpedImage, orient='y', sobel_kernel=ksize, thresh=(10, 120))
     mag_binary = magnitudeThreshold.mag_thresh(
-        warpedImage, sobel_kernel=ksize, mag_thresh=(30, 90))
+        warpedImage, sobel_kernel=ksize, mag_thresh=(10, 120))
     dir_binary = directionThreshold.dir_threshold(
-        warpedImage, sobel_kernel=15, thresh=(0.7, 1.3))
+        warpedImage, sobel_kernel=15, thresh=(0.70, 2))
 
     gradx = regionOfInterest.region_of_interest(gradx)
     grady = regionOfInterest.region_of_interest(grady)

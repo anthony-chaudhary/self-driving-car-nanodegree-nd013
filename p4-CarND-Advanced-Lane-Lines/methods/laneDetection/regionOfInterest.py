@@ -18,14 +18,14 @@ def region_of_interest(edges):
     match = 128
     bottom_left_a = (match * 2, 720)
     bottom_right_a = (match * 3.5, 720)
-    top_left_a = (match / 2, 0)
+    top_left_a = (match * 2.35, 0)
     top_right_a = (match * 5, 0)
 
     # Right Mask
     bottom_left_b = (match * 7, 720)
-    bottom_right_b = (match * 8.5, 720)
-    top_left_b = (match * 5, 0)
-    top_right_b = (match * 10 - (match / 2), 0)
+    bottom_right_b = (match * 9, 720)
+    top_left_b = (match * 7, 0)
+    top_right_b = (match * 11, 0)
 
     imshape = edges.shape
     vertices = np.array([[bottom_left_a, top_left_a,
