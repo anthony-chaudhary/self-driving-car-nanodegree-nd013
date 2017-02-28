@@ -171,7 +171,7 @@ left and right centriod points.
 `methods\processVideo.py`
 `methods\processImage.py\process_image()`
 
-Here's a [link to my video result](./output_video/attempt3_project_video.mp4)
+Here's a [link to my video result](./output_video/attempt7_project_video.mp4)
 
 ---
 
