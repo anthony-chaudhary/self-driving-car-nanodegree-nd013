@@ -28,7 +28,9 @@ def radiusOfCurvature(ploty, l_center_points, r_center_points, super_fun_y_point
 
     # Define conversions in x and y from pixels space to meters
     ym_per_pix = 30 / 720  # meters per pixel in y dimension
-    xm_per_pix = 3.7 / 700  # meters per pixel in x dimension
+
+    # max(dst) - min(dst)
+    xm_per_pix = 3.7 / (1024 - 256)  # meters per pixel in x dimension
 
     # Fit new polynomials to x,y in world space
     left_fit_cr = np.polyfit(super_fun_y_points *
