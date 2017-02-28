@@ -3,10 +3,9 @@ import cv2
 
 def perspectiveTransform(img, src, dst):
     """
-    Purpose: Fix image warping.
+    Purpose: Transform image to bird's eye view.
     Inputs: Img array, source points, destintation points
-    Outputs: transformMatrix(fixed image, warpedImage
-    (Perspective changed image?)
+    Outputs: warpedImage array
     """
 
     img_size = (img.shape[1], img.shape[0])

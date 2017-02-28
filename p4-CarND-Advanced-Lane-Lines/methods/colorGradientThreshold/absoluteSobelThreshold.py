@@ -3,7 +3,12 @@ import cv2
 
 
 def abs_sobel_thresh(image, orient='x', sobel_kernel=3, thresh=(20, 100)):
-    # Calculate directional gradient
+    """
+    Purpose: Apply sobel threshold to an image.
+    Inputs: Image array, orientation direction, kernal size(int),
+    and threshold (list with two values)
+    Outputs: Binary image array with threshold applied.
+    """
 
     # 1) Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)

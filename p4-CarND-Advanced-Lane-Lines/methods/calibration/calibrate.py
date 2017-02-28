@@ -3,9 +3,9 @@ import cv2
 
 def calibrate(objpoints, imgpoints):
     """
-    Purpose: Provide calibrated camera info
-    Inputs: Image array, object points array, and image points array
-    Outputs: Vectors and stuff
+    Purpose: Provide calibrated camera info.
+    Inputs: Image array, object points array, and image points array.
+    Outputs: Vectors describing calibration.
     """
 
     #assert img.shape is not None

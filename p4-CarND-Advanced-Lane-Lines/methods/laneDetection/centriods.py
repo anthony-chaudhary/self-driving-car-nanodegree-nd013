@@ -10,6 +10,13 @@ def window_mask(width, height, img_ref, center, level):
 
 
 def find_window_centroids(warped, window_width, window_height, margin):
+    """
+    Purpose: Convert our binary lane image to useful points.
+    Inputs: Warped image (bird's eye view), the width and height of
+    each centriod window (int), and a margin.
+    Outputs: arrays of centriod points, and centriod points
+    pre-split between left and right.
+    """
 
     # Store the (left,right) window centroid positions per level
     window_centroids = []

@@ -3,13 +3,19 @@ import cv2
 
 
 def drawLane(warped, left_fitx, right_fitx, ploty, image, Minv):
+    """
+    Purpose: Draw a visual of the lane on top of the original image.
+    Inputs: warped image array (bird's eye view), left and right x lists,
+    y lists, image array, and Minv, an inverted perspective transform.
+    Outputs: Image array with visual applied.
+    """
+
     # Create an image to draw the lines on
     warp_zero = np.zeros_like(warped).astype(np.uint8)
     color_warp = np.dstack((warp_zero, warp_zero, warp_zero))
 
     # Recast the x and y points into usable format for cv2.fillPoly()
-    #ploty = np.array(ploty)
-    #print(left_fitx.shape, ploty.shape)
+    # print(left_fitx.shape, ploty.shape)
 
     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
     pts_right = np.array(

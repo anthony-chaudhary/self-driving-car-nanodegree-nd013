@@ -1,11 +1,21 @@
 
+"""
+Uncomment any function to run test
+
+"Success" means program has run all lines without
+python level errors.
+
+Most tests also generate some additional output to
+visually verify expected results.
+
+"""
+
 
 def testFindPoints():
     """
     Purpose: Test find points function.
     Inputs: findPoints.findPoints() and hardcoded calibration path
     Outputs: Prints points and success message if program reaches end.
-
     """
 
     from calibration import findPoints
@@ -19,7 +29,7 @@ def testFindPoints():
 
     return print("Success")
 
-# testFindPoints()
+#testFindPoints()
 
 
 def testCalibration():
@@ -38,20 +48,16 @@ def testCalibration():
     from calibration import calibrate
     import matplotlib.image as mpimg
     image = mpimg.imread('../test_images/test1.jpg')
-    #image = "test"
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     return print("Success")
 
-# testCalibration()
+#testCalibration()
 
 
 def testDrawChessBoardCorners():
     """
-    Purpose:
-    Inputs: 
-    Outputs: 
+    Purpose: Test if chessboard corners works
     """
 
     from calibration import findPoints
@@ -61,8 +67,7 @@ def testDrawChessBoardCorners():
     from calibration import calibrate
     import matplotlib.image as mpimg
     image = mpimg.imread('../camera_cal/calibration12.jpg')
-    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(
-        image, objpoints, imgpoints)
+    ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
 
@@ -88,25 +93,12 @@ def testDrawChessBoardCorners():
 
     plt.show()
 
-    return "success"
+    return print("Success")
 
-# testDrawChessBoardCorners()
-
-import numpy as np
-src = np.float32([[610, 450], [720, 450],
-                  [300, 680], [1080, 670]])
-
-# Define 4 destination points dst
-dst = np.float32([[300, 0], [900, 0],
-                  [300, 710], [900, 710]])
+#testDrawChessBoardCorners()
 
 
 def testUndistort():
-    """
-    Purpose:
-    Inputs: 
-    Outputs: 
-    """
 
     from calibration import findPoints
     imagesPath = "../camera_cal/calibration*.jpg"
@@ -119,7 +111,7 @@ def testUndistort():
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.undistort(image, mtx, dist)
 
     import matplotlib.pyplot as plt
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
@@ -132,30 +124,33 @@ def testUndistort():
 
     plt.show()
 
-    return "success"
+    return print("Success")
 
 # testUndistort()
 
 
 def testBirdsEyeView():
-    """
-    Purpose:
-    Inputs: 
-    Outputs: 
-    """
+
+    import numpy as np
+    src = np.float32([[576, 450], [704, 450],
+                      [128, 700], [1152, 700]])
+
+    # Define 4 destination points dst
+    dst = np.float32([[256, 128], [1024, 128],
+                      [256, 720], [1024, 720]])
 
     from calibration import findPoints
     imagesPath = "../camera_cal/calibration*.jpg"
     objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
     import matplotlib.image as mpimg
-    image = mpimg.imread('../test_images/test5.jpg')
+    image = mpimg.imread('../test_images/straight_lines1.jpg')
 
     from calibration import calibrate
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.undistort(image, mtx, dist)
 
     print(src)
 
@@ -174,17 +169,20 @@ def testBirdsEyeView():
 
     plt.show()
 
-    return "success"
+    return print("Success")
 
-# testBirdsEyeView()
+#testBirdsEyeView()
 
 
 def testThresholds():
-    """
-    Purpose:
-    Inputs: 
-    Outputs: 
-    """
+    import numpy as np
+    # Define 4 source points as src
+    src = np.float32([[576, 450], [704, 450],
+                      [128, 700], [1152, 700]])
+
+    # Define 4 destination points dst
+    dst = np.float32([[256, 128], [1024, 128],
+                      [256, 720], [1024, 720]])
 
     from calibration import findPoints
     imagesPath = "../camera_cal/calibration*.jpg"
@@ -197,16 +195,13 @@ def testThresholds():
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort = undistort.birdsEyeView(image, mtx, dist)
+    image = undistort.undistort(image, mtx, dist)
 
     from perspectiveTransform import perspectiveTransform
-    warpedImage = perspectiveTransform.perspectiveTransform(
-        image, src, dst)
+    warpedImage = perspectiveTransform.perspectiveTransform(image, src, dst)
 
     from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect
     import numpy as np
-
-    image = undistort
 
     ksize = 31
 
@@ -261,31 +256,35 @@ def testThresholds():
     plt.imshow(combined, cmap="gray")
     plt.show()
 
-    return "success"
+    return print("Success")
 
 
-# testThresholds()
+#testThresholds()
 
 
 def peakLaneHistogram():
-    """
-    Purpose:
-    Inputs: 
-    Outputs: 
-    """
+
+    import numpy as np
+    # Define 4 source points as src
+    src = np.float32([[576, 450], [704, 450],
+                  [128, 700], [1152, 700]])
+
+    # Define 4 destination points dst
+    dst = np.float32([[256, 128], [1024, 128],
+                  [256, 720], [1024, 720]])
 
     from calibration import findPoints
     imagesPath = "../camera_cal/calibration*.jpg"
     objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
     import matplotlib.image as mpimg
-    image = mpimg.imread('../test_images/test5.jpg')
+    image = mpimg.imread('../test_images/test1.jpg')
 
     from calibration import calibrate
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.undistort(image, mtx, dist)
 
     from perspectiveTransform import perspectiveTransform
     warpedImage = perspectiveTransform.perspectiveTransform(
@@ -326,28 +325,32 @@ def peakLaneHistogram():
     return "success"
 
 
-# peakLaneHistogram()
+#peakLaneHistogram()
 
 
 def testLaneDetection():
-    """
-    Purpose:
-    Inputs: 
-    Outputs: 
-    """
+
+    import numpy as np
+    # Define 4 source points as src
+    src = np.float32([[576, 450], [704, 450],
+                      [128, 700], [1152, 700]])
+
+    # Define 4 destination points dst
+    dst = np.float32([[256, 128], [1024, 128],
+                      [256, 720], [1024, 720]])
 
     from calibration import findPoints
     imagesPath = "../camera_cal/calibration*.jpg"
     objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
     import matplotlib.image as mpimg
-    image = mpimg.imread('../test_images/test5.jpg')
+    image = mpimg.imread('../test_images/test1.jpg')
 
     from calibration import calibrate
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
-    undistort = undistort.birdsEyeView(image, mtx, dist)
+    undistort = undistort.undistort(image, mtx, dist)
 
     from perspectiveTransform import perspectiveTransform
     warpedImage = perspectiveTransform.perspectiveTransform(image, src, dst)
@@ -370,7 +373,7 @@ def testLaneDetection():
         (mag_binary == 1) & (dir_binary == 1)) | (hls_select == 1)] = 1
 
     from laneDetection import regionOfInterest
-    combined, vertices = regionOfInterest.region_of_interest(combined)
+    combined = regionOfInterest.region_of_interest(combined)
 
     window_width = 50
     window_height = 80
@@ -390,9 +393,7 @@ def testLaneDetection():
         l_center_points, r_center_points, window_height)
 
     import matplotlib.pyplot as plt
-    # Plot up the data
 
-    # plt.plot(vertices[0])
     plt.imshow(combined, cmap="gray")
     plt.show()
 
@@ -411,16 +412,21 @@ def testLaneDetection():
     result = draw.drawLane(combined, left_fitx,
                            right_fitx, ploty, image, Minv)
 
+    from laneDetection import curveCalculations, offset
+    average_curve = curveCalculations.radiusOfCurvature(
+        ploty, l_center_points, r_center_points, super_fun_y_points)
+    meters_offset = offset.calculateCarOffset(l_center_points, r_center_points)
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    cv2.putText(result, ("Radius of curvature: " + str(average_curve) + "m"),(800,50), font, 1,(255,255,255),2,cv2.LINE_AA)
+    cv2.putText(result, ("Offset from centre: " + str(meters_offset) + "m"),(800,100), font, 1,(255,255,255),2,cv2.LINE_AA)
+
     plt.imshow(result)
     plt.show()
 
-    from laneDetection import curveCalculations
-    left_curverad, right_curverad = curveCalculations.radiusOfCurvature(
-        ploty, l_center_points, r_center_points, super_fun_y_points)
+    return print("Success")
 
-    return "success"
-
-# testLaneDetection()
+#testLaneDetection()
 
 
 ########### BULK TEST IMAGES ############
@@ -428,6 +434,8 @@ def testLaneDetection():
     Collects test images, creates folder to put them in, runs pipeline, and saves images.
 """
 
+#! important , request a slight change to process_image() to return all needed images.
+# TODO refactor into a flag
 
 def testAllImages():
     import matplotlib.image as mpimg
@@ -443,20 +451,35 @@ def testAllImages():
     except FileNotFoundError:
         print("File not found")
 
-    # Delete and recreate directory
-    if processed_images:
-        shutil.rmtree("../test_images/processed_images/", ignore_errors=True)
-        os.mkdir("../test_images/processed_images/")
-
     for img in test_images:
         if '.jpg' in img:
             image = mpimg.imread("../test_images/%(filename)s" %
                                  {"filename": img})
 
-            result = process_image(image)
+            result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods = process_image(
+                image)
             result_color_fix = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
+            #print(combined.shape, prettyPrintCentriods.shape)
 
             cv2.imwrite("../test_images/processed_images/%(filename)s_processed.jpg" %
                         {"filename": img.replace(".jpg", "")}, result_color_fix)
 
-testAllImages()
+            cv2.imwrite("../test_images/processed_images/%(filename)s_gradx.jpg" %
+                        {"filename": img.replace(".jpg", "")}, gradx * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_mag_binary.jpg" %
+                        {"filename": img.replace(".jpg", "")}, mag_binary * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_dir_binary.jpg" %
+                        {"filename": img.replace(".jpg", "")}, dir_binary * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_hls_select.jpg" %
+                        {"filename": img.replace(".jpg", "")}, hls_select * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_combined.jpg" %
+                        {"filename": img.replace(".jpg", "")}, combined * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_prettyPrintCentriods.jpg" %
+                        {"filename": img.replace(".jpg", "")}, prettyPrintCentriods)
+
+#testAllImages()

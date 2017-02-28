@@ -3,10 +3,17 @@ import numpy as np
 
 
 def poly(l_center_points, r_center_points, window_height):
+    """
+    Purpose:  Fit a poloynomial line using points found from
+    centriod function.
+    Inputs: Lists of points
+    Outputs: left/right fitx and associated y points.
+    """
 
     ploty = np.linspace(0, 720 - 1, 720)
-    # a wild hardcoded list appears! It's super fun!
+
     windows = int((720 - window_height) / window_height)
+
     super_fun_y_points = []
     for w in range(1, windows + 1):
         super_fun_y_points.append(window_height * w)

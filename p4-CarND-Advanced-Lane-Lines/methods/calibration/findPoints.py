@@ -4,6 +4,13 @@ import glob
 
 
 def findPoints(imagesPath):
+    """
+    Purpose: Provide calibrated camera info.
+    Inputs: Image array, object points array, and image points array.
+    Outputs: Objectpoints -> (x, y, z) ciirdubates of chessboard corners
+    in the world, and image points -> (x, y) pixel positions of each corner.
+    """
+
     # prepare object points, like (0,0,0), (1,0,0), (2,0,0) ....,(6,5,0)
     objp = np.zeros((6 * 9, 3), np.float32)
     objp[:, :2] = np.mgrid[0:9, 0:6].T.reshape(-1, 2)
@@ -27,12 +34,5 @@ def findPoints(imagesPath):
         if ret == True:
             objpoints.append(objp)
             imgpoints.append(corners)
-
-            # Draw and display the corners
-            # img = cv2.drawChessboardCorners(img, (9, 6), corners, ret)
-            # cv2.imshow('img',img)
-            # cv2.waitKey(500)
-
-    # cv2.destroyAllWindows()
 
     return objpoints, imgpoints

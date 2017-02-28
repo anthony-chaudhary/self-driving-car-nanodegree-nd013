@@ -2,7 +2,13 @@ import cv2
 import numpy as np
 
 
-def hlsSelect(img, thresh=(90, 255)):
+def hlsSelect(img, thresh=(120, 255)):
+    """
+    Purpose: Apply a Hue, Light, and Saturation colour threshold
+    to an image.
+    Inputs: Image array, threhsold values.
+    Outputs: Binary image array with threshold applied.
+    """
 
     # 1) Convert to HLS color space
     hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)

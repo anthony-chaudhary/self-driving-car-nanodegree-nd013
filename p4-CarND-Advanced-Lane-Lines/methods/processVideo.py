@@ -1,6 +1,13 @@
 from moviepy.editor import VideoFileClip
 from processImage import process_image
 
-clip1 = VideoFileClip("../challenge_video.mp4")
+"""
+Purpose: Process videos using the methods\processImage.py
+pipeline.
+Inputs: Video clip
+Outputs: Video clip with detected lane recorded and drawn.
+"""
+
+clip1 = VideoFileClip("../project_video.mp4")
 clip = clip1.fl_image(process_image)
-clip.write_videofile('attempt1_challenge_video.mp4', audio=False)
+clip.write_videofile('attempt_test_project_video.mp4', audio=False)

@@ -3,8 +3,13 @@ import cv2
 
 
 def mag_thresh(image, sobel_kernel=31, mag_thresh=(30, 100)):
-    # Calculate gradient magnitude
-    # Apply threshold
+    """
+    Purpose: Apply magnitude based threshold using sobel gradient.
+    to an image.
+    Inputs: Image array, kernal size, and threhsold values list
+    (low, high).
+    Outputs: Binary image array with threshold applied.
+    """
 
     # 1) Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)

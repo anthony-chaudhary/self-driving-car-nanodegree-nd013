@@ -3,8 +3,13 @@ import cv2
 
 
 def dir_threshold(image, sobel_kernel=15, thresh=(0.7, 1.3)):
-    # Calculate gradient direction
-        # Apply the following steps to img
+    """
+    Purpose: Apply sobel directional gradient to an image.
+    Inputs: Image array, kernal size(int),
+    and threshold (list with two values)
+    Outputs: Binary image array with threshold applied.
+    """
+
     # 1) Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
 
@@ -16,7 +21,7 @@ def dir_threshold(image, sobel_kernel=15, thresh=(0.7, 1.3)):
     abs_s_x = np.absolute(sobelx)
     abs_s_y = np.absolute(sobely)
 
-    # 4) Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction 
+    # 4) Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction
     # of the gradient
     # Important, y should come before x here if we want to detect lines
     dir_grad = np.arctan2(abs_s_y, abs_s_x)

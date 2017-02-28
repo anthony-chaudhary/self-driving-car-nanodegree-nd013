@@ -4,22 +4,10 @@ import numpy as np
 
 def undistort(img, mtx, dist):
     """
-    Purpose:
-    Inputs:
-    Outputs:
-    """
-
-    # Undistort using mtx and dist
-    undistort = cv2.undistort(img, mtx, dist, None, mtx)
-
-    return undistort
-
-
-def birdsEyeView(img, mtx, dist):
-    """
-    Purpose: Define source and destination points for perspectiveTransform()
-    Inputs: Img array and  mtx and dist correction values from calibrate()
-    Outputs: undistort, source points, destintation points
+    Purpose: Undistort an image.
+    Inputs: Image array, a camera matrix (mtx),
+    and distortion coefficients (dist)
+    Outputs: Undistorted image array.
     """
 
     # Undistort using mtx and dist
@@ -30,7 +18,7 @@ def birdsEyeView(img, mtx, dist):
 
 def chessBoardTest(img, nx, ny, mtx, dist):
     """
-    Purpose: Define source and destination points for perspectiveTransform()
+    Purpose: See if we can find chessboard corners to test pipeline.
     Inputs: Img array, number of chessboard corners (nx, ny),
     mtx and dist correction values from calibrate()
     Outputs: imgWithChessBoard, source points, destintation points

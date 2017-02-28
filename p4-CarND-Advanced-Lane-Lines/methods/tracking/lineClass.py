@@ -1,3 +1,7 @@
+
+
+# TODO use this perhaps with smoothing function if needed
+
 # Define a class to receive the characteristics of each line detection
 class Line():
     def __init__(self):
