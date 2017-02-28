@@ -15,22 +15,35 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [Undistorted]: ./examples/undistort_output.png "Undistorted"
-[image2]: ./output_images/undistort_car_output.jpg "Road Transformed"
+[Road Undistorted]: ./output_images/undistort_car_output.png "Road Undistorted"
+
+[Centriods]: ./output_images/test2_prettyPrintCentriods.jpg "Centriods"
+[Test result]: ./output_images/test2_processed.jpg "Test result"
+[Binary magnitude]: ./output_images/test2_mag_binary.jpg "Binary magnitude"
+[Binary hls]: ./output_images/test2_hls_select.jpg "Binary hls"
+[Binary gradient y]: ./output_images/gradx.jpg "Binary gradient y"
+[Binary gradient x]: ./output_images/test2_grady.jpg "Binary gradient x"
+[Binary direction]: ./output_images/test2_dir_binary.jpg "Binary direction"
+[Binary combined]: ./output_images/test2_combined.jpg "Binary combined"
+
+
+[Mask Example]: ./output_images/mask_example.jpg "Mask Example"
+
 [image3]: ./examples/binary_combo_example.jpg "Binary Example"
-[image4]: ./examples/warped_straight_lines.jpg "Warp Example"
+[birds_eye]: ./examples/birds_eye.png "Birds_eye Example"
 [image5]: ./examples/color_fit_lines.jpg "Fit Visual"
 [image6]: ./examples/example_output.jpg "Output"
 [video1]: ./project_video.mp4 "Video"
-
 
 ---
 ###Writeup / README
 
 ###Camera Calibration
 
-####1. Briefly state how you computed the camera matrix and distortion coefficients. Provide an example of a distortion corrected calibration image.
+####1. Camera matrix and distortion coefficients:
 
-The code for this step is contained in the first code cell of the IPython notebook located in "./examples/example.ipynb" (or in lines # through # of the file called `some_file.py`).
+`methods\calibration\calibrate.py`
+`methods\calibration\findPoints.py`
 
 I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
@@ -38,64 +51,96 @@ I then used the output `objpoints` and `imgpoints` to compute the camera calibra
 
 ![alt text][Undistorted]
 
+
 ###Pipeline (single images)
 
-####1. Provide an example of a distortion-corrected image.
-To demonstrate this step, I will describe how I apply the distortion correction to one of the test images like this one:
-![alt text][image2]
-####2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
+####1. Distortion-corrected image:
+![alt text][Road Undistorted]
+
+####2. Color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
 
 I used a combination of color and gradient thresholds to generate a binary image.
 The key functions for this are all wihin `methods/colorGradientThreshold/`
+The methods are use in `methods/processImage.py`.
+
+The critical part is:
+```
+combined[((gradx == 1) & (grady == 1)) | (
+        (mag_binary == 1) & (dir_binary == 0)) | (hls_select == 1)] = 1
+        ```
+
+Here we say, whenever we see gradient x and gradient y both think there should
+be a lane pixel, include it. Or when the magnitude and direction functions see a pixel,
+or when HLS sees a pixel.
+
+Binary, meaning that the pixel value is either on or off.
 
 Some example outputs:
-![alt text][image3]
+Magnitude
+![Binary magnitude][Binary magnitude]
 
-####3. Describe how (and identify where in your code) you performed a perspective transform and provide an example of a transformed image.
+HLS (Hue, light, saturation)
+![Binary hls][Binary hls]
 
-The code for my perspective transform includes a function called `warper()`, which appears in lines 1 through 8 in the file `example.py` (output_images/examples/example.py) (or, for example, in the 3rd code cell of the IPython notebook).  The `warper()` function takes as inputs an image (`img`), as well as source (`src`) and destination (`dst`) points.  I chose the hardcode the source and destination points in the following manner:
+Gradient x
+![Binary gradient x][Binary gradient x]
+
+Gradient y
+![Binary gradient y][Binary gradient y]
+
+Direction
+![Binary direction][Binary direction]
+
+Combined
+![Binary combined][Binary combined]
+
+
+####3. Perspective transform and provide an example of a transformed image.
+
+`methods\perspectiveTransform.py\perspectiveTransform()`
+```
+    Purpose: Transform image to bird's eye view.
+    Inputs: Img array, source points, destintation points
+    Outputs: warpedImage array
+```
+
+I chose the hardcode the source and destination points in the following manner:
 
 ```
-src = np.float32(
-    [[(img_size[0] / 2) - 55, img_size[1] / 2 + 100],
-    [((img_size[0] / 6) - 10), img_size[1]],
-    [(img_size[0] * 5 / 6) + 60, img_size[1]],
-    [(img_size[0] / 2 + 55), img_size[1] / 2 + 100]])
-dst = np.float32(
-    [[(img_size[0] / 4), 0],
-    [(img_size[0] / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), img_size[1]],
-    [(img_size[0] * 3 / 4), 0]])
+src = np.float32([[576, 450], [704, 450],
+                  [128, 700], [1152, 700]])
+
+dst = np.float32([[256, 128], [1024, 128],
+                  [256, 720], [1024, 720]])
 
 ```
-This resulted in the following source and destination points:
-
-| Source        | Destination   | 
-|:-------------:|:-------------:| 
-| 585, 460      | 320, 0        | 
-| 203, 720      | 320, 720      |
-| 1127, 720     | 960, 720      |
-| 695, 460      | 960, 0        |
 
 I verified that my perspective transform was working as expected by drawing the `src` and `dst` points onto a test image and its warped counterpart to verify that the lines appear parallel in the warped image.
 
-![alt text][image4]
+![alt text][birds_eye]
 
-####4. Describe how (and identify where in your code) you identified lane-line pixels and fit their positions with a polynomial?
+####4. Identified lane-line pixels and fit their positions with a polynomial:
 
-Then I did some other stuff and fit my lane lines with a 2nd order polynomial kinda like this:
+`methods\laneDetection\centriods.py\find_window_centriods()`
+`methods\laneDetection\customPolyFit.py\poly()`
+`methods\laneDetection\regionOfInterest.py\region_of_interest()`
 
-![alt text][image5]
+I create a two polygon image mask to create cones around each lane:
+[Mask Example]
 
-####5. Describe how (and identify where in your code) you calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+I found this really helped, and I beleive it's reasonably scalable to forward facing lines. 
+I also played with the `window_width, window_height, and margin` to find optimal settings.
 
-I did this in lines # through # in my code in `my_other_file.py`
+![Centriods][Centriods]
+
+####5. Calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+
+`methods\laneDetection\curveCalculations\radiusOfCurvature()`
+`methods\laneDetection\offset\calculateCarOffset()`
 
 ####6. Provide an example image of your result plotted back down onto the road such that the lane area is identified clearly.
 
-I implemented this step in lines # through # in my code in `yet_another_file.py` in the function `map_lane()`.  Here is an example of my result on a test image:
-
-![alt text][image6]
+![Test result][Test result]
 
 ---
 
@@ -103,7 +148,10 @@ I implemented this step in lines # through # in my code in `yet_another_file.py`
 
 ####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
-Here's a [link to my video result](./project_video.mp4)
+`methods\processVideo.py`
+`methods\processImage.py\process_image()`
+
+Here's a [link to my video result](./output_video/attempt3_project_video.mp4)
 
 ---
 
@@ -111,5 +159,9 @@ Here's a [link to my video result](./project_video.mp4)
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-The pipeline is likey to fail in more challenging curves / conditions. 
+The pipeline is likey to fail in more challenging curves / conditions.
+I would like to consider:
+-> Using functions in `methods\tracking\lineClass.py\Line()` to "smooth" detection.
+-> More robust parmetter selection, for example, the masking, or the thresholding functions
+-> More robust processing performance. I was able to get a 3x speedup simply removing some unnecessarily repeated calculations, and would like to improve this further. 
 
