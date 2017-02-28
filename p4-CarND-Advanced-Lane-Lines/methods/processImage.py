@@ -29,11 +29,9 @@ objpoints, imgpoints = findPoints.findPoints(imagesPath)
 
 ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
-# Define 4 source points as src
 src = np.float32([[576, 450], [704, 450],
                   [128, 700], [1152, 700]])
 
-# Define 4 destination points dst
 dst = np.float32([[256, 128], [1024, 128],
                   [256, 720], [1024, 720]])
 
@@ -48,7 +46,9 @@ ploty = np.linspace(0, 720 - 1, 720)
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 
-def process_image(image):
+def process_image(image, testing_flag=False):
+
+    # Please see doc strings on each function
 
     # From this point on "image" is the undistorted image
     image = undistort.undistort(image, mtx, dist)
@@ -99,5 +99,7 @@ def process_image(image):
     cv2.putText(result, ("Offset from centre: " + str(meters_offset) + "m"),
                 (800, 100), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
-    # return result, gradx, mag_binary, dir_binary, hls_select, combined
-    return result
+    if testing_flag is False:
+        return result
+    else:
+        return result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods

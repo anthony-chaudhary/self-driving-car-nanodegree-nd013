@@ -430,18 +430,13 @@ def testLaneDetection():
 
 
 ########### BULK TEST IMAGES ############
-"""
-    Collects test images, creates folder to put them in, runs pipeline, and saves images.
-"""
-
-#! important , request a slight change to process_image() to return all needed images.
-# TODO refactor into a flag
+# Collects test images, creates folder to put them in, runs pipeline, and saves images.
+# Uses settings in methods/processImage
 
 def testAllImages():
     import matplotlib.image as mpimg
     import cv2
     import os
-    import shutil
     from processImage import process_image
 
     test_images = os.listdir("../test_images/")
@@ -457,7 +452,7 @@ def testAllImages():
                                  {"filename": img})
 
             result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods = process_image(
-                image)
+                image, testing_flag=True)
             result_color_fix = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
             #print(combined.shape, prettyPrintCentriods.shape)
 
@@ -482,4 +477,4 @@ def testAllImages():
             cv2.imwrite("../test_images/processed_images/%(filename)s_prettyPrintCentriods.jpg" %
                         {"filename": img.replace(".jpg", "")}, prettyPrintCentriods)
 
-#testAllImages()
+testAllImages()
