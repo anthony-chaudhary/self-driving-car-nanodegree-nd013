@@ -66,7 +66,7 @@ def testDrawChessBoardCorners():
 
     from calibration import calibrate
     import matplotlib.image as mpimg
-    image = mpimg.imread('../camera_cal/calibration12.jpg')
+    image = mpimg.imread('../camera_cal/calibration3.jpg')
     ret, mtx, dist, rvecs, tvecs = calibrate.calibrate(objpoints, imgpoints)
 
     from distortionCorrection import undistort
@@ -86,9 +86,9 @@ def testDrawChessBoardCorners():
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
     f.tight_layout()
     ax1.imshow(image)
-    ax1.set_title('Original Image', fontsize=50)
+    ax1.set_title('Original Image', fontsize=30)
     ax2.imshow(chessBoard)
-    ax2.set_title('Chessboard corners', fontsize=50)
+    ax2.set_title('Undistorted image with chessboard corners', fontsize=30)
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
 
     plt.show()
@@ -438,6 +438,7 @@ def testAllImages():
     import cv2
     import os
     from processImage import process_image
+    import lineClass
 
     test_images = os.listdir("../test_images/")
 
@@ -446,15 +447,16 @@ def testAllImages():
     except FileNotFoundError:
         print("File not found")
 
+    x = lineClass.Line()
+
     for img in test_images:
         if '.jpg' in img:
             image = mpimg.imread("../test_images/%(filename)s" %
                                  {"filename": img})
 
-            result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods = process_image(
-                image, testing_flag=True)
+            result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods, white_lines, yellow_lines = x.process_image(image, testing_flag=True)
             result_color_fix = cv2.cvtColor(result, cv2.COLOR_BGR2RGB)
-            #print(combined.shape, prettyPrintCentriods.shape)
+            #print(combined.shape,s prettyPrintCentriods.shape)
 
             cv2.imwrite("../test_images/processed_images/%(filename)s_processed.jpg" %
                         {"filename": img.replace(".jpg", "")}, result_color_fix)
@@ -470,6 +472,12 @@ def testAllImages():
 
             cv2.imwrite("../test_images/processed_images/%(filename)s_hls_select.jpg" %
                         {"filename": img.replace(".jpg", "")}, hls_select * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_white_lines.jpg" %
+                        {"filename": img.replace(".jpg", "")}, white_lines * 255)
+
+            cv2.imwrite("../test_images/processed_images/%(filename)s_yellow_lines.jpg" %
+                        {"filename": img.replace(".jpg", "")}, yellow_lines * 255)
 
             cv2.imwrite("../test_images/processed_images/%(filename)s_combined.jpg" %
                         {"filename": img.replace(".jpg", "")}, combined * 255)
