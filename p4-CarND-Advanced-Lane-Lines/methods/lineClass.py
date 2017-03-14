@@ -1,14 +1,14 @@
-
-
-# TODO use this perhaps with smoothing function if needed
+import numpy as np
+from processImage import process_image
 
 # Define a class to receive the characteristics of each line detection
 class Line():
     def __init__(self):
         # was the line detected in the last iteration?
         self.detected = False
-        # x values of the last n fits of the line
-        self.recent_xfitted = []
+
+        self.distance_between_lines = []
+        
         # average x values of the fitted line over the last n iterations
         self.bestx = None
         # polynomial coefficients averaged over the last n iterations
@@ -25,3 +25,6 @@ class Line():
         self.allx = None
         # y values for detected line pixels
         self.ally = None
+
+    def process_image(self, image, testing_flag=False):
+        return process_image(self, image, testing_flag)

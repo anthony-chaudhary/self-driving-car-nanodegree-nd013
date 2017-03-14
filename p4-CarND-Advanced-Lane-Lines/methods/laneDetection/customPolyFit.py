@@ -1,7 +1,6 @@
 
 import numpy as np
 
-
 def poly(l_center_points, r_center_points, window_height):
     """
     Purpose:  Fit a poloynomial line using points found from
@@ -25,6 +24,5 @@ def poly(l_center_points, r_center_points, window_height):
     left_fitx = left_fit[0] * ploty**2 + left_fit[1] * ploty + left_fit[2]
 
     right_fit = np.polyfit(super_fun_y_points, r_center_points, 2)
-    right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2]
-
+    right_fitx = right_fit[0] * ploty**2 + right_fit[1] * ploty + right_fit[2] 
     return left_fitx, right_fitx, super_fun_y_points

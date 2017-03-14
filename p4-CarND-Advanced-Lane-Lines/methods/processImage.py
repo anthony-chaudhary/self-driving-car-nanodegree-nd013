@@ -4,7 +4,7 @@ from calibration import findPoints
 from calibration import calibrate
 from distortionCorrection import undistort
 from perspectiveTransform import perspectiveTransform
-from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect
+from colorGradientThreshold import absoluteSobelThreshold, directionThreshold, magnitudeThreshold, hlsSelect, white, yellow
 from laneDetection import regionOfInterest, centriods, customPolyFit
 from laneDetection import curveCalculations, offset
 from drawing import draw
@@ -37,16 +37,17 @@ dst = np.float32([[256, 128], [1024, 128],
 
 Minv = cv2.getPerspectiveTransform(dst, src)
 
-window_width = 30
-window_height = 130
-margin = 15
+window_width = 20
+window_height = 60
+margin = 20
 
 ploty = np.linspace(0, 720 - 1, 720)
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
 
-def process_image(image, testing_flag=False):
+
+def process_image(self, image, testing_flag=False):
 
     # Please see doc strings on each function
 
@@ -61,45 +62,62 @@ def process_image(image, testing_flag=False):
     ksize = 27
     gradx = absoluteSobelThreshold.abs_sobel_thresh(
         warpedImage, orient='x', sobel_kernel=ksize, thresh=(10, 120))
-    grady = absoluteSobelThreshold.abs_sobel_thresh(
-        warpedImage, orient='y', sobel_kernel=ksize, thresh=(10, 120))
+    
     mag_binary = magnitudeThreshold.mag_thresh(
         warpedImage, sobel_kernel=ksize, mag_thresh=(10, 120))
     dir_binary = directionThreshold.dir_threshold(
-        warpedImage, sobel_kernel=15, thresh=(0.70, 2))
+        warpedImage, sobel_kernel=15, thresh=(.8, 1.7))
+
+    white_lines = white.white(warpedImage, thresh=225)
+    white_lines = regionOfInterest.region_of_interest(white_lines)
+
+    yellow_lines = yellow.yellow(warpedImage, thresh=235)
+    yellow_lines = regionOfInterest.region_of_interest(yellow_lines)
 
     gradx = regionOfInterest.region_of_interest(gradx)
-    grady = regionOfInterest.region_of_interest(grady)
     mag_binary = regionOfInterest.region_of_interest(mag_binary)
     hls_select = regionOfInterest.region_of_interest(hls_select)
 
     combined = np.zeros_like(dir_binary)
-    combined[((gradx == 1) & (grady == 1)) | (
-        (mag_binary == 1) & (dir_binary == 0)) | (hls_select == 1)] = 1
+    combined[(gradx == 1) | (hls_select == 1) | (yellow_lines == 1) | (
+        (mag_binary == 1) & (dir_binary == 0)) | white_lines == 1] = 1
 
     window_centroids, l_center_points, r_center_points = centriods.find_window_centroids(
         combined, window_width, window_height, margin)
 
-    prettyPrintCentriods = centriods.prettyPrintCentriods(
-        combined, window_centroids, window_width, window_height)
-
     left_fitx, right_fitx, super_fun_y_points = customPolyFit.poly(
         l_center_points, r_center_points, window_height)
-
-    result = draw.drawLane(combined, left_fitx,
-                           right_fitx, ploty, image, Minv)
 
     average_curve = curveCalculations.radiusOfCurvature(
         ploty, l_center_points, r_center_points, super_fun_y_points)
 
     meters_offset = offset.calculateCarOffset(l_center_points, r_center_points)
 
+    # reject bad apples
+    distance_between_lines = abs(np.average(left_fitx)-np.average(right_fitx))
+
+    self.distance_between_lines.append(distance_between_lines)
+    average_distance_between_lines = np.average(self.distance_between_lines)
+
+    difference = abs(distance_between_lines - average_distance_between_lines)
+    print("dif:" , difference)
+
+    if difference <= 25:
+        self.current_fit = (left_fitx, right_fitx)
+
+    result = draw.drawLane(combined, self.current_fit[0],
+                       self.current_fit[1], ploty, image, Minv)
+
     cv2.putText(result, ("Radius of curvature: " + str(average_curve) +
                          "m"), (800, 50), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
     cv2.putText(result, ("Offset from centre: " + str(meters_offset) + "m"),
                 (800, 100), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
+
     if testing_flag is False:
         return result
     else:
-        return result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods
+        
+        prettyPrintCentriods = centriods.prettyPrintCentriods(combined, window_centroids, window_width, window_height)
+        
+        return result, gradx, mag_binary, dir_binary, hls_select, combined, prettyPrintCentriods, white_lines, yellow_lines
