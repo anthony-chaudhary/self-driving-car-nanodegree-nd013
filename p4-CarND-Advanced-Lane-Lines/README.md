@@ -14,7 +14,7 @@ The goals / steps of this project are the following:
 
 [//]: # (Image References)
 
-[Undistorted]: ./examples/undistort_output.png "Undistorted"
+[Undistorted]: ./output_images/figure_1.png "Undistorted"
 [Road Undistorted]: ./output_images/undistort_car_output.png "Road Undistorted"
 
 [Centriods]: ./output_images/test2_prettyPrintCentriods.jpg "Centriods"
@@ -171,7 +171,7 @@ left and right centriod points.
 `methods\processVideo.py`
 `methods\processImage.py\process_image()`
 
-Here's a [link to my video result](./output_video/attempt7_project_video.mp4)
+Here's a [link to my video result](./output_video/complete_project_video.mp4)
 
 ---
 
