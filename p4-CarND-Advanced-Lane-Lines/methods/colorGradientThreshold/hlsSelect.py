@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def hlsSelect(img, thresh=(120, 200)):
+def hlsSelect(img, thresh=(100, 170)):
     """
     Purpose: Apply a Hue, Light, and Saturation colour threshold
     to an image.
