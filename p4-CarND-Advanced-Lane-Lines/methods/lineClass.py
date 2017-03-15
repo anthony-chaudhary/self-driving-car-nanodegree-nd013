@@ -8,7 +8,10 @@ class Line():
         self.detected = False
 
         self.distance_between_lines = []
-        
+
+        self.recent_fit_x_left = []
+        self.recent_fit_x_right = []
+
         # average x values of the fitted line over the last n iterations
         self.bestx = None
         # polynomial coefficients averaged over the last n iterations

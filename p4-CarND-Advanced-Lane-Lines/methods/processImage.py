@@ -37,15 +37,15 @@ dst = np.float32([[256, 128], [1024, 128],
 
 Minv = cv2.getPerspectiveTransform(dst, src)
 
-window_width = 20
-window_height = 60
-margin = 20
+window_width = 10
+window_height = 92
+margin = 25
 
 ploty = np.linspace(0, 720 - 1, 720)
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
-
+differenceStore = []
 
 def process_image(self, image, testing_flag=False):
 
@@ -59,14 +59,14 @@ def process_image(self, image, testing_flag=False):
 
     hls_select = hlsSelect.hlsSelect(warpedImage)
 
-    ksize = 27
+    ksize = 17
     gradx = absoluteSobelThreshold.abs_sobel_thresh(
-        warpedImage, orient='x', sobel_kernel=ksize, thresh=(10, 120))
+        warpedImage, orient='x', sobel_kernel=ksize, thresh=(35, 115))
     
     mag_binary = magnitudeThreshold.mag_thresh(
-        warpedImage, sobel_kernel=ksize, mag_thresh=(10, 120))
+        warpedImage, sobel_kernel=ksize, mag_thresh=(35, 115))
     dir_binary = directionThreshold.dir_threshold(
-        warpedImage, sobel_kernel=15, thresh=(.8, 1.7))
+        warpedImage, sobel_kernel=7, thresh=(.8, 1.4))
 
     white_lines = white.white(warpedImage, thresh=225)
     white_lines = regionOfInterest.region_of_interest(white_lines)
@@ -97,16 +97,28 @@ def process_image(self, image, testing_flag=False):
     distance_between_lines = abs(np.average(left_fitx)-np.average(right_fitx))
 
     self.distance_between_lines.append(distance_between_lines)
-    average_distance_between_lines = np.average(self.distance_between_lines)
+    average_distance_between_lines = np.average(self.distance_between_lines[-60:])
 
-    difference = abs(distance_between_lines - average_distance_between_lines)
-    print("dif:" , difference)
+    difference_square = (abs(distance_between_lines - average_distance_between_lines))**2
+    print("dif squre:" , difference_square)
 
-    if difference <= 25:
-        self.current_fit = (left_fitx, right_fitx)
+    differenceStore.append(difference_square)
+    print("runnning average", np.average(difference_square))
 
-    result = draw.drawLane(combined, self.current_fit[0],
-                       self.current_fit[1], ploty, image, Minv)
+    # Only append the current frame if difference square is less
+    # than or equal to x pixels.
+
+    if difference_square <= 750:
+
+        self.recent_fit_x_left.append([left_fitx])
+        self.recent_fit_x_right.append([right_fitx])
+
+    # Use the average if last n frames as the fit.
+    best_x_left = np.average(self.recent_fit_x_left[-5:], axis=0)
+    best_x_right = np.average(self.recent_fit_x_right[-5:], axis=0)
+
+    result = draw.drawLane(combined, best_x_left,
+                       best_x_right, ploty, image, Minv)
 
     cv2.putText(result, ("Radius of curvature: " + str(average_curve) +
                          "m"), (800, 50), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
