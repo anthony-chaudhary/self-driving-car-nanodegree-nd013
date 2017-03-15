@@ -113,7 +113,7 @@ def process_image(self, image, testing_flag=False):
         self.recent_fit_x_left.append([left_fitx])
         self.recent_fit_x_right.append([right_fitx])
 
-    # Use the average if last n frames as the fit.
+    # Use the average of last n frames as the fit.
     best_x_left = np.average(self.recent_fit_x_left[-5:], axis=0)
     best_x_right = np.average(self.recent_fit_x_right[-5:], axis=0)
 
