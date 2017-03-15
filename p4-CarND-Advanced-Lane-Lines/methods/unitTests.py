@@ -1,6 +1,6 @@
 
 """
-Uncomment any function to run test
+Uncomment any function to run tests
 
 "Success" means program has run all lines without
 python level errors.

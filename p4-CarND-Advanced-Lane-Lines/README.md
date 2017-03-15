@@ -70,12 +70,11 @@ The methods are use in `methods/processImage.py`.
 
 The critical part is:
 ```
-combined[((gradx == 1) & (grady == 1)) | ((mag_binary == 1) & (dir_binary == 0)) | (hls_select == 1)] = 1
+combined[(gradx == 1) | (hls_select == 1) | (yellow_lines == 1) | (
+        (mag_binary == 1) & (dir_binary == 0)) | white_lines == 1] = 1
 ```
-Meaning, if gradient x and gradient y both think there should
-be a lane pixel, include it. 
-Or include the pixel when the magnitude and direction functions agree,
-or when HLS sees a pixel.
+For example if the magnitude and direction functions agree,
+or when HLS sees a pixel, add that pixel to the combined image.
 
 I tried a few combinations here and found this to be the best so far.
 
