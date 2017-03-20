@@ -13,5 +13,5 @@ class Detect():
         self.recent_fit_x_right = []
 
 
-    def process_image(self, image, testing_flag=False):
-        return process_image(self, image, testing_flag)
+    def process_image(self, image):
+        return process_image(self, image)

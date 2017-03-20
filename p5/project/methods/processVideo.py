@@ -14,4 +14,4 @@ x = detectClass.Detect()
 clip1 = VideoFileClip("../test_video.mp4")
 clip = clip1.fl_image(x.process_image)
 clip.write_videofile(
-    '../testing_videos/attempt1_march19.mp4', audio=False)
+    '../test_videos/attempt1_march19.mp4', audio=False)
