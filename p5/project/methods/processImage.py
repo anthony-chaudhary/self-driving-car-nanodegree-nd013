@@ -1,15 +1,14 @@
 from supportFunctions import *
-
-# Read in cars and notcars
-carImages = glob.glob('../vehicles/vehicles/KITTI_extracted/*.png')
-notCarImages = glob.glob('../non-vehicles/non-vehicles/GTI/*.png')
-cars = []
-notcars = []
-for image in carImages:
-    cars.append(image)
-for image in notCarImages:
-    notcars.append(image)
-print(notcars[10], cars[10])
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+import numpy as np
+import cv2
+import glob
+import time
+from sklearn.svm import LinearSVC
+from sklearn.preprocessing import StandardScaler
+from sklearn.model_selection import train_test_split
+import pickle
 
 color_space = 'HSV'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
 orient = 9   # HOG orientations
@@ -23,19 +22,14 @@ hist_feat = True  # Histogram features on or off
 hog_feat = True  # HOG features on or off
 y_start_stop = [450, None]  # Min and max in y to search in slide_window()
 
-car_features = extract_features(cars, color_space=color_space,
-                        spatial_size=spatial_size, hist_bins=hist_bins,
-                        orient=orient, pix_per_cell=pix_per_cell, 
-                        cell_per_block=cell_per_block, 
-                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-                        hist_feat=hist_feat, hog_feat=hog_feat)
 
-notcar_features = extract_features(notcars, color_space=color_space, 
-                        spatial_size=spatial_size, hist_bins=hist_bins, 
-                        orient=orient, pix_per_cell=pix_per_cell, 
-                        cell_per_block=cell_per_block, 
-                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-                        hist_feat=hist_feat, hog_feat=hog_feat)
+# bring in features
+with open('features.pickle', 'rb') as featuresPickle:
+	data = pickle.load(featuresPickle)
+car_features = data['car']
+notcar_features = data['notCar']
+print("Features loaded.")
+
 
 X = np.vstack((car_features, notcar_features)).astype(np.float64)                        
 X_scaler = StandardScaler().fit(X)  # Fit a per-column scaler
@@ -43,24 +37,6 @@ scaled_X = X_scaler.transform(X)  # Apply the scaler to X
 
 # Define the labels vector
 y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
-
-heat = np.zeros_like(image[:,:,0]).astype(np.float)
-heat = add_heat(heat,box_list)  # Add heat to each box in box list
-heat = apply_threshold(heat,1)  # Apply threshold to help remove false positives 
-heatmap = np.clip(heat, 0, 255)  # Visualize the heatmap when displaying   
-
-# Find final boxes from heatmap using label function
-labels = label(heatmap)
-draw_img = draw_labeled_bboxes(np.copy(image), labels)
-
-fig = plt.figure()
-plt.subplot(121)
-plt.imshow(draw_img)
-plt.title('Car Positions')
-plt.subplot(122)
-plt.imshow(heatmap, cmap='hot')
-plt.title('Heat Map')
-fig.tight_layout()
 
 # Split up data into randomized training and test sets
 rand_state = np.random.randint(0, 100)
@@ -71,11 +47,8 @@ print('Using:',orient,'orientations',pix_per_cell,
     'pixels per cell and', cell_per_block,'cells per block')
 print('Feature vector length:', len(X_train[0]))
 
-# Use a linear SVC 
-svc = LinearSVC()
-
-# Check the training time for the SVC
-t=time.time()
+svc = LinearSVC()  # Use a linear SVC 
+t=time.time()  # Check the training time for the SVC
 svc.fit(X_train, y_train)
 t2 = time.time()
 print(round(t2-t, 2), 'Seconds to train SVC...')

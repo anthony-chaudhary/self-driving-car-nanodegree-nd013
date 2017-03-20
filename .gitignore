@@ -121,3 +121,4 @@ p4-CarND-Advanced-Lane-Lines/submissions/p4-advanced-lane-finding-v2-.zip
 p4-CarND-Advanced-Lane-Lines/test_images/processed_images/Thumbs.db
 git-ignore/
 submissions/
+*.pickle
