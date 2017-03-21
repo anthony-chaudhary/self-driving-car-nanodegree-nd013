@@ -1,16 +1,16 @@
 from supportFunctions import *
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
 import numpy as np
-import cv2
-import glob
 import time
 from sklearn.svm import LinearSVC
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
 import pickle
+from scipy.ndimage.measurements import label
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 
-color_space = 'HSV'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+
+color_space = 'YCrCb'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
 orient = 9   # HOG orientations
 pix_per_cell = 8  # HOG pixels per cell
 cell_per_block = 2  # HOG cells per block
@@ -20,80 +20,65 @@ hist_bins = 32     # Number of histogram bins
 spatial_feat = True  # Spatial features on or off
 hist_feat = True  # Histogram features on or off
 hog_feat = True  # HOG features on or off
-y_start_stop = [450, None]  # Min and max in y to search in slide_window()
 
-# bring in features
+"""
+1. Get extracted iamge features
+"""
 with open('features.pickle', 'rb') as featuresPickle:
-	data = pickle.load(featuresPickle)
+    data = pickle.load(featuresPickle)
 car_features = data['car']
 notcar_features = data['notCar']
 print("Features loaded.")
 
+"""
+2. Train classifier
+"""
+
+X = np.vstack((car_features, notcar_features)).astype(np.float64)
+X_scaler = StandardScaler().fit(X)  # Fit a per-column scaler
+scaled_X = X_scaler.transform(X)  # Apply the scaler to X
+
+# Define the labels vector
+y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
+
+# Split up data into randomized training and test sets
+rand_state = np.random.randint(0, 100)
+X_train, X_test, y_train, y_test = train_test_split(
+    scaled_X, y, test_size=0.2, random_state=rand_state)
+
+print('Using:', orient, 'orientations', pix_per_cell,
+      'pixels per cell and', cell_per_block, 'cells per block')
+print('Feature vector length:', len(X_train[0]))
+
+svc = LinearSVC()  # Use a linear SVC
+t = time.time()  # Check the training time for the SVC
+svc.fit(X_train, y_train)
+t2 = time.time()
+print(round(t2 - t, 2), 'Seconds to train SVC...')
+# Check the score of the SVC
+print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
+# Check the prediction time for a single sample
+t = time.time()
+
+"""
+3. Process image
+"""
 
 def process_image(self, image):
 
-	X = np.vstack((car_features, notcar_features)).astype(np.float64)                        
-	X_scaler = StandardScaler().fit(X)  # Fit a per-column scaler
-	scaled_X = X_scaler.transform(X)  # Apply the scaler to X
+    ystart = 400
+    ystop = 656
+    scale = .8
 
-	# Define the labels vector
-	y = np.hstack((np.ones(len(car_features)), np.zeros(len(notcar_features))))
+    final_result, draw_img = find_cars(image, ystart, ystop, scale, svc, X_scaler,
+                                       orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
 
-	# Split up data into randomized training and test sets
-	rand_state = np.random.randint(0, 100)
-	X_train, X_test, y_train, y_test = train_test_split(
-	    scaled_X, y, test_size=0.2, random_state=rand_state)
+    # plt.imshow(final_result)
+    # plt.show()
 
-	print('Using:',orient,'orientations',pix_per_cell,
-	    'pixels per cell and', cell_per_block,'cells per block')
-	print('Feature vector length:', len(X_train[0]))
+    # plt.imshow(draw_img)
+    # plt.show()
 
-	svc = LinearSVC()  # Use a linear SVC 
-	t=time.time()  # Check the training time for the SVC
-	svc.fit(X_train, y_train)
-	t2 = time.time()
-	print(round(t2-t, 2), 'Seconds to train SVC...')
-	# Check the score of the SVC
-	print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
-	# Check the prediction time for a single sample
-	t=time.time()
-
-	# image = mpimg.imread('../test_images/test1.jpg')
-	draw_image = np.copy(image)
-
-	# Uncomment the following line if you extracted training
-	# data from .png images (scaled 0 to 1 by mpimg) and the
-	# image you are searching is a .jpg (scaled 0 to 255)
-	image = image.astype(np.float32)/255
-
-	windows = slide_window(image, x_start_stop=[None, None], y_start_stop=y_start_stop, 
-	                    xy_window=(64, 64), xy_overlap=(0.5, 0.5))
-
-	hot_windows = search_windows(image, windows, svc, X_scaler, color_space=color_space, 
-	                        spatial_size=spatial_size, hist_bins=hist_bins, 
-	                        orient=orient, pix_per_cell=pix_per_cell, 
-	                        cell_per_block=cell_per_block, 
-	                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-	                        hist_feat=hist_feat, hog_feat=hog_feat)                       
-
-	window_img = draw_boxes(draw_image, hot_windows, color=(0, 0, 255), thick=6)                    
-
-	#plt.imshow(window_img)
-	#plt.show()
-
-	ystart = 400
-	ystop = 656
-	scale = 1.5
-    
-	out_img = find_cars(image, ystart, ystop, scale, svc, X_scaler, orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
-
-	#plt.imshow(out_img)
-	#plt.show()
-
-	return window_img
+    return final_result
 
 
-#window_img = process_image()
-
-#plt.imshow(window_img)
-#plt.show()
