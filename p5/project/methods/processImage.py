@@ -15,11 +15,8 @@ orient = 9   # HOG orientations
 pix_per_cell = 8  # HOG pixels per cell
 cell_per_block = 2  # HOG cells per block
 hog_channel = "ALL"  # Can be 0, 1, 2, or "ALL"
-spatial_size = (16, 16)  # Spatial binning dimensions
+spatial_size = (32, 32)  # Spatial binning dimensions
 hist_bins = 32     # Number of histogram bins
-spatial_feat = True  # Spatial features on or off
-hist_feat = True  # Histogram features on or off
-hog_feat = True  # HOG features on or off
 
 """
 1. Get extracted iamge features
@@ -64,21 +61,37 @@ t = time.time()
 3. Process image
 """
 
+
 def process_image(self, image):
 
     ystart = 400
     ystop = 656
-    scale = .8
 
-    final_result, draw_img = find_cars(image, ystart, ystop, scale, svc, X_scaler,
-                                       orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+    scales = [.5, 1, 1.25, 1.5]
+    bounding_boxes = []
 
-    # plt.imshow(final_result)
-    # plt.show()
+    for scale in scales:
+        new_box = find_cars(image, ystart, ystop, scale, svc, X_scaler,
+                            orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
 
-    # plt.imshow(draw_img)
-    # plt.show()
+        bounding_boxes += new_box
+
+        print("Boxes detected for scale:", scale, "->", len(new_box))
+
+    # distance_between_last_box = abs(np.average(
+       # self.bounding_boxes[-1:]) - np.average(bounding_boxes))
+
+    # print(distance_between_last_box)
+
+    # if distance_between_last_box <= 100:
+
+    labels = combineBoundingBoxes(image, bounding_boxes, 5)
+    self.labels.append([labels])
+    # print(len(self.labels))
+
+    #best_labels = np.average(self.labels[-3:], axis=1)
+    # print(len(best_boxes))
+
+    final_result = draw_labeled_bboxes(np.copy(image), labels)
 
     return final_result
-
-

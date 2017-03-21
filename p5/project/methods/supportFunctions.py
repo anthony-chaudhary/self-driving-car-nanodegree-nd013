@@ -8,8 +8,6 @@ from scipy.ndimage.measurements import label
 def convert_color(img, conv='RGB2YCrCb'):
     if conv == 'RGB2YCrCb':
         return cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
-    if conv == 'BGR2YCrCb':
-        return cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
     if conv == 'RGB2LUV':
         return cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
 
@@ -222,6 +220,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
                              xpos:xpos + nblocks_per_window].ravel()
             hog_feat3 = hog3[ypos:ypos + nblocks_per_window,
                              xpos:xpos + nblocks_per_window].ravel()
+
             hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
 
             xleft = xpos * pix_per_cell
@@ -246,24 +245,38 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
                 xbox_left = np.int(xleft * scale)
                 ytop_draw = np.int(ytop * scale)
                 win_draw = np.int(window * scale)
+
+                """
+                # Earlier pipeline stage commented out for now
                 cv2.rectangle(draw_img, (xbox_left, ytop_draw + ystart),
                               (xbox_left + win_draw,
                                ytop_draw + win_draw + ystart),
                               (0, 0, 255), 6)
+                """
 
                 bounding_box_list.append([(xbox_left, ytop_draw + ystart),
                                           (xbox_left + win_draw,
                                            ytop_draw + win_draw + ystart)])
 
                 # print(len(bounding_box_list))
+    return bounding_box_list
 
-    heat = np.zeros_like(final_result[:, :, 0]).astype(np.float)
+
+def combineBoundingBoxes(img, bounding_box_list, thresholdValue=2):
+    """
+    Purpose: To combine the bounding boxes from find_cars, 
+    of different scales, and apply thresholds.
+    Inputs: image array, bounding box list
+    Outputs: final result
+    """
+
+    heat = np.zeros_like(img[:, :, 0]).astype(np.float)
 
     # Add heat to each box in box list
     heat = add_heat(heat, bounding_box_list)
 
     # Apply threshold to help remove false positives
-    heat = apply_threshold(heat, 3)
+    heat = apply_threshold(heat, thresholdValue)
 
     # Visualize the heatmap when displaying
     heatmap = np.clip(heat, 0, 255)
@@ -271,9 +284,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
 
-    final_result = draw_labeled_bboxes(np.copy(final_result), labels)
-
-    return final_result, draw_img
+    return labels
 
 
 def add_heat(heatmap, bbox_list):

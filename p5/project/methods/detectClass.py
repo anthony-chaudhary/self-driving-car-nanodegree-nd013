@@ -6,13 +6,9 @@ from processImage import process_image
 
 class Detect():
     def __init__(self):
-        # was the line detected in the last iteration?
+
         self.detected = False
-
-        self.distance_between_lines = []
-
-        self.recent_fit_x_left = []
-        self.recent_fit_x_right = []
+        self.labels = []
 
     def process_image(self, image):
         return process_image(self, image)
