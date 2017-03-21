@@ -10,11 +10,9 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
 
-color_space = 'YCrCb'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
 orient = 9   # HOG orientations
 pix_per_cell = 8  # HOG pixels per cell
 cell_per_block = 2  # HOG cells per block
-hog_channel = "ALL"  # Can be 0, 1, 2, or "ALL"
 spatial_size = (32, 32)  # Spatial binning dimensions
 hist_bins = 32     # Number of histogram bins
 
@@ -57,39 +55,50 @@ print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
 # Check the prediction time for a single sample
 t = time.time()
 
-"""
-3. Process image
-"""
-
 
 def process_image(self, image):
+    """
+    3. Process image
+    """
 
     ystart = 400
     ystop = 656
 
-    scales = [.5, 1, 1.25, 1.5]
+    scales = [.7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
     bounding_boxes = []
 
     for scale in scales:
-        new_box = find_cars(image, ystart, ystop, scale, svc, X_scaler,
-                            orient, pix_per_cell, cell_per_block, spatial_size, hist_bins)
+        new_box, draw_img = find_cars(image, ystart, ystop, scale, svc, X_scaler,
+                                      orient, pix_per_cell, cell_per_block, spatial_size,
+                                      hist_bins, testing_flag=True)
 
-        bounding_boxes += new_box
+        # plt.imshow(draw_img)
+        # plt.show()
 
-        print("Boxes detected for scale:", scale, "->", len(new_box))
+        length_of_new_box = len(new_box)
+        #print("Boxes detected for scale:", scale, "->", length_of_new_box)
+
+        if length_of_new_box <= 5:
+            bounding_boxes += new_box
 
     # distance_between_last_box = abs(np.average(
-       # self.bounding_boxes[-1:]) - np.average(bounding_boxes))
+    # self.bounding_boxes[-1:]) - np.average(bounding_boxes))
 
     # print(distance_between_last_box)
 
     # if distance_between_last_box <= 100:
 
-    labels = combineBoundingBoxes(image, bounding_boxes, 5)
+    threshold = int(len(bounding_boxes) / len(scales))
+    # print(threshold)
+    labels, heatmap = combineBoundingBoxes(image, bounding_boxes, threshold)
+
+    # plt.imshow(heatmap)
+    # plt.show()
+
     self.labels.append([labels])
     # print(len(self.labels))
 
-    #best_labels = np.average(self.labels[-3:], axis=1)
+    # best_labels = np.average(self.labels[-3:], axis=1)
     # print(len(best_boxes))
 
     final_result = draw_labeled_bboxes(np.copy(image), labels)

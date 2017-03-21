@@ -9,6 +9,7 @@ class Detect():
 
         self.detected = False
         self.labels = []
+        self.bounding_box_length = []
 
     def process_image(self, image):
         return process_image(self, image)

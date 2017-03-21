@@ -3,6 +3,7 @@ import numpy as np
 import cv2
 from skimage.feature import hog
 from scipy.ndimage.measurements import label
+from regionOfInterest import region_of_interest
 
 
 def convert_color(img, conv='RGB2YCrCb'):
@@ -67,10 +68,13 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
 # Define a single function that can extract features
 # using hog sub-sampling and make predictions
 def find_cars(img, ystart, ystop, scale, svc, X_scaler,
-              orient, pix_per_cell, cell_per_block, spatial_size, hist_bins):
+              orient, pix_per_cell, cell_per_block, spatial_size,
+              hist_bins, testing_flag=False):
 
     draw_img = np.copy(img)
     final_result = np.copy(img)
+
+    #img = region_of_interest(img)
 
     img = img.astype(np.float32) / 255
 
@@ -146,20 +150,24 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
                 ytop_draw = np.int(ytop * scale)
                 win_draw = np.int(window * scale)
 
-                """
-                # Earlier pipeline stage commented out for now
                 cv2.rectangle(draw_img, (xbox_left, ytop_draw + ystart),
                               (xbox_left + win_draw,
                                ytop_draw + win_draw + ystart),
                               (0, 0, 255), 6)
-                """
 
                 bounding_box_list.append([(xbox_left, ytop_draw + ystart),
                                           (xbox_left + win_draw,
                                            ytop_draw + win_draw + ystart)])
 
+            if len(bounding_box_list) >= 6:
+                break
+
                 # print(len(bounding_box_list))
-    return bounding_box_list
+
+    if testing_flag is True:
+        return bounding_box_list, draw_img
+    else:
+        return bounding_box_list
 
 
 def combineBoundingBoxes(img, bounding_box_list, thresholdValue=2):
@@ -184,7 +192,7 @@ def combineBoundingBoxes(img, bounding_box_list, thresholdValue=2):
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
 
-    return labels
+    return labels, heatmap
 
 
 def add_heat(heatmap, bbox_list):
