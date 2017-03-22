@@ -1,6 +1,6 @@
 # Behavioral Cloning
 
-###Abstract
+### Abstract
 Our goal is to clone human driving into a computer program using a simulator and deep neural networks. This project is part of the Udacity Self Driving Car Nano Degree program. The simulator and project guidelines are supplied by Udacity.
 
 [//]: # (Image References)
@@ -27,9 +27,9 @@ Our goal is to clone human driving into a computer program using a simulator and
 Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
 
 ---
-###Files Submitted & Code Quality
+### Files Submitted & Code Quality
 
-####1. Submission includes all required files and can be used to run the simulator in autonomous mode
+#### 1. Submission includes all required files and can be used to run the simulator in autonomous mode
 
 My project includes the following files:
 * model.py containing the script to create and train the model
@@ -37,19 +37,19 @@ My project includes the following files:
 * my_model.h5 containing a trained convolution neural network 
 * writeup_report.md or writeup_report.pdf summarizing the results
 
-####2. Submssion includes functional code
+#### 2. Submssion includes functional code
 Using the Udacity provided simulator and my drive.py file, the car can be driven autonomously around the track by executing 
 ```sh
 python drive.py my_model.h5
 ```
 
-####3. Submssion code is usable and readable
+#### 3. Submssion code is usable and readable
 
 The model.py file contains the code for training and saving the convolution neural network. The file shows the pipeline I used for training and validating the model, and it contains comments to explain how the code works.
 
-###Model Architecture and Training Strategy
+### Model Architecture and Training Strategy
 
-####1. An appropriate model architecture has been employed
+#### 1. An appropriate model architecture has been employed
 
 My model consists of a convolution neural network with 5x5 and 3x3 filter sizes and depths between 24 and 64. 
 
@@ -57,25 +57,25 @@ The model includes ELU layers to introduce nonlinearity, and the data is normali
 
 Please see Model architecture at line 411 for more.
 
-####2. Attempts to reduce overfitting in the model
+#### 2. Attempts to reduce overfitting in the model
 
 The model contains dropout layers in order to reduce overfitting.
 
 The model was trained and validated on different data sets to ensure that the model was not overfitting (code line 10-16). The model was tested by running it through the simulator and ensuring that the vehicle could stay on the track.
 
-####3. Model parameter tuning
+#### 3. Model parameter tuning
 
 The model used an adam optimizer with a setting of .0001.
 
-####4. Appropriate training data
+#### 4. Appropriate training data
 
 I decided to use the Udacity provided data set for the training data. I connected an xbox controller to the PC and got a small (~800 lines of data with 3 images per line) additional data set to use for validation. I used a combination of center lane driving, and programatically generated "recovery data" from the left and right camera angles.
 
 For details about how I created the training data, see the next section. 
 
-###Model Architecture and Training Strategy
+### Model Architecture and Training Strategy
 
-####1. Solution Design Approach and Final Model Architecture
+#### 1. Solution Design Approach and Final Model Architecture
 
 #First we use balance_data()
 This format allow for a significant amount of flexibility,    for example, it takes an arbitrary length of data   and returns a randomized line, following the settings   specified by the user. Additionally, the user  could fairly easily change "uniform" to another  numpy distribution to test how different distributions  affect results.  Further it creates a very flexible testing environment   In a sense, the data is "shuffled" after every batch    And, an arbitrary sample size can be selected.
@@ -150,7 +150,7 @@ Total params: 850,551
 _______________________
 
 
-####3. Creation of the Training Set & Training Process
+#### 3. Creation of the Training Set & Training Process
 
 Here is an example image of center lane driving:
 
