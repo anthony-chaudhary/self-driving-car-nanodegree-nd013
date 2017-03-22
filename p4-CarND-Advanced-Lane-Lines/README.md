@@ -35,11 +35,11 @@ The goals / steps of this project are the following:
 [video1]: ./project_video.mp4 "Video"
 
 ---
-###Writeup / README
+### Writeup / README
 
-###Camera Calibration
+### Camera Calibration
 
-####1. Camera matrix and distortion coefficients:
+#### 1. Camera matrix and distortion coefficients:
 
 `methods\calibration\calibrate.py`
 `methods\calibration\findPoints.py`
@@ -51,9 +51,9 @@ I then used the output `objpoints` and `imgpoints` to compute the camera calibra
 ![alt text][Undistorted]
 
 
-###Pipeline (single images)
+### Pipeline (single images)
 
-####1. Distortion-corrected image:
+#### 1. Distortion-corrected image:
 ![alt text][Road Undistorted]
 
 To spot the differences, look closely at the hood, and the white car.
@@ -81,25 +81,25 @@ I tried a few combinations here and found this to be the best so far.
 Binary, meaning that the pixel value is either on or off.
 
 Some example outputs:
-#####Magnitude
+##### Magnitude
 ![Binary magnitude][Binary magnitude]
 
-#####HLS (Hue, light, saturation)
+##### HLS (Hue, light, saturation)
 ![Binary hls][Binary hls]
 
-#####Gradient x
+##### Gradient x
 ![Binary gradient x][Binary gradient x]
 
-#####Direction
+##### Direction
 ![Binary direction][Binary direction]
 
 The direction one "looks" terrible, but surprisingly helps with performance.
 
-#####Combined
+##### Combined
 ![Binary combined][Binary combined]
 
 
-####3. Perspective transform and provide an example of a transformed image.
+#### 3. Perspective transform and provide an example of a transformed image.
 
 `methods\perspectiveTransform.py\perspectiveTransform()`
 
@@ -143,7 +143,7 @@ Here is an example of the centriod output.
 
 ![Centriods][Centriods]
 
-####5. Calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
+#### 5. Calculated the radius of curvature of the lane and the position of the vehicle with respect to center.
 
 `methods\laneDetection\curveCalculations\radiusOfCurvature()`
 `methods\laneDetection\offset\calculateCarOffset()`
@@ -163,9 +163,9 @@ left and right centriod points.
 
 ---
 
-###Pipeline (video)
+### Pipeline (video)
 
-####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
+#### 1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (wobbly lines are ok but no catastrophic failures that would cause the car to drive off the road!).
 
 `methods\processVideo.py`
 `methods\processImage.py\process_image()`
@@ -174,9 +174,9 @@ Here's a [link to my video result](./output_video/complete_project_video.mp4)
 
 ---
 
-###Discussion
+### Discussion
 
-####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
+#### 1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
 The pipeline is likely to fail in more challenging curves / conditions.
 I would like to consider:
