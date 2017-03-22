@@ -122,3 +122,4 @@ p4-CarND-Advanced-Lane-Lines/test_images/processed_images/Thumbs.db
 git-ignore/
 submissions/
 *.pickle
+test_videos/
