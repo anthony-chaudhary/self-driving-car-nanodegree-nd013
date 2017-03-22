@@ -1,7 +1,17 @@
-#**Behavioral Cloning** 
+# Behavioral Cloning
 
 ###Abstract
 Our goal is to clone human driving into a computer program using a simulator and deep neural networks. This project is part of the Udacity Self Driving Car Nano Degree program. The simulator and project guidelines are supplied by Udacity.
+
+[//]: # (Image References)
+[image1]: ./examples/center_2016_12_01_13_30_48_287.jpg
+[image2]: ./examples/left_2016_12_01_13_34_03_716.jpg
+[image3]: ./examples/right_2016_12_01_13_36_10_800.jpg
+[image4]: ./examples/gen-features4123.jpg
+[image5]: ./examples/gen-features4072.jpg
+[image6]: ./examples/loss-history8289.png
+[image7]: ./examples/unique-angles-histogram2815.png
+
 
 ---
 
@@ -14,7 +24,7 @@ Our goal is to clone human driving into a computer program using a simulator and
 * Summarize the results with a written report
 
 ## Rubric
-###Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
+Here I will consider the [rubric points](https://review.udacity.com/#!/rubrics/432/view) individually and describe how I addressed each point in my implementation.  
 
 ---
 ###Files Submitted & Code Quality
@@ -144,21 +154,21 @@ _______________________
 
 Here is an example image of center lane driving:
 
-[./examples/center_2016_12_01_13_30_48_287.jpg]
+![image1]
 
 I then used the left and right lanes to generate recovery data:
 
-[./examples/left_2016_12_01_13_34_03_716.jpg]
-[./examples/right_2016_12_01_13_36_10_800.jpg]
+![image2]
+![image3]
 
 Some examples of augmented images:
 
-[./examples/gen-features4123.jpg]
-[./examples/gen-features4072.jpg]
+![image4]
+![image5]
 
 Loss history example:
-[./examples/loss-history8289.png]
+![image6]
 
 
 Angle balancing example:
-[./examples/unique-angles-histogram2815.png]
+![image7]
