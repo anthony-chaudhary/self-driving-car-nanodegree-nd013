@@ -11,5 +11,5 @@ class Detect():
         self.labels = []
         self.bounding_box_length = []
 
-    def process_image(self, image):
-        return process_image(self, image)
+    def process_image(self, image, testing_flag=False):
+        return process_image(self, image, testing_flag)

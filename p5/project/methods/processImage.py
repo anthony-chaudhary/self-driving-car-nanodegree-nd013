@@ -56,7 +56,7 @@ print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
 t = time.time()
 
 
-def process_image(self, image):
+def process_image(self, image, testing_flag=False):
     """
     3. Process image
     """
@@ -64,43 +64,48 @@ def process_image(self, image):
     ystart = 400
     ystop = 656
 
-    scales = [.7, .8, .9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.5]
+    #scales = [.8, .9, 1, 1.1, 1.2]
+    scales = [.8, .9, .95, 1, 1.05, 1.1, 1.2]
     bounding_boxes = []
 
     for scale in scales:
-        new_box, draw_img = find_cars(image, ystart, ystop, scale, svc, X_scaler,
-                                      orient, pix_per_cell, cell_per_block, spatial_size,
-                                      hist_bins, testing_flag=True)
-
+        new_box = find_cars(image, ystart, ystop, scale, svc, X_scaler,
+                            orient, pix_per_cell, cell_per_block, spatial_size,
+                            hist_bins, testing_flag=True)
         # plt.imshow(draw_img)
         # plt.show()
-
         length_of_new_box = len(new_box)
-        #print("Boxes detected for scale:", scale, "->", length_of_new_box)
 
-        if length_of_new_box <= 5:
-            bounding_boxes += new_box
+        if testing_flag is True:
+            print("Boxes detected for scale:", scale, "->", length_of_new_box)
 
-    # distance_between_last_box = abs(np.average(
-    # self.bounding_boxes[-1:]) - np.average(bounding_boxes))
+        # Reject adding bounding box if to many detections
+        # if length_of_new_box <= 10:
+        bounding_boxes += new_box
 
-    # print(distance_between_last_box)
-
-    # if distance_between_last_box <= 100:
-
-    threshold = int(len(bounding_boxes) / len(scales))
+    #threshold = 5
+    threshold = 14
     # print(threshold)
+
+    all_detections_image = draw_boxes(np.copy(image), bounding_boxes)
+
     labels, heatmap = combineBoundingBoxes(image, bounding_boxes, threshold)
+    self.labels.append([labels])
+
+    # for label in self.labels:
+    # print(label[0])
+    #best_label_1 = np.average(label[0], axis=0)
 
     # plt.imshow(heatmap)
     # plt.show()
 
-    self.labels.append([labels])
     # print(len(self.labels))
-
     # best_labels = np.average(self.labels[-3:], axis=1)
     # print(len(best_boxes))
 
     final_result = draw_labeled_bboxes(np.copy(image), labels)
 
-    return final_result
+    if testing_flag is True:
+        return final_result, heatmap, all_detections_image
+    else:
+        return final_result

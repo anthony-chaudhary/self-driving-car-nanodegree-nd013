@@ -1,10 +1,12 @@
 from supportFunctions import *
 import time
 import glob
-import pickle 
+import pickle
 
-carImages = glob.glob('../../git-ignore/warm-up/vehicles/vehicles/KITTI_extracted/*.png')
-notCarImages = glob.glob('../../git-ignore/warm-up/non-vehicles/non-vehicles/GTI/*.png')
+carImages = glob.glob(
+    '../../git-ignore/warm-up/vehicles/vehicles/KITTI_extracted/*.png')
+notCarImages = glob.glob(
+    '../../git-ignore/warm-up/non-vehicles/non-vehicles/GTI/*.png')
 cars = []
 notcars = []
 for image in carImages:
@@ -13,7 +15,7 @@ for image in notCarImages:
     notcars.append(image)
 print(notcars[10], cars[10])
 
-color_space = 'HSV'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
+color_space = 'YCrCb'  # Can be RGB, HSV, LUV, HLS, YUV, YCrCb
 orient = 9   # HOG orientations
 pix_per_cell = 8  # HOG pixels per cell
 cell_per_block = 2  # HOG cells per block
@@ -27,26 +29,27 @@ hog_feat = True  # HOG features on or off
 t1 = time.time()
 
 car_features = extract_features(cars, color_space=color_space,
-                        spatial_size=spatial_size, hist_bins=hist_bins,
-                        orient=orient, pix_per_cell=pix_per_cell, 
-                        cell_per_block=cell_per_block, 
-                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-                        hist_feat=hist_feat, hog_feat=hog_feat)
+                                spatial_size=spatial_size, hist_bins=hist_bins,
+                                orient=orient, pix_per_cell=pix_per_cell,
+                                cell_per_block=cell_per_block,
+                                hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                hist_feat=hist_feat, hog_feat=hog_feat)
 
-notcar_features = extract_features(notcars, color_space=color_space, 
-                        spatial_size=spatial_size, hist_bins=hist_bins, 
-                        orient=orient, pix_per_cell=pix_per_cell, 
-                        cell_per_block=cell_per_block, 
-                        hog_channel=hog_channel, spatial_feat=spatial_feat, 
-                        hist_feat=hist_feat, hog_feat=hog_feat)
+notcar_features = extract_features(notcars, color_space=color_space,
+                                   spatial_size=spatial_size, hist_bins=hist_bins,
+                                   orient=orient, pix_per_cell=pix_per_cell,
+                                   cell_per_block=cell_per_block,
+                                   hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                   hist_feat=hist_feat, hog_feat=hog_feat)
 
 
-# Inspiration https://github.com/jatindhankhar/CarND-Vehicle-Detection/blob/master/Playground.ipynb
+# Inspiration
+# https://github.com/jatindhankhar/CarND-Vehicle-Detection/blob/master/Playground.ipynb
 t2 = time.time()
-print(round(t2-t1, 0), ' seconds to extract features')
+print(round(t2 - t1, 0), ' seconds to extract features')
 # Pickle to save time for testing
 
-features_dictionary = {'car' : car_features, 'notCar' :  notcar_features}
+features_dictionary = {'car': car_features, 'notCar': notcar_features}
 
 print("Saving features...")
 
