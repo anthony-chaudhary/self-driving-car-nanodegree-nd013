@@ -1,5 +1,5 @@
 
-# Vehicle Detection Project
+# Vehicle Detection Project  *Work in progress
 
 The goals / steps of this project are the following:
 
