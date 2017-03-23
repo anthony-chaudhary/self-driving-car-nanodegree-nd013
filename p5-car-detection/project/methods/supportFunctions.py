@@ -67,14 +67,14 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
 
 # Define a single function that can extract features
 # using hog sub-sampling and make predictions
-def find_cars(img, ystart, ystop, scale, svc, X_scaler,
+def find_cars(img, ystart, ystop, scale, classifier, X_scaler,
               orient, pix_per_cell, cell_per_block, spatial_size,
               hist_bins, testing_flag=False):
 
     draw_img = np.copy(img)
     final_result = np.copy(img)
 
-    #img = region_of_interest(img)
+    # img = region_of_interest(img)
 
     img = img.astype(np.float32) / 255
 
@@ -101,6 +101,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
     nblocks_per_window = (window // pix_per_cell) - 1
     cells_per_step = 2  # Instead of overlap, define how many cells to step
     nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
+    # print(nxblocks, nblocks_per_window)
     nysteps = (nyblocks - nblocks_per_window) // cells_per_step
 
     # Compute individual channel HOG features for the entire image
@@ -144,7 +145,9 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
             test_features = X_scaler.transform(
                 np.hstack((spatial_features,
                            hist_features, hog_features)).reshape(1, -1))
-            test_prediction = svc.predict(test_features)
+            test_prediction = classifier.predict(test_features)
+
+            # print("test prediction", test_prediction)
 
             if test_prediction == 1:
                 xbox_left = np.int(xleft * scale)
@@ -153,6 +156,10 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
 
                 # TODO Rather do this in search grid to save cycles
                 if xbox_left >= 700:
+
+                    # Reject boxes too small to be cars
+                    # print(ytop_draw)
+                    # if ytop_draw >= 40:
                     bounding_box_list.append([(xbox_left, ytop_draw + ystart),
                                               (xbox_left + win_draw,
                                                ytop_draw + win_draw + ystart)])
@@ -170,7 +177,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler,
 
 def combineBoundingBoxes(img, bounding_box_list, thresholdValue=2):
     """
-    Purpose: To combine the bounding boxes from find_cars, 
+    Purpose: To combine the bounding boxes from find_cars,
     of different scales, and apply thresholds.
     Inputs: image array, bounding box list
     Outputs: final result
@@ -187,10 +194,7 @@ def combineBoundingBoxes(img, bounding_box_list, thresholdValue=2):
     # Visualize the heatmap when displaying
     heatmap = np.clip(heat, 0, 255)
 
-    # Find final boxes from heatmap using label function
-    labels = label(heatmap)
-
-    return labels, heatmap
+    return heatmap
 
 
 def add_heat(heatmap, bbox_list):
@@ -216,15 +220,24 @@ def draw_labeled_bboxes(img, labels):
     for car_number in range(1, labels[1] + 1):
         # Find pixels with each car_number label value
         nonzero = (labels[0] == car_number).nonzero()
+
         # Identify x and y values of those pixels
         nonzeroy = np.array(nonzero[0])
         nonzerox = np.array(nonzero[1])
-        # Define a bounding box based on min/max x and y
-        bbox = ((np.min(nonzerox), np.min(nonzeroy)),
-                (np.max(nonzerox), np.max(nonzeroy)))
-        # Draw the box on the image
-        cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
-    # Return the image
+
+        differenceX = max(nonzerox) - min(nonzerox)
+        differenceY = max(nonzeroy) - min(nonzeroy)
+
+        # Threshold to only show big cars
+        if differenceX >= 70 and differenceY >= 50 and differenceX != 0:
+
+            # Define a bounding box based on min/max x and y
+            bbox = ((np.min(nonzerox), np.min(nonzeroy)),
+                    (np.max(nonzerox), np.max(nonzeroy)))
+
+            # Draw the box on the image
+            cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+
     return img
 
 

@@ -8,8 +8,7 @@ class Detect():
     def __init__(self):
 
         self.detected = False
-        self.labels = []
-        self.bounding_box_length = []
+        self.heatmaps = []
 
     def process_image(self, image, testing_flag=False):
         return process_image(self, image, testing_flag)

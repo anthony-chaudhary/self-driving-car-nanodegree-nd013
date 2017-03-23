@@ -9,6 +9,7 @@ from scipy.ndimage.measurements import label
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 
+from sklearn.neural_network import MLPClassifier
 
 orient = 9   # HOG orientations
 pix_per_cell = 8  # HOG pixels per cell
@@ -45,13 +46,19 @@ print('Using:', orient, 'orientations', pix_per_cell,
       'pixels per cell and', cell_per_block, 'cells per block')
 print('Feature vector length:', len(X_train[0]))
 
-svc = LinearSVC()  # Use a linear SVC
-t = time.time()  # Check the training time for the SVC
-svc.fit(X_train, y_train)
+# svc = LinearSVC()  # Use a linear SVC
+MLP = MLPClassifier()
+
+t = time.time()  # Check the training time
+
+#svc.fit(X_train, y_train)
+MLP.fit(X_train, y_train)
+
 t2 = time.time()
-print(round(t2 - t, 2), 'Seconds to train SVC...')
-# Check the score of the SVC
-print('Test Accuracy of SVC = ', round(svc.score(X_test, y_test), 4))
+print(round(t2 - t, 2), 'Seconds to train...')
+# print('Test Accuracy of = ', round(svc.score(X_test, y_test), 4))
+print('Test Accuracy of = ', round(MLP.score(X_test, y_test), 4))
+
 # Check the prediction time for a single sample
 t = time.time()
 
@@ -61,15 +68,16 @@ def process_image(self, image, testing_flag=False):
     3. Process image
     """
 
-    ystart = 400
-    ystop = 656
+    ystart = 390
+    ystop = 650
 
     #scales = [.8, .9, 1, 1.1, 1.2]
-    scales = [.8, .9, .95, 1, 1.05, 1.1, 1.2]
+    # scales = [.8, .9, .95, 1, 1.05, 1.1, 1.2]
+    scales = [.85, 1, 1.1, 1.2]
     bounding_boxes = []
 
     for scale in scales:
-        new_box = find_cars(image, ystart, ystop, scale, svc, X_scaler,
+        new_box = find_cars(image, ystart, ystop, scale, MLP, X_scaler,
                             orient, pix_per_cell, cell_per_block, spatial_size,
                             hist_bins, testing_flag=True)
         # plt.imshow(draw_img)
@@ -79,33 +87,34 @@ def process_image(self, image, testing_flag=False):
         if testing_flag is True:
             print("Boxes detected for scale:", scale, "->", length_of_new_box)
 
-        # Reject adding bounding box if to many detections
-        # if length_of_new_box <= 10:
         bounding_boxes += new_box
 
-    #threshold = 5
-    threshold = 14
+    # threshold = 5 # for SVC
+    threshold = 22
     # print(threshold)
 
     all_detections_image = draw_boxes(np.copy(image), bounding_boxes)
 
-    labels, heatmap = combineBoundingBoxes(image, bounding_boxes, threshold)
-    self.labels.append([labels])
+    heatmap = combineBoundingBoxes(image, bounding_boxes, threshold)
 
-    # for label in self.labels:
-    # print(label[0])
-    #best_label_1 = np.average(label[0], axis=0)
+    # Average heatmaps over last few frames.
+    if testing_flag is False:
+        self.heatmaps.append([heatmap])
+        sumOfHeatMaps = 0
+        for heat in self.heatmaps[-5:]:
+            sumOfHeatMaps += sum(heat)
+    else:
+        sumOfHeatMaps = heatmap
 
-    # plt.imshow(heatmap)
-    # plt.show()
-
-    # print(len(self.labels))
-    # best_labels = np.average(self.labels[-3:], axis=1)
-    # print(len(best_boxes))
+    # Find final boxes from heatmap using label function
+    labels = label(sumOfHeatMaps)
 
     final_result = draw_labeled_bboxes(np.copy(image), labels)
 
+    # plt.imshow(final_result)
+    # plt.show()
+
     if testing_flag is True:
-        return final_result, heatmap, all_detections_image
+        return final_result, sumOfHeatMaps, all_detections_image
     else:
         return final_result
