@@ -13,6 +13,7 @@ The goals / steps of this project are the following:
 [image4]: ./test_images/processed_images/test6_all_detections.jpg
 [image5]: ./test_images/processed_images/test6_heatmap.jpg
 [image7]: ./test_images/processed_images/test6_processed.jpg
+[heatmap]: ./figure_1-1.png
 [video1]: ./processed_project_video.mp4
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
@@ -36,7 +37,7 @@ Once the features were extracted I saved it to a pickle file to save computation
 
 #### 2. Explain how you settled on your final choice of HOG parameters.
 
-I tested HSV, LUV, HLS, YUV, and YCrCB. I got the best results, at the expense of computation speed, when I used YCrCB with all the colour channels. It was generally 99.99% on the test set. While I don't believe 99.99% is an accurate representation of the overall  effectiveness of it, it was the best within the scope of available options. Specifically, in unit tests with HSV and channel 2 (V), an SVC classifier got a test accuracy of 94%, and the S channel got 97%. All the colour channels got 99%. 
+I tested HSV, LUV, HLS, YUV, and YCrCB. I got the best results, at the expense of computation speed, when I used YCrCB with all the colour channels. It was generally 99.95% on the test set. While I don't believe 99.95% is an accurate representation of the overall  effectiveness of it, it was the best within the scope of available options. Specifically, in unit tests with HSV and channel 2 (V), an SVC classifier got a test accuracy of 94%, and the S channel got 97%. All the colour channels got 99%. 
 
 I tested a few different `orient` values. 9 seemed to perform well, and based on suggestions and readings from the course it was a logical choice.
 
@@ -86,9 +87,11 @@ From the positive detections I created a heatmap and then thresholded that map t
 
 Further, I created a class `detectClass.Detect()` that can store heatmaps accross vidoe frames. For ever 5 frames the heatmaps are combined. This yields a smoother result and increases confidence in detection.
 
+Here is an example heatmap:
+![heatmap][heatmap]
 
 Here's an example result showing the binary combined heatmap:
-![alt text][image5]
+![binary heatmap][image5]
 
 Further examples are available in the `/test-images` folder.
 
