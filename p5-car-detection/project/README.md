@@ -9,12 +9,9 @@ The goals / steps of this project are the following:
 * Estimate a bounding box for vehicles detected.
 
 [//]: # (Image References)
-[image1]: 
-[image2]: 
 [image3]: ./test_images/processed_images/test1_all_detections.jpg
 [image4]: ./test_images/processed_images/test6_all_detections.jpg
 [image5]: ./test_images/processed_images/test6_heatmap.jpg
-[image6]: 
 [image7]: ./test_images/processed_images/test6_processed.jpg
 [video1]: ./processed_project_video.mp4
 
