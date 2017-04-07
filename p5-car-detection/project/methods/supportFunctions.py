@@ -4,6 +4,7 @@ import cv2
 from skimage.feature import hog
 from scipy.ndimage.measurements import label
 from regionOfInterest import region_of_interest
+import matplotlib.pyplot as plt
 
 
 def convert_color(img, conv='RGB2YCrCb'):
@@ -155,7 +156,7 @@ def find_cars(img, ystart, ystop, scale, classifier, X_scaler,
                 win_draw = np.int(window * scale)
 
                 # TODO Rather do this in search grid to save cycles
-                if xbox_left >= 700:
+                if xbox_left >= 725:
 
                     # Reject boxes too small to be cars
                     # print(ytop_draw)
@@ -194,7 +195,7 @@ def combineBoundingBoxes(img, bounding_box_list, thresholdValue=2):
     # Visualize the heatmap when displaying
     heatmap = np.clip(heat, 0, 255)
 
-    return heatmap
+    return heatmap, heat
 
 
 def add_heat(heatmap, bbox_list):
@@ -229,7 +230,7 @@ def draw_labeled_bboxes(img, labels):
         differenceY = max(nonzeroy) - min(nonzeroy)
 
         # Threshold to only show big cars
-        if differenceX >= 70 and differenceY >= 50 and differenceX != 0:
+        if differenceX >= 75 and differenceY >= 55 and differenceX != 0:
 
             # Define a bounding box based on min/max x and y
             bbox = ((np.min(nonzerox), np.min(nonzeroy)),

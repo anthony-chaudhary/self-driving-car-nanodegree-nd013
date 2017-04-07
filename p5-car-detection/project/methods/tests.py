@@ -32,7 +32,7 @@ def testImages():
                         {"filename": img.replace(".jpg", "")}, result_color_fix)
 
             cv2.imwrite("../test_images/processed_images/%(filename)s_heatmap.jpg" %
-                        {"filename": img.replace(".jpg", "")}, heatmap * 255)
+                        {"filename": img.replace(".jpg", "")}, heatmap)
 
             cv2.imwrite("../test_images/processed_images/%(filename)s_all_detections.jpg" %
                         {"filename": img.replace(".jpg", "")}, all_detections_image)
