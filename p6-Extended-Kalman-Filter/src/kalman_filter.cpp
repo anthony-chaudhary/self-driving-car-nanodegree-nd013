@@ -54,28 +54,33 @@ void KalmanFilter::Update(const VectorXd &z) {
 }
 
 void KalmanFilter::UpdateEKF(const VectorXd &z) {
-  /**
-  TODO:
-    * update the state by using Extended Kalman Filter equations
- 
+  /*
+   * update the state by using Extended Kalman Filter equations
+   */
 
-  VectorXd Hx = VectorXd(3);
-  float ro = z(0);
-  float phi = z(1);
-  float px = ro * cos(phi);
-  float py = ro * sin(phi);
-  float v = z(2);
-  float vx = v * cos(phi);
-  float vy = v * sin(phi);
-  float first = sqrt(pow(px, 2) + pow(py, 2));
-  float second = atan(py/px);
-  float third = (px*vx + py*vy) / first;
-  Hx << first, second, third;
-  VectorXd x_state = VectorXd(4);
-  x_state << px, py, vx, vy;
-  */
+  // convert to polar
+  VectorXd new_polar(3);
+  new_polar[0] = sqrt(z[0] * z[0] + z[1] * z[1]);
+  new_polar[1] = atan2(z[1], z[0]);
+  double d = new_polar[0];
+  if (d < 1e-6) d = 1e-6;
 
-  Tools tools = Tools::Tools();
-  MatrixXd Hj = tools.CalculateJacobian(.x_);
-  VectorXd y = z - Hx;
+  new_polar[2] = (z[0] * z[2] + z[1] * z[3]) / d;
+  VectorXd z_pred = new_polar;
+  VectorXd y_ = z - z_pred;
+
+  // This part same as normal update
+  MatrixXd H_transpose = H_.transpose();
+  MatrixXd S_ = H_ * P_ * H_transpose + R_;
+
+  MatrixXd S_inverse = S_.inverse();
+
+  MatrixXd P_h_transpose = P_ * H_transpose;
+  MatrixXd K_ = P_h_transpose * S_inverse;
+
+  // new estimate
+  x_ = x_ + (K_ * y_);
+  long x_size = x_.size();
+  MatrixXd I_ = MatrixXd::Identity(x_size, x_size);
+  P_ = (I_ - K_ * H_) * P_;
 }

@@ -64,16 +64,16 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
 
 	// state parameters
 
-	float px = x_state(0);
-	float py = x_state(1);
+	double px = x_state(0);
+	double py = x_state(1);
 
-	float vx = x_state(2);
-	float vy = x_state(3);
+	double vx = x_state(2);
+	double vy = x_state(3);
 
 	// for efficiency terms pre-computed here
-	float c1 = (px * px) + (py * py);
-	float c2 = sqrt(1);
-	float c3 = (c1 * c2);
+	double c1 = (px * px) + (py * py);
+	double c2 = sqrt(1);
+	double c3 = (c1 * c2);
 	// end pre-compute
 
 	// division by zero check
