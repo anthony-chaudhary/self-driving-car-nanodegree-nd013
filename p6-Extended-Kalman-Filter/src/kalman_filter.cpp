@@ -38,11 +38,11 @@ void KalmanFilter::Update(const VectorXd &z) {
   VectorXd y_ = z - z_pred;  // new filter for error calculation
 
   MatrixXd H_transpose = H_.transpose();
-  MatrixXd S_ = H_ * P_ * H_transpose + R_;
+  MatrixXd P_h_transpose = P_ * H_transpose;
 
+  MatrixXd S_ = H_ * P_h_transpose + R_;
   MatrixXd S_inverse = S_.inverse();
 
-  MatrixXd P_h_transpose = P_ * H_transpose;
   MatrixXd K_ = P_h_transpose * S_inverse;
 
   // new estimate
@@ -60,12 +60,12 @@ void KalmanFilter::UpdateEKF(const VectorXd &z) {
 
   // convert to polar
   VectorXd new_polar(3);
-  new_polar[0] = sqrt(z[0] * z[0] + z[1] * z[1]);
-  new_polar[1] = atan2(z[1], z[0]);
+  new_polar[0] = sqrt(x_[0] * x_[0] + x_[1] * x_[1]);
+  new_polar[1] = atan2(x_[1], x_[0]);
   double d = new_polar[0];
   if (d < 1e-6) d = 1e-6;
+  new_polar[2] = (x_[0] * x_[2] + x_[1] * x_[3]) / d;
 
-  new_polar[2] = (z[0] * z[2] + z[1] * z[3]) / d;
   VectorXd z_pred = new_polar;
   VectorXd y_ = z - z_pred;
 
