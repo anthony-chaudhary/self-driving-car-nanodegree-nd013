@@ -72,16 +72,17 @@ MatrixXd Tools::CalculateJacobian(const VectorXd& x_state) {
 
 	// for efficiency terms pre-computed here
 	double c1 = (px * px) + (py * py);
-	double c2 = sqrt(1);
+
+	// division by zero check
+	if(fabs(c1) < 0.0001) {
+		cout << "CalculateJacobian () - Warning - division by Zero" << endl;
+		c1 = 1;
+	}
+
+	double c2 = sqrt(c1);
 	double c3 = (c1 * c2);
 	// end pre-compute
 
-	// division by zero check
-
-	if(fabs(c1) < 0.0001) {
-		cout << "CalculateJacobian () - Error - division by Zero" << endl;
-		return Hj;
-	}
 
 	Hj << (px / c2), (py / c2), 0 , 0,
 		  -(py / c1), (px / c1), 0 , 0,
