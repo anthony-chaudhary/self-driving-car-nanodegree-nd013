@@ -24,7 +24,7 @@ FusionEKF::FusionEKF() {
   H_laser_ << 1, 0, 0, 0,
               0, 1, 0, 0;
 
-  Hj_ = MatrixXd(3, 4);
+  // Hj_ = MatrixXd(3, 4);
 
   //measurement covariance matrix - laser
   R_laser_ << 0.0225, 0,
@@ -82,15 +82,15 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
        *  phi == angle between px and py
        *  rhodot == estimated distance from point p ?
        */
-      double rho = measurement_pack.raw_measurements_(0);
-      double phi = measurement_pack.raw_measurements_(1);
-      double rhodot = measurement_pack.raw_measurements_(2);
+      double rho = measurement_pack.raw_measurements_[0];
+      double phi = measurement_pack.raw_measurements_[1];
+      double rhodot = measurement_pack.raw_measurements_[2];
 
-      auto px = rho * cos(phi);
-      auto py = rho * sin(phi);
+      double px = rho * cos(phi);
+      double py = rho * sin(phi);
 
-      auto vx = rhodot * cos(phi);
-      auto vy = rhodot * sin(phi);
+      double vx = rhodot * cos(phi);
+      double vy = rhodot * sin(phi);
 
       ekf_.x_ << px, py, vx, vy;
     }
@@ -123,15 +123,15 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   double dt_4 = dt_3 * dt;
   // end precomputation of dt terms
 
-  // acceleration noise components for Q matrix.
-  int noise_ax = 9;
-  int noise_ay = 9;
-
   // 2) use Delta t to compute new EKF F, Q
 
   // modfy F matrix to integrate time
   ekf_.F_(0, 2) = dt;
   ekf_.F_(1, 3) = dt;
+
+  // acceleration noise components for Q matrix.
+  const int noise_ax = 9;
+  const int noise_ay = 9;
 
     // set covariance matrix Q
   ekf_.Q_ = MatrixXd(4, 4);
@@ -141,8 +141,10 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
               0,               dt_3/2*noise_ay, 0,               dt_2*noise_ay;
 
 
-  // Predict P
-  ekf_.Predict();
+  // If time difference is acceptable do prediction step. 
+  if (dt > .001) {
+    ekf_.Predict();
+  }
 
   /*****************************************************************************
    *  Update
@@ -157,13 +159,15 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     // Radar updates
     ekf_.R_ = R_radar_;
 
+    // State update with new measurements
+    ekf_.UpdateEKF(measurement_pack.raw_measurements_);
+
   } else {  // Laser updates
     ekf_.R_ = R_laser_;
     ekf_.H_ = H_laser_;
+    // State update with new measurements
+    ekf_.Update(measurement_pack.raw_measurements_);
   }
-
-  // State update with new measurements
-  ekf_.Update(measurement_pack.raw_measurements_);
 
   // print the output
   // cout << "x_ = " << ekf_.x_ << endl;
