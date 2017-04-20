@@ -13,6 +13,17 @@ Self-driving cars represent one of the most significant advances in modern histo
 
 # Project directory:
 
+# Term 2:
+
+## 01, [Extended Kalman filter](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p6-Extended-Kalman-Filter)
+The goal of this project is to build an extended Kalman filter and sensor fusion pipeline. We take Lidar and Radar measurements, run a Predict/Update cycle through a Kalman filter, and output the results.
+
+## 02, [Unscented Kalman filter](#)
+Project pending :)
+
+
+# Term 1:
+
 ## 01, [Find lane lines](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/CarND-LaneLines-P1-1)
 Step 1 in developing a self-driving car: automatically detect lane lines using an algorithm.
 
