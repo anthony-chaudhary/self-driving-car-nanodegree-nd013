@@ -14,7 +14,7 @@ using std::vector;
 FusionEKF::FusionEKF() {
 
   is_initialized_ = false;
-  long long previous_timestamp_ = 0;
+  previous_timestamp_ = 0;
 
   // initializing matrices
   R_laser_ = MatrixXd(2, 2);
@@ -97,7 +97,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
     }
 
     // functions valid for both laser and radar
-    long long previous_timestamp_ = measurement_pack.timestamp_;
+    previous_timestamp_ = measurement_pack.timestamp_;
     // done initializing, no need to predict or update
     is_initialized_ = true;
 
@@ -111,7 +111,7 @@ void FusionEKF::ProcessMeasurement(const MeasurementPackage &measurement_pack) {
   // 1) compute elapsed time where delta time (dt) == difference_time, expresssed in seconds
   double secondsDivisor = 1000000.0; // 1,000,000
   double dt = (measurement_pack.timestamp_ - previous_timestamp_) / secondsDivisor;
-  long long previous_timestamp_ = measurement_pack.timestamp_;
+  previous_timestamp_ = measurement_pack.timestamp_;
 
   // If time difference is acceptable do prediction step. 
   if (dt > .001) {
