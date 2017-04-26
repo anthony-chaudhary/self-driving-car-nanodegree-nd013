@@ -74,6 +74,24 @@ public:
   ///* the current NIS for laser
   double NIS_laser_;
 
+
+  VectorXd x_aug;
+
+  MatrixXd P_aug;
+
+  MatrixXd Xsig_aug;
+
+  MatrixXd Zsig;
+
+  VectorXd z_pred;
+
+  MatrixXd S;
+
+  VectorXd z;
+
+  MatrixXd Tc;
+
+
   /**
    * Constructor
    */
