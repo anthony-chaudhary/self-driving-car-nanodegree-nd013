@@ -128,3 +128,5 @@ p5-car-detection/project/methods/processImage.py
 .vs
 ignore-submissions
 p6-Extended-Kalman-Filter/kalman_tracker_windows/kalman_tracker_Data/output_log.txt
+p6-Extended-Kalman-Filter/data_out.txt
+p6-Extended-Kalman-Filter/data_in.txt
