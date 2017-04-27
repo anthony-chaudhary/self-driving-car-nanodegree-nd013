@@ -97,6 +97,8 @@ public:
 
   VectorXd z_laser;
 
+  long long previous_timestamp_;
+
 
   /**
    * Constructor

@@ -19,7 +19,7 @@ UKF::UKF() {
   use_radar_ = true;
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 2;
+  std_a_ = 2.;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = .5;
@@ -54,11 +54,13 @@ UKF::UKF() {
   // initial covariance matrix
   P_ = MatrixXd(n_x_, n_x_);
 
+  /*
   P_ <<     0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
           -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
            0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
           -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
           -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
+  */
 
   weights_ = VectorXd(2 * n_aug_ + 1);
   int sigma_p_length  = (n_aug_ * 2) + 1;
@@ -117,6 +119,8 @@ UKF::UKF() {
   // Create vector for incoming measurement
   z_laser = VectorXd(4);
 
+  previous_timestamp_ = 0;
+
 }
 
 UKF::~UKF() {}
@@ -129,13 +133,13 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   if (!is_initialized_) {
 
-    /*
+
     P_ <<     1,   0,   0,   0,   0,
               0,   1,   0,   0,   0,
               0,   0,   1,   0,   0,
               0,   0,   0,   1,   0,
               0,   0,   0,   0,   1;
-    */
+
 
     if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
       // Convert radar from polar to cartesian coordinates and initialize state.
@@ -170,6 +174,7 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
     // done initializing, no need to predict or update
     is_initialized_ = true;
+    previous_timestamp_ = meas_package.timestamp_;
     cout << "is_initialized_ complete." << endl;
 
     return;
@@ -181,19 +186,19 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   // 1) compute elapsed time where delta time (dt) == difference_time, expresssed in seconds
   
-  long long previous_timestamp_ = meas_package.timestamp_;
-
   double secondsDivisor = 1000000.0; // 1,000,000
   double delta_t = (meas_package.timestamp_ - previous_timestamp_) / secondsDivisor;
 
   previous_timestamp_ = meas_package.timestamp_;
 
+  cout << "delta_t: " << delta_t << endl;
+
   // If time difference is acceptable do prediction step. 
-  // if (delta_t > .001) {
+  if (delta_t > .001) {
 
     Prediction(delta_t);
 
-  // }
+  }
 
   /*****************************************************************************
    *  Update
@@ -250,6 +255,7 @@ void UKF::Prediction(double delta_t) {
 
   //create augmented mean state
   x_aug.head(5) = x_;
+
   x_aug(5) = 0;
   x_aug(6) = 0;
 
@@ -273,6 +279,7 @@ void UKF::Prediction(double delta_t) {
     Xsig_aug.col(i + 1 + n_aug_)  = x_aug - sqrt(lambda_ + n_aug_) * L.col(i); 
   }
 
+  cout << "Xsig_aug" << endl << Xsig_aug << endl;
   cout << "Generated augmented sigma points." << endl;
 
   /*******************************************************************************
@@ -408,7 +415,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   P_ = (I_ - K_ * H_laser_) * P_;
 
 
-  NIS_laser_ = 1;
+  NIS_laser_ = y_.transpose() * S_inverse * y_;
 
   cout << "Laser update complete." << endl;
 
@@ -542,7 +549,7 @@ void UKF::UpdateRadar(MeasurementPackage meas_package) {
 
   cout << "State and covariance matrix updated." << endl;
 
-  NIS_radar_ = 1.;
+  NIS_radar_ = z_diff.transpose() * S.inverse() * z_diff;
 
   cout << "Radar complete." << endl;
 
