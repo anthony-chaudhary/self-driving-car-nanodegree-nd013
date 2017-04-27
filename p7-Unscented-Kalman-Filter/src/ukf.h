@@ -91,6 +91,12 @@ public:
 
   MatrixXd Tc;
 
+  MatrixXd R_laser;
+
+  MatrixXd H_laser_;
+
+  VectorXd z_laser;
+
 
   /**
    * Constructor
