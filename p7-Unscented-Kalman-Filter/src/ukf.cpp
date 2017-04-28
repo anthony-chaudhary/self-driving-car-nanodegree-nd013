@@ -110,7 +110,7 @@ UKF::UKF() {
   // Add measurement noise to covariance matrix
   R_laser = MatrixXd(2, 2);
   R_laser <<  std_laspx_,  0,
-              std_laspy_,  0;
+              0,        std_laspy_;
 
   H_laser_ = MatrixXd(2, 5);
   H_laser_ << 1, 0, 0, 0, 0,
