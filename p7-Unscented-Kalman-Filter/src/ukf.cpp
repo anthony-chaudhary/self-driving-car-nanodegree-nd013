@@ -144,6 +144,9 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
       double px = rho * cos(phi);
       double py = rho * sin(phi);
 
+      if (px < 0.001) px = 0.001;
+      if (py < 0.001) py = 0.001;
+
       x_ <<   px, 
               py,
               0, 
@@ -154,11 +157,18 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
     else if (meas_package.sensor_type_ == MeasurementPackage::LASER) {
       // set state with initial location and zero velocity
       // where m[0] == point_x, and m[1] == point_y
-      x_ <<  meas_package.raw_measurements_[0], 
-             meas_package.raw_measurements_[1], 
-             0,
-             0,
-             0;
+
+      double px = meas_package.raw_measurements_[0];
+      double py = meas_package.raw_measurements_[1];
+
+      if (px < 0.001) px = 0.001;
+      if (py < 0.001) py = 0.001;
+      
+      x_ <<   px, 
+              py,
+              0, 
+              0, 
+              0;
     }
 
     // done initializing, no need to predict or update
