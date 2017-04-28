@@ -54,14 +54,6 @@ UKF::UKF() {
   // initial covariance matrix
   P_ = MatrixXd(n_x_, n_x_);
 
-  /*
-  P_ <<     0.0043,   -0.0013,    0.0030,   -0.0022,   -0.0020,
-          -0.0013,    0.0077,    0.0011,    0.0071,    0.0060,
-           0.0030,    0.0011,    0.0054,    0.0007,    0.0008,
-          -0.0022,    0.0071,    0.0007,    0.0098,    0.0100,
-          -0.0020,    0.0060,    0.0008,    0.0100,    0.0123;
-  */
-
   weights_ = VectorXd(2 * n_aug_ + 1);
   int sigma_p_length  = (n_aug_ * 2) + 1;
 
@@ -133,13 +125,11 @@ void UKF::ProcessMeasurement(MeasurementPackage meas_package) {
 
   if (!is_initialized_) {
 
-
     P_ <<     1,   0,   0,   0,   0,
               0,   1,   0,   0,   0,
               0,   0,   1,   0,   0,
               0,   0,   0,   1,   0,
               0,   0,   0,   0,   1;
-
 
     if (meas_package.sensor_type_ == MeasurementPackage::RADAR) {
       // Convert radar from polar to cartesian coordinates and initialize state.
