@@ -19,7 +19,7 @@ UKF::UKF() {
   use_radar_ = true;
 
   // Process noise standard deviation longitudinal acceleration in m/s^2
-  std_a_ = 1.2;
+  std_a_ = 2;
 
   // Process noise standard deviation yaw acceleration in rad/s^2
   std_yawdd_ = .7;
@@ -265,7 +265,7 @@ void UKF::Prediction(double delta_t) {
   P_aug(5, 5) = std_a_ * std_a_;
   P_aug(6, 6) = std_yawdd_ * std_yawdd_; 
 
-  cout << "Covariance matrix built." << endl;
+  // cout << "Covariance matrix built." << endl;
 
   //create square root matrix
   MatrixXd L = P_aug.llt().matrixL();
@@ -279,15 +279,15 @@ void UKF::Prediction(double delta_t) {
     Xsig_aug.col(i + 1 + n_aug_)  = x_aug - sqrt(lambda_ + n_aug_) * L.col(i); 
   }
 
-  cout << "Xsig_aug" << endl << Xsig_aug << endl;
-  cout << "Generated augmented sigma points." << endl;
+  // cout << "Xsig_aug" << endl << Xsig_aug << endl;
+  // cout << "Generated augmented sigma points." << endl;
 
   /*******************************************************************************
    * 2. Predict sigma points
    ******************************************************************************/
 
   int n_aug_limit = 2 * 7 + 1;
-  cout << "n_aug_limit" << endl << n_aug_limit << ", " << n_aug_ << endl;
+  // cout << "n_aug_limit" << endl << n_aug_limit << ", " << n_aug_ << endl;
 
   for (int i =0;  i < n_aug_limit;  i++)
   {
@@ -345,7 +345,7 @@ void UKF::Prediction(double delta_t) {
 
   }
 
-  cout << "Sigma points prediction complete." << endl << Xsig_pred_ << endl;
+  // cout << "Sigma points prediction complete." << endl << Xsig_pred_ << endl;
 
   /*******************************************************************************
    * 3. Predict mean and covariance
@@ -373,8 +373,8 @@ void UKF::Prediction(double delta_t) {
     P_ += weights_(i) * x_diff * x_diff.transpose();
   }
 
-  cout << "P_" << endl << P_ << endl;
-  cout << "Prediction complete." << endl;
+  // cout << "P_" << endl << P_ << endl;
+  // cout << "Prediction complete." << endl;
 
 }
 
@@ -389,7 +389,7 @@ void UKF::UpdateLidar(MeasurementPackage meas_package) {
   /**   TODO: Calculate the lidar NIS.
   */
 
-  cout << "Starting laser update." << endl;
+  // cout << "Starting laser update." << endl;
 
   /*******************************************************************************
    * Laser Update
