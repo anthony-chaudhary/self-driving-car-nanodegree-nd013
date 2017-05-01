@@ -61,5 +61,44 @@ int main() {
 		 *  Coding quiz 1: just print out map infos and measurement package:     *
     ******************************************************************************/
 
+	cout << "Landmarks" << endl;
+
+	for(int i = 0;		i < map_1d.landmark_list.size();	i++){
+
+		cout << "ID"  << map_1d.landmark_list[i].id_i << "\t"
+			 << "X: " << map_1d.landmark_list[i].x_f  << endl;
+	}
+
+	cout << endl << ".-|-.-|-.-|-.-|-.-|-.-|-.-|-.-|-.-|-.-|-." << endl << endl;
+
+
+	cout << "Measurement package:" << endl;
+
+	int observation_size = 0;
+
+	for(int i = 0;		i < measurement_pack_list.size();		i++){
+
+		cout << "Step " << i << "\t" << "-> " << measurement_pack_list[i].control_s_.delta_x_f
+			 << " meters in driving direction " << endl;
+
+		// Observations
+		observation_size = measurement_pack_list[i].observation_s_.distance_f.size();
+
+		if (observation_size < 1){
+			cout << "No Observations. Observations size: " << observation_size << endl << endl;
+		}
+		else {
+
+			cout << "Valid Observations " << observation_size << endl;
+
+			for(int j = 0;		j < observation_size;		j++){
+
+				cout << "Distance to landmark: " 
+				<< measurement_pack_list[i].observation_s_.distance_f[j]
+				<< " meters" << endl << endl;
+			}
+		}
+	}
+
 	return 0;
 }
