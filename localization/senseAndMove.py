@@ -14,6 +14,8 @@ def sense(p, Z):
     for i in range(len(p)):
         hit = (Z == world[i])
         q.append(p[i] * (hit * pHit + (1 - hit) * pMiss))
+
+    # normalization
     s = sum(q)
     for i in range(len(q)):
         q[i] = q[i] / s
@@ -23,7 +25,9 @@ def sense(p, Z):
 # Where U == movement
 def move(p, U):
     q = []
-    for i in range(len(p)):
+    len_p = len(p)
+    print(len_p)
+    for i in range(len_p):
         s = pExact * p[(i - U) % len(p)]
         s = s + pOvershoot * p[(i - U - 1) % len(p)]
         s = s + pUndershoot * p[(i - U + 1) % len(p)]
