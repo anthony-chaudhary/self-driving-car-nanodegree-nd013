@@ -39,6 +39,12 @@ private:
     //Add members!//
     ////////////////
 
+	float control_std;
+
+    std::vector<float> bel_x_init;
+
+    bool is_initialized_;
+
 };
 
 #endif /* BAYESIANFILTER_H_ */
