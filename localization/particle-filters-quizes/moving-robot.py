@@ -166,8 +166,8 @@ def naive_normalize_and_choice(N, weights, p):
     # print(sum(normalized_list))
 
     for i in range(N):
-        x = weighted_choice(normalized_list)
-        p_new.append(p[x])
+        index = weighted_choice(normalized_list)
+        p_new.append(p[index])
 
     return p_new
 
