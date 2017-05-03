@@ -10,9 +10,12 @@
 
 #include <sstream>
 #include <fstream>
+
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
 #include "map.h"
+
 
 /*
  * Struct representing one position/control measurement.
