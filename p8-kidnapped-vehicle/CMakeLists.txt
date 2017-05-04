@@ -6,7 +6,7 @@ project(PARTICLE_FILTER)
 # Use C++11
 set(SRCS src/main.cpp src/particle_filter.cpp)
 set_source_files_properties(${SRCS})
-add_definitions(-Wall)
+add_definitions(-W3)
 
 # Create the executable
 add_executable(particle_filter ${SRCS})
