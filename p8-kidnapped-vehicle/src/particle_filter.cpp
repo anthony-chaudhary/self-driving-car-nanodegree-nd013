@@ -18,7 +18,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	// Initialize all particles to first position (based on estimates of 
 	//   x, y, theta and their uncertainties from GPS)
 
-	num_particles = 10;
+	num_particles = 100;
 
 	random_device rd;
     mt19937 gen(rd());
@@ -53,6 +53,8 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 	for (int i = 0; 	i < num_particles; 		i++) {
 		
 		const double theta = particles[i].theta ;
+
+		// cout << "Prediction step:" << i << endl;
 
 		// Add measurements
 
@@ -123,12 +125,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	// 1. Convert particle observations to global frame
 	for (int i = 0; 	i < num_particles; 		i++) {
 
+		// cout << "Update step: \t" << i << endl;
+
 		for (int k = 0; 	k < observations_size;		k++) {
 
 			// Pre-compute terms
 			const double particle_theta = particles[i].theta ;
-			const double cos_theta = cos(particle_theta) ;
-			const double sin_theta = sin(particle_theta) ; 
+			const double cos_theta 		= cos(particle_theta) ;
+			const double sin_theta 		= sin(particle_theta) ; 
 			
 			// Create placeholder for transformations
 			LandmarkObs single_transformed_observation ;
@@ -143,13 +147,14 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 											   (observations[k].x * sin_theta) + 
 											   (observations[k].y * cos_theta) ;
 
-			transformed_observations[i] = single_transformed_observation ;
+			transformed_observations[k] = single_transformed_observation ;
 		}
 
 		// cout << "Transformation complete" << endl;
 
 		// 2. Only keep landmarks that are within range
 		vector<LandmarkObs> reasonable_landmarks ;
+		reasonable_landmarks.resize(num_particles) ;  // for debugging
 
 		int landmark_limit = map_landmarks.landmark_list.size() ;
 
@@ -189,15 +194,15 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		// cout << part_1 << endl;
 
 
-		double weight_placeholder = 1.0 ;
+		double weight_placeholder = particles[i].weight ;
 		// if reasonable landmarks have been found
 		if (reasonable_landmarks.size() > 0) {
 
 			for (unsigned int zzz = 0; 	zzz < observations.size();	zzz++) {
 
-				const double x 				= transformed_observations[zzz].x ;
+				const double x 				= observations[zzz].x ;
 				const double u_x 			= reasonable_landmarks[zzz].x ;
-				const double y 			  	= transformed_observations[zzz].y ;
+				const double y 			  	= observations[zzz].y ;
 				const double u_y 		  	= reasonable_landmarks[zzz].y ;
 				const double x_ux_squared 	= (x - u_x) * (x - u_x) ;
 				const double y_uy_squared 	= (y - u_y) * (y - u_y) ;
@@ -214,7 +219,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 
 				weight_placeholder *= part_1 * exp_part_2 ;
 
-				cout << weight_placeholder << endl;
+				// cout << weight_placeholder << endl;
 				// cout << "x " << x << "\tu_x " << u_x << "\ty " << y << "\tu_y " <<  u_y << endl ;
 			}
 		}
@@ -239,15 +244,22 @@ void ParticleFilter::resample() {
     mt19937 gen(rd());
 	discrete_distribution<> d(weights.begin(), weights.end());
 
-	// cout << "discrete_distribution complete" << endl;
+	// cout << "Number of particles \t" << num_particles << endl;
+
+	vector<Particle> resampled_particles ;
+	resampled_particles.resize(num_particles) ;
 
     for(int n = 0;	n < num_particles;	n++) {
 
+
+    	// cout << "Resample step: \t" << n << endl;
+
     	int new_index = d(gen);
     	// cout << new_index << endl ;
-        particles[n] = particles[ new_index ];
+        resampled_particles[n] = particles[new_index];
     }
     // cout << "Resample complete" << endl;
+    particles = resampled_particles ;
 }
 
 void ParticleFilter::write(std::string filename) {
