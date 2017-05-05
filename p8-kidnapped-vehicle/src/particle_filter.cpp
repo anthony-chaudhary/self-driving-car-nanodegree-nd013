@@ -1,8 +1,3 @@
-/*
- *  5/3/17
- *  Student author: Anthony Sarkis
- */
-
 #include <random>
 #include <algorithm>
 #include <iostream>
@@ -137,7 +132,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		}
 
 		// cout << transformed_observations.size() << endl;
-
 		// cout << "Transformation complete" << endl;
 
 		// 2. Only keep landmarks that are within range
@@ -178,11 +172,18 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 																  landmark_position_x,
 																  landmark_position_y }) ;
 				}
+			}
+
 		}
 
-			// cout << "reasonable_landmarks" << "\t" << reasonable_landmarks[ggg].x 
-			// << "," << reasonable_landmarks[ggg].y  << endl ;
+		/*
+		for (int running_out_of_ints = 0;	running_out_of_ints << reasonable_landmarks.size(); running_out_of_ints++){
+
+			cout << "reasonable_landmarks" << "\t" << reasonable_landmarks[running_out_of_ints].x 
+			<< "," << running_out_of_ints[ggg].y  << endl ;
+
 		}
+		*/
 
 		// 3. Associate each predicted measurement to it's closest point
 		// cout << reasonable_landmarks.size() << "\t" << transformed_observations.size() << endl;
@@ -277,6 +278,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		weights[i] 			= weight_placeholder ;
 		particles[i].weight = weight_placeholder ;
 		// cout << "Weight update complete" << endl;
+
+		cout << particles[i].x << "," << particles[i].y << ","  << particles[i].theta << endl;
 	}
 }
 
