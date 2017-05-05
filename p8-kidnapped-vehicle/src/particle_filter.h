@@ -11,6 +11,8 @@
 
 #include "helper_functions.h"
 
+using namespace std;
+
 struct Particle {
 
 	int id;
@@ -58,6 +60,14 @@ public:
 	 */
 	void init(double x, double y, double theta, double std[]);
 
+
+	vector<LandmarkObs> transformed_observations( Particle	  particle_, 
+												  vector<LandmarkObs> observations) ;
+
+	vector<LandmarkObs> ParticleFilter::reasonable_landmarks( vector<LandmarkObs>   transformed_observations,
+																   Map		map_landmarks,
+															  	   double sensor_range) ;
+
 	/**
 	 * prediction Predicts the state for the next time step
 	 *   using the process model.
@@ -75,7 +85,7 @@ public:
 	 * @param predicted Vector of predicted landmark observations
 	 * @param observations Vector of landmark observations
 	 */
-	void dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations);
+	vector<int> dataAssociation(std::vector<LandmarkObs> predicted, std::vector<LandmarkObs>& observations);
 	
 	/**
 	 * updateWeights Updates the weights for each particle based on the likelihood of the 

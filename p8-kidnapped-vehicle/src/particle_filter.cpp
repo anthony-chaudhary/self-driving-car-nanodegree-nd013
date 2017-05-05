@@ -87,141 +87,159 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
 }
 
 
-// IGNORE
-void ParticleFilter::dataAssociation( std::vector<LandmarkObs> reasonable_landmarks, 
-									  std::vector<LandmarkObs>& transformed_observations) {
+vector<int> ParticleFilter::dataAssociation( std::vector<LandmarkObs> reasonable_landmarks, 
+									        std::vector<LandmarkObs>& transformed_observations) {
+
+	// 3. Associate each predicted measurement to it's closest point
+	// cout << reasonable_landmarks.size() << "\t" << transformed_observations.size() << endl;
+	// loop through all observations
+	vector<int> transformed_observations_landmark_ids ;
+	transformed_observations_landmark_ids.resize(transformed_observations.size()) ;
+
+	for (unsigned int i = 0;	i < transformed_observations.size();	 i++){
+
+		double associate_difference ;
+		double threshold = 9999999.0 ;
+		int current_id ;
+
+		// for each observation, compare it to all reasonable landmarks
+		for (unsigned int j = 0;	j < reasonable_landmarks.size();	 j++){
+
+		// Find the predicted measurement that is closest to each observed measurement
+		associate_difference = dist( reasonable_landmarks[j].x,    reasonable_landmarks[j].y, 
+						   transformed_observations[i].x, transformed_observations[i].y) ;
+			
+			// check if threshold is less than previous
+			if (associate_difference < threshold) {
+				
+				// if it is, then we have the current lowest ID
+				current_id = reasonable_landmarks[j].id ;
+
+				// assign the threshold to the current difference
+				// so that next loop if the difference is higher it won't update the id.
+				threshold = associate_difference ;
+			}
+		}
+		// assign the id of the correct particle from the observation to a list	
+		transformed_observations_landmark_ids[i] = current_id ;
+		// cout << current_id << endl ;
+		// cout << reasonable_particles_landmark_ids[i] << endl ;
+	}
+
+	// cout << "difference \t" << difference << endl ;
+	// cout << "reasonable_particles_landmark_ids size: \t" << reasonable_particles_landmark_ids.size()
+	// << "\t" << reasonable_landmarks.size() << endl;
+	// cout << "dataAssociation complete, reasonable landmarks size: " << reasonable_landmarks.size() << endl;
+
+	return transformed_observations_landmark_ids ;
+}
+
+
+vector<LandmarkObs> ParticleFilter::transformed_observations( Particle				particle_, 
+															  vector<LandmarkObs>   observations){
+
+	// Create placeholder for transformations
+	vector<LandmarkObs> transformed_observations ;
+	LandmarkObs 		single_transformed_observation ;
+
+	const int observations_size = observations.size() ;
+	transformed_observations.resize(observations_size) ;
+
+	for (int k = 0; 	k < observations_size;		k++) {
+
+		// Pre-compute terms
+		const double particle_theta = particle_.theta ;
+		const double cos_theta 		= cos(particle_theta) ;
+		const double sin_theta 		= sin(particle_theta) ; 
+
+		// p_x + (obs_x * cos(theta)) - (obs_y * sin(theta))
+		single_transformed_observation.x =  particle_.x    + 
+										   (observations[k].x * cos_theta) - 
+										   (observations[k].y * sin_theta) ;
+
+		// p_y + (obs_x * sin(theta)) + (obs_y * cos(theta))					   
+		single_transformed_observation.y =  particle_.y    +
+										   (observations[k].x * sin_theta) + 
+										   (observations[k].y * cos_theta) ;
+
+		transformed_observations[k] = single_transformed_observation ;
+	}
+
+	return transformed_observations ;
 
 }
 
+
+vector<LandmarkObs> ParticleFilter::reasonable_landmarks( vector<LandmarkObs>   transformed_observations,
+																   		Map		map_landmarks,
+															  	   	 double 	sensor_range){
+	vector<LandmarkObs> reasonable_landmarks ;
+	int landmark_limit = map_landmarks.landmark_list.size() ;
+	reasonable_landmarks.resize(transformed_observations.size()) ;  // for debugging
+
+	vector<int> reasonable_particles_landmark_ids ;
+	reasonable_particles_landmark_ids.resize(transformed_observations.size()) ;
+
+	for (unsigned int i = 0;	i < transformed_observations.size();	 i++) {
+		
+		for (int q = 0;		q < landmark_limit;		q++){
+
+			const double landmark_position_x = map_landmarks.landmark_list[q].x_f ;
+			const double landmark_position_y = map_landmarks.landmark_list[q].y_f ;
+			
+			// 2.1 Compare particle distance to landmark distance
+			double difference = dist( landmark_position_x, landmark_position_y,
+						   	          transformed_observations[i].x, 
+						   	          transformed_observations[i].y );
+			// cout << difference << "  " << sensor_range << endl; 
+			// Only look at landmarks within sensor range
+			if (difference <= sensor_range) {
+
+				const int landmark_id = map_landmarks.landmark_list[q].id_i ;
+				// cout << "landmark_id\t" << landmark_id << endl ;
+
+				reasonable_landmarks.push_back( LandmarkObs { landmark_id, 
+															  landmark_position_x,
+															  landmark_position_y }) ;
+			}
+		}
+	}
+
+	return reasonable_landmarks ;
+
+	/*
+	for (int running_out_of_ints = 0;	running_out_of_ints << reasonable_landmarks.size(); running_out_of_ints++){
+
+		cout << "reasonable_landmarks" << "\t" << reasonable_landmarks[running_out_of_ints].x 
+		<< "," << running_out_of_ints[ggg].y  << endl ;
+
+	}
+	*/
+}
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
 		std::vector<LandmarkObs> observations, Map map_landmarks) {
 
 	// cout << "Starting update weights" << endl;
-
-	vector<LandmarkObs> transformed_observations ;
-	const int observations_size = observations.size() ;
-	transformed_observations.resize(observations_size) ;
-
-	// 1. Convert particle observations to global frame
 	for (int i = 0; 	i < num_particles; 		i++) {
 
-		// cout << "Update step: \t" << i << endl;
-
-		// Create placeholder for transformations
-		LandmarkObs single_transformed_observation ;
-
-		for (int k = 0; 	k < observations_size;		k++) {
-
-			// Pre-compute terms
-			const double particle_theta = particles[i].theta ;
-			const double cos_theta 		= cos(particle_theta) ;
-			const double sin_theta 		= sin(particle_theta) ; 
-
-			// p_x + (obs_x * cos(theta)) - (obs_y * sin(theta))
-			single_transformed_observation.x =  particles[i].x    + 
-											   (observations[k].x * cos_theta) - 
-											   (observations[k].y * sin_theta) ;
-
-			// p_y + (obs_x * sin(theta)) + (obs_y * cos(theta))					   
-			single_transformed_observation.y =  particles[i].y    +
-											   (observations[k].x * sin_theta) + 
-											   (observations[k].y * cos_theta) ;
-
-			transformed_observations[k] = single_transformed_observation ;
-		}
-
+		// key note, all of this is for 1 particle, ie a particle easily may have 5+ obersvations
+		
+		// 1. Convert particle observations to global frame
+		vector<LandmarkObs> transformed_observations ;
+		transformed_observations = ParticleFilter::transformed_observations(particles[i], observations) ;
 		// cout << transformed_observations.size() << endl;
-		// cout << "Transformation complete" << endl;
 
 		// 2. Only keep landmarks that are within range
-
-		// reasonable_landmarks 	= landmarks obverserved by particles,
-		// 						      that are also within sensor range
-		// transformed_observations = observations transformed 
-		//                            into global reference frame
-
+		// reasonable_landmarks 	= landmarks obverserved by particles, that are also within sensor range
 		vector<LandmarkObs> reasonable_landmarks ;
-		int landmark_limit = map_landmarks.landmark_list.size() ;
-		reasonable_landmarks.resize(transformed_observations.size()) ;  // for debugging
-
-		vector<int> reasonable_particles_landmark_ids ;
-		reasonable_particles_landmark_ids.resize(transformed_observations.size()) ;
-
-
-		for (unsigned int ggg = 0;	ggg < transformed_observations.size();	 ggg++) {
-			
-			for (int q = 0;		q < landmark_limit;		q++){
-
-				const double landmark_position_x = map_landmarks.landmark_list[q].x_f ;
-				const double landmark_position_y = map_landmarks.landmark_list[q].y_f ;
-				
-				// 2.1 Compare particle distance to landmark distance
-				double difference = dist( landmark_position_x, landmark_position_y,
-							   	          transformed_observations[ggg].x, 
-							   	          transformed_observations[ggg].y );
-				// cout << difference << "  " << sensor_range << endl; 
-
-				// 2.2 Only look at landmarks within sensor range
-				if (difference <= sensor_range) {
-
-					const int landmark_id = map_landmarks.landmark_list[q].id_i ;
-					// cout << "landmark_id\t" << landmark_id << endl ;
-
-					reasonable_landmarks.push_back( LandmarkObs { landmark_id, 
-																  landmark_position_x,
-																  landmark_position_y }) ;
-				}
-			}
-
-		}
-
-		/*
-		for (int running_out_of_ints = 0;	running_out_of_ints << reasonable_landmarks.size(); running_out_of_ints++){
-
-			cout << "reasonable_landmarks" << "\t" << reasonable_landmarks[running_out_of_ints].x 
-			<< "," << running_out_of_ints[ggg].y  << endl ;
-
-		}
-		*/
-
-		// 3. Associate each predicted measurement to it's closest point
-		// cout << reasonable_landmarks.size() << "\t" << transformed_observations.size() << endl;
-		// loop through all observations
-		for (unsigned int jjj = 0;	jjj < transformed_observations.size();	 jjj++){
-
-			double associate_difference ;
-			double threshold = 9999999.0 ;
-			int current_id ;
-
-			// for each observation, compare it to all reasonable landmarks
-			for (unsigned int qqt = 0;	qqt < reasonable_landmarks.size();	 qqt++){
-
-			// Find the predicted measurement that is closest to each observed measurement
-			associate_difference = dist( reasonable_landmarks[qqt].x,    reasonable_landmarks[qqt].y, 
-							   transformed_observations[jjj].x, transformed_observations[jjj].y) ;
-				
-				// check if threshold is less than previous
-				if (associate_difference < threshold) {
-					
-					// if it is, then we have the current lowest ID
-					current_id = reasonable_landmarks[qqt].id ;
-
-					// assign the threshold to the current difference
-					// so that next loop if the difference is higher it won't update the id.
-					threshold = associate_difference ;
-				}
-			}
-			// assign the id of the correct particle from the observation to a list	
-			reasonable_particles_landmark_ids[jjj] = current_id ;
-			// cout << current_id << endl ;
-			// cout << reasonable_particles_landmark_ids[jjj] << endl ;
-		}
-
-		// cout << "difference \t" << difference << endl ;
-		// cout << "reasonable_particles_landmark_ids size: \t" << reasonable_particles_landmark_ids.size()
-		// << "\t" << reasonable_landmarks.size() << endl;
-		// cout << "dataAssociation complete, reasonable landmarks size: " << reasonable_landmarks.size() << endl;
+		reasonable_landmarks = ParticleFilter::reasonable_landmarks(transformed_observations,
+																		map_landmarks, 
+																		sensor_range) ;
+		// 3. Create list of landmark ids associated with observations
+		vector<int> transformed_observations_landmark_ids;
+		transformed_observations_landmark_ids = ParticleFilter::dataAssociation(reasonable_landmarks, 
+																   				transformed_observations) ;
 
 		// 4. Weight distribution
 		// Pre compute
@@ -238,13 +256,12 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		if (reasonable_landmarks.size() > 0) {
 
 			// cout << reasonable_particles_landmark_ids.size() << "\t" << transformed_observations.size() << endl;
+			for (unsigned int j = 0; 	j < transformed_observations.size();	j++) {
 
-			for (unsigned int zzz = 0; 	zzz < transformed_observations.size();	zzz++) {
-
-				const int r_p_index			= reasonable_particles_landmark_ids[zzz] ;
-				const double x 				= transformed_observations[zzz].x ;
+				const int r_p_index			= transformed_observations_landmark_ids[j] ;
+				const double x 				= transformed_observations[j].x ;
 				const double u_x 			= reasonable_landmarks[r_p_index].x ;
-				const double y 			  	= transformed_observations[zzz].y ;
+				const double y 			  	= transformed_observations[j].y ;
 				const double u_y 		  	= reasonable_landmarks[r_p_index].y ;
 				const double x_ux_squared 	= (x - u_x) * (x - u_x) ;
 				const double y_uy_squared 	= (y - u_y) * (y - u_y) ;
@@ -252,10 +269,8 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 									 		  y_uy_squared / (standard_y_squared_2) ;
 				double exp_part_2			= exp(-part_2) ;
 
-
 				// cout << "transformed_observations\t" << x << "," << y <<
 				// "\t reasonable_landmarks\t" << u_x << "," << u_y << endl ;
-
 				// cout << weight_placeholder << endl;
 				// cout << part_2 << "\t" << exp_part_2 << endl;
 
@@ -264,7 +279,6 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 				}
 
 				weight_placeholder *= part_1 * exp_part_2 ;
-
 				// cout << weight_placeholder << endl;
 				// cout << "x " << x << "\tu_x " << u_x << "\ty " << y << "\tu_y " <<  u_y << endl ;
 			}

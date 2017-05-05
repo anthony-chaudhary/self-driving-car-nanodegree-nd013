@@ -16,6 +16,8 @@
 #include <vector>
 #include "map.h"
 
+using namespace std;
+
 
 /*
  * Struct representing one position/control measurement.
@@ -45,6 +47,8 @@ struct LandmarkObs {
 	double x;			// Local (vehicle coordinates) x position of landmark observation [m]
 	double y;			// Local (vehicle coordinates) y position of landmark observation [m]
 };
+
+
 
 /*
  * Computes the Euclidean distance between two 2D points.
