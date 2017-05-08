@@ -110,9 +110,18 @@ def run(robot, tau, n=100, speed=1.0):
     y_trajectory = []
     # TODO: your code here
 
-    steering = -tau * crosstrack_error
     for i in range(n):
-        robot.move()
+
+        # target x axis, where y = 0, therefore y is the cross track error
+        crosstrack_error = robot.y
+        steering = -tau * crosstrack_error
+
+        robot.move(steering, speed)
+
+        x_trajectory.append(robot.x)
+        y_trajectory.append(robot.y)
+
+        print(robot, steering)
 
     return x_trajectory, y_trajectory
 
@@ -121,4 +130,6 @@ n = len(x_trajectory)
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
 ax1.plot(x_trajectory, y_trajectory, 'g', label='P controller')
+
 ax1.plot(x_trajectory, np.zeros(n), 'r', label='reference')
+plt.show()
