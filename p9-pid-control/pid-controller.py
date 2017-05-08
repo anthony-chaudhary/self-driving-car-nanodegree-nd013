@@ -107,17 +107,44 @@ class Robot(object):
 robot = Robot()
 robot.set(0, 1, 0)
 
+# steering = -tau_p * CTE - tau_d * diff_CTE - tau_i * int_CTE
+
 
 def run(robot, tau_p, tau_d, tau_i, n=100, speed=1.0):
     x_trajectory = []
     y_trajectory = []
-    # TODO: your code here
+    int_CTE = []
+
+    robot.set_steering_drift(10 / 180 * 3.14)
+
+    previous_cross_track_error = 0
+
+    for i in range(n):
+
+        CTE = robot.y
+        int_CTE.append(CTE)
+
+        diff_CTE = robot.y - previous_cross_track_error
+        int_CTE_sum = sum(int_CTE)
+        # print(int_CTE_sum)
+
+        steering = -tau_p * CTE - tau_d * diff_CTE - tau_i * int_CTE_sum
+
+        previous_cross_track_error = CTE
+
+        robot.move(steering, speed)
+        x_trajectory.append(robot.x)
+        y_trajectory.append(robot.y)
+
+        print(robot, steering)
+
     return x_trajectory, y_trajectory
 
 
-x_trajectory, y_trajectory = run(robot, 0.2, 3.0, 0.004)
+x_trajectory, y_trajectory = run(robot, 0.2, 3.0, 0.006)
 n = len(x_trajectory)
 
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
 ax1.plot(x_trajectory, y_trajectory, 'g', label='PID controller')
 ax1.plot(x_trajectory, np.zeros(n), 'r', label='reference')
+plt.show()
