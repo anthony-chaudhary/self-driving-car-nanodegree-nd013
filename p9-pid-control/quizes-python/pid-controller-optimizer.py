@@ -173,6 +173,8 @@ def twiddle(tol=0.001):
                 tune_parameters[i] *= 1.1
                 best_err = current_error
 
+                # exit, since increase worked, -> loop
+
             else:
                 parameters[i] -= 2 * tune_parameters[i]
 
@@ -180,6 +182,7 @@ def twiddle(tol=0.001):
                 x_trajectory, y_trajectory, current_error = run(
                     robot, parameters)
 
+                # check if decrease worked, if not, do a "reset" on the parameters
                 if current_error < best_err:
                     best_err = current_error
                     tune_parameters[i] *= 1.1
