@@ -19,9 +19,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ------------------------------------------------
-# 
+#
 # this is the Robot class
 #
+
 
 class Robot(object):
     def __init__(self, length=20.0):
@@ -32,8 +33,8 @@ class Robot(object):
         self.y = 0.0
         self.orientation = 0.0
         self.length = length
-        self.steering_noise = 0.0
-        self.distance_noise = 0.0
+        self.steering_noise = 0.1
+        self.distance_noise = 0.1
         self.steering_drift = 0.0
 
     def set(self, x, y, orientation):
@@ -59,7 +60,8 @@ class Robot(object):
         """
         self.steering_drift = drift
 
-    def move(self, steering, distance, tolerance=0.001, max_steering_angle=np.pi / 4.0):
+    def move(self, steering, distance, tolerance=0.001,
+             max_steering_angle=np.pi / 4.0):
         """
         steering = front wheel steering angle, limited by max_steering_angle
         distance = total distance driven, most be non-negative
@@ -116,7 +118,7 @@ def make_robot():
 
 
 # NOTE: We use params instead of tau_p, tau_d, tau_i
-def run(robot, params, n=100, speed=1.0):
+def run(robot, params, n=100, speed=1.2):
     x_trajectory = []
     y_trajectory = []
     err = 0
@@ -138,15 +140,61 @@ def run(robot, params, n=100, speed=1.0):
 
 
 # Make this tolerance bigger if you are timing out!
-def twiddle(tol=0.2): 
-    # Don't forget to call `make_robot` before you call `run`!
-    p = [0, 0, 0]
-    dp = [1, 1, 1]
+def twiddle(tol=0.001):
+
+    parameters = [0, 0, 0]
+    tune_parameters = [1, 1, 1]
+
     robot = make_robot()
-    x_trajectory, y_trajectory, best_err = run(robot, p)
-    # TODO: twiddle loop here
-    
-    return p, best_err
+
+    # first run to get best_error init
+    sum_tune_parameters = sum(tune_parameters)
+    best_err = 99999999
+    x_trajectory, y_trajectory, best_err = run(robot, parameters)
+    # Final twiddle error = 9.586648821207443e-05
+    print(parameters, tune_parameters)
+
+    counter = 0
+
+    while sum_tune_parameters > tol:
+
+        print("Iteration {}, best error = {}, parameters = {}" .format(
+            counter, best_err, parameters))
+
+        for i in range(len(parameters)):
+
+            parameters[i] += tune_parameters[i]
+            robot = make_robot()  # to rest starting point
+
+            x_trajectory, y_trajectory, current_error = run(robot, parameters)
+
+            # print(sum_parameters)
+            if current_error < best_err:  # last update worked, keep going
+                tune_parameters[i] *= 1.1
+                best_err = current_error
+
+            else:
+                parameters[i] -= 2 * tune_parameters[i]
+
+                robot = make_robot()  # to rest starting point
+                x_trajectory, y_trajectory, current_error = run(
+                    robot, parameters)
+
+                if current_error < best_err:
+                    best_err = current_error
+                    tune_parameters[i] *= 1.1
+                else:
+                    parameters[i] += tune_parameters[i]
+                    tune_parameters[i] *= .95
+
+            # tune_parameters[i] *= 0.99
+            sum_tune_parameters = sum(tune_parameters)
+            #print(parameters, tune_parameters, current_error)
+
+        counter += 1
+
+    print(counter)
+    return parameters, best_err
 
 
 params, err = twiddle()
@@ -158,3 +206,4 @@ n = len(x_trajectory)
 fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
 ax1.plot(x_trajectory, y_trajectory, 'g', label='Twiddle PID controller')
 ax1.plot(x_trajectory, np.zeros(n), 'r', label='reference')
+plt.show()
