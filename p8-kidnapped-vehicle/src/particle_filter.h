@@ -64,7 +64,7 @@ public:
 	vector<LandmarkObs> transformed_observations( Particle	  particle_, 
 												  vector<LandmarkObs> observations) ;
 
-	vector<LandmarkObs> ParticleFilter::reasonable_landmarks( vector<LandmarkObs>   transformed_observations,
+	vector<LandmarkObs> reasonable_landmarks( vector<LandmarkObs>   transformed_observations,
 																   Map		map_landmarks,
 															  	   double sensor_range) ;
 

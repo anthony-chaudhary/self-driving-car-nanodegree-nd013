@@ -142,6 +142,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
         // check if threshold is less than previous
         if (difference < threshold) {
           // if it is, then we have the current lowest ID
+          // map data is not zero indexed
           current_id = map_landmarks.landmark_list[q].id_i -1 ;
           // assign the threshold to the current difference so that next loop if the difference is higher it won't update the id.
           threshold = difference ;
