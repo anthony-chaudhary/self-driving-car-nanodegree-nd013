@@ -61,13 +61,79 @@ int main()
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          double steer_value;
           /*
           * TODO: Calcuate steering value here, remember the steering value is
           * [-1, 1].
           * NOTE: Feel free to play around with the throttle and speed. Maybe use
           * another PID controller to control the speed!
           */
+
+          /*****************************************************************************
+           *  Setup
+           ****************************************************************************/
+
+          // TODO REVIEW THIS NONE RIGHT YET
+          double steer_value  = 0 ;
+          double err          = 0 ;
+          double prev_cte     = 0 ;
+          double int_cte      = 0 ;
+          double diff_cte     = 0 ;
+
+          /*****************************************************************************
+           *  Twiddle
+           ****************************************************************************/
+
+          vector<double> parameters       << 5.0, 5.0, 0.1 ;
+          vector<double> tune_parameters  << 1.0, 1.0, 1.0 ;
+          // double sum_tune_parameters      = tune_parameters.sum() ;
+
+          double best_err  = 99999999.0 ;
+          int counter      = 0 ;
+
+          cout << "Iteration" << counter <<
+          "\t best error" <<  best_err <<
+          "\t parameters" << parameters << endl ;
+
+          for (int i = 0;   i < 3;   i++ ):
+
+              parameters[i] += tune_parameters[i] ;
+              current_error = 1 ;    // TODO set current error UpdateError(cte)?
+
+              // print(sum_parameters)
+              if (current_error < best_err) {  //last update worked, keep going
+                  
+                  tune_parameters[i] *= 1.1 ;
+                  best_err = current_error ;
+                  // exit, since increase worked, -> loop
+              }
+              else {
+                  
+                  parameters[i] -= 2 * tune_parameters[i] ;
+                  current_error = 1 ;    // TODO set current error
+
+                  // check if decrease worked, if not, do a "reset" on the parameters
+                  if (current_error < best_err){
+                      
+                      best_err = current_error ;
+                      tune_parameters[i] *= 1.1 ;
+                  }
+                  else {
+                      parameters[i] += tune_parameters[i] ;
+                      tune_parameters[i] *= .95 ;
+                  }
+              }
+
+          /*****************************************************************************
+           *  Proportional integral derivative controller
+           ****************************************************************************/
+            
+          diff_cte = cte - prev_cte ;
+          int_cte += cte ;
+
+          steer_value = -parameters[0] * cte - parameters[1] * diff_cte - parameters[2] * int_cte ;
+          
+          prev_cte = cte ;    // update CTE for next loop
+          counter += 1 ;
 
 
           // DEBUG
