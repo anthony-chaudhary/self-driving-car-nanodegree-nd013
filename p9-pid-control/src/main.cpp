@@ -1,8 +1,14 @@
-#include <uWS/uWS.h>
+#include "uweb-sockets-src/uWS.h"
 #include <iostream>
 #include "json.hpp"
 #include "PID.h"
+
+#include <numeric>
+#include <algorithm>
+
+#define _USE_MATH_DEFINES
 #include <math.h>
+
 
 // for convenience
 using json = nlohmann::json;
@@ -101,7 +107,7 @@ int main()
   });
 
   int port = 4567;
-  if (h.listen(port))
+  if (h.listen("0.0.0.0", port))
   {
     std::cout << "Listening to port " << port << std::endl;
   }
