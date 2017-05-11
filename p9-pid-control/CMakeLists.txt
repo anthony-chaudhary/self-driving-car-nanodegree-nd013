@@ -1,7 +1,7 @@
 project(PID)
 cmake_minimum_required (VERSION 3.5)
 add_definitions(-std=c++11)
-set(CXX_FLAGS "-Wall")
+set(CXX_FLAGS "-W1")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     
@@ -23,3 +23,8 @@ add_executable(pid ${sources})
 if(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     target_link_libraries(pid z ssl uv uWS)
 endif(NOT ${CMAKE_SYSTEM_NAME} MATCHES "Windows")
+
+add_custom_command(TARGET pid
+				   POST_BUILD COMMAND ${CMAKE_COMMAND}
+				   -E copy $<TARGET_FILE:pid>
+				   C:/Users/Anthony/Documents/GitHub/self-driving-car-nanodegree-nd013/p9-pid-control/build)

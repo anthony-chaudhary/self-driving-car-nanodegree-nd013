@@ -83,45 +83,49 @@ int main()
            *  Twiddle
            ****************************************************************************/
 
-          vector<double> parameters       << 5.0, 5.0, 0.1 ;
-          vector<double> tune_parameters  << 1.0, 1.0, 1.0 ;
+		  vector<double> parameters;
+		  parameters = { 5.0, 5.0, 0.1 } ;
+
+		  vector<double> tune_parameters;
+		  tune_parameters = { 1.0, 1.0, 1.0 };
           // double sum_tune_parameters      = tune_parameters.sum() ;
 
-          double best_err  = 99999999.0 ;
+		  double best_err = 99999999.0;
           int counter      = 0 ;
 
           cout << "Iteration" << counter <<
           "\t best error" <<  best_err <<
-          "\t parameters" << parameters << endl ;
+          "\t parameters" << parameters[0] << parameters[1] << parameters[2] << endl ;
 
-          for (int i = 0;   i < 3;   i++ ):
+		  for (int i = 0; i < 3; i++) {
 
-              parameters[i] += tune_parameters[i] ;
-              current_error = 1 ;    // TODO set current error UpdateError(cte)?
+			  parameters[i] += tune_parameters[i];
+			  double current_error = 1;    // TODO set current error UpdateError(cte)?
 
-              // print(sum_parameters)
-              if (current_error < best_err) {  //last update worked, keep going
-                  
-                  tune_parameters[i] *= 1.1 ;
-                  best_err = current_error ;
-                  // exit, since increase worked, -> loop
-              }
-              else {
-                  
-                  parameters[i] -= 2 * tune_parameters[i] ;
-                  current_error = 1 ;    // TODO set current error
+			  // print(sum_parameters)
+			  if (current_error < best_err) {  //last update worked, keep going
 
-                  // check if decrease worked, if not, do a "reset" on the parameters
-                  if (current_error < best_err){
-                      
-                      best_err = current_error ;
-                      tune_parameters[i] *= 1.1 ;
-                  }
-                  else {
-                      parameters[i] += tune_parameters[i] ;
-                      tune_parameters[i] *= .95 ;
-                  }
-              }
+				  tune_parameters[i] *= 1.1;
+				  best_err = current_error;
+				  // exit, since increase worked, -> loop
+			  }
+			  else {
+
+				  parameters[i] -= 2 * tune_parameters[i];
+				  current_error = 1;    // TODO set current error
+
+				  // check if decrease worked, if not, do a "reset" on the parameters
+				  if (current_error < best_err) {
+
+					  best_err = current_error;
+					  tune_parameters[i] *= 1.1;
+				  }
+				  else {
+					  parameters[i] += tune_parameters[i];
+					  tune_parameters[i] *= .95;
+				  }
+			  }
+		  }
 
           /*****************************************************************************
            *  Proportional integral derivative controller
