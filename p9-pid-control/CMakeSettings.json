@@ -22,7 +22,13 @@
         "configurationType" : "Release",
         "buildRoot":  "${env.LOCALAPPDATA}\\CMakeBuild\\${workspaceHash}\\build\\${name}",
         "cmakeCommandArgs":  "",
-        "buildCommandArgs": "-m -v:minimal"
+        "buildCommandArgs": "-m -v:minimal",
+
+                "variables": [
+          {
+            "name": "DCMAKE_TOOLCHAIN_FILE",
+            "value": "C:/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          
         },
         {
         "name": "x64-Debug",
