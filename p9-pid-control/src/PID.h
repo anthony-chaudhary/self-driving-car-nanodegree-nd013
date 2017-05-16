@@ -6,16 +6,35 @@ public:
   /*
   * Errors
   */
-  double p_error;
-  double i_error;
-  double d_error;
+  // _ at end to indicate class variable
+
+  double current_cte_ ;
+
+  double integral_cte_ ;
+  double difference_cte_ ;
+  double previous_cte_ ;
+
+  double sum_square_error_ ;
+  double sum_absolute_value_error_ ;
+  double mean_squared_error_ ;
+
+  double twiddle_best_error_ ;
+
+  int counter_ ;
 
   /*
   * Coefficients
   */ 
-  double Kp;
-  double Ki;
-  double Kd;
+  double Kp ;
+  double Ki ;
+  double Kd ;
+
+  double tune_Kp ;
+  double tune_Ki ;
+  double tune_Kd ;
+  int twiddle_counter ;
+
+  float speed_goal ;
 
   /*
   * Constructor
@@ -41,6 +60,8 @@ public:
   * Calculate the total PID error.
   */
   double TotalError();
+
+
 };
 
 #endif /* PID_H */
