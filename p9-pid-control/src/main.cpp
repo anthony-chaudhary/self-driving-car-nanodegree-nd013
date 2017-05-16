@@ -42,11 +42,26 @@ int main()
 {
   uWS::Hub h;
 
-  PID pid;
+  PID pid ;
+  PID pid_throttle ;
   // TODO: Initialize the pid variable.
-  
 
-  h.onMessage([&pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+    /*****************************************************************************
+   *  Setup
+   ****************************************************************************/
+  double kp = 0 ;   
+  double ki = 0 ;    
+  double kd = 0 ;    
+
+  //double kp = 1.6 ;   
+  //double ki = 0.010 ;    
+  //double kd = 55.0  
+
+  pid.Init(kp, ki, kd) ;
+  pid_throttle.Init(.8, 0, .8) ;
+
+
+  h.onMessage([&pid_throttle, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -68,87 +83,139 @@ int main()
           * another PID controller to control the speed!
           */
 
-          /*****************************************************************************
-           *  Setup
-           ****************************************************************************/
-
-          // TODO REVIEW THIS NONE RIGHT YET
-          double steer_value  = 0 ;
-          double err          = 0 ;
-          double prev_cte     = 0 ;
-          double int_cte      = 0 ;
-          double diff_cte     = 0 ;
-
+          
           /*****************************************************************************
            *  Twiddle
            ****************************************************************************/
 
-		  vector<double> parameters;
-		  parameters = { 5.0, 5.0, 0.1 } ;
+          // put to true to use twiddle
+          bool twiddleFlag = false ; 
 
-		  vector<double> tune_parameters;
-		  tune_parameters = { 1.0, 1.0, 1.0 };
-          // double sum_tune_parameters      = tune_parameters.sum() ;
 
-		  double best_err = 99999999.0;
-          int counter      = 0 ;
+          if (twiddleFlag == true && pid.twiddle_counter % 10 == 0) {
 
-          cout << "Iteration" << counter <<
-          "\t best error" <<  best_err <<
-          "\t parameters" << parameters[0] << parameters[1] << parameters[2] << endl ;
+            vector<double> parameters;
+            parameters = { pid.Kp, pid.Ki, pid.Kd} ;
 
-		  for (int i = 0; i < 3; i++) {
+            vector<double> tune_parameters;
+            tune_parameters = { pid.tune_Kp, pid.tune_Ki, pid.tune_Kd };
+            
+            cout << "Iteration" << pid.twiddle_counter <<
+            "\t best error" <<  pid.twiddle_best_error_ <<
+            "\t parameters" << parameters[0] << parameters[1] << parameters[2] << endl ;
 
-			  parameters[i] += tune_parameters[i];
-			  double current_error = 1;    // TODO set current error UpdateError(cte)?
 
-			  // print(sum_parameters)
-			  if (current_error < best_err) {  //last update worked, keep going
+      		  for (int i = 0; i < 3; i++) {
 
-				  tune_parameters[i] *= 1.1;
-				  best_err = current_error;
-				  // exit, since increase worked, -> loop
-			  }
-			  else {
+      			  parameters[i] += tune_parameters[i] ;
 
-				  parameters[i] -= 2 * tune_parameters[i];
-				  current_error = 1;    // TODO set current error
+              double twiddle_current_error ;
+              
+              pid.UpdateError(cte) ;
+      			  twiddle_current_error =  pid.mean_squared_error_ ;
 
-				  // check if decrease worked, if not, do a "reset" on the parameters
-				  if (current_error < best_err) {
+      			  if (twiddle_current_error < pid.twiddle_best_error_) {  //last update worked, keep going
 
-					  best_err = current_error;
-					  tune_parameters[i] *= 1.1;
-				  }
-				  else {
-					  parameters[i] += tune_parameters[i];
-					  tune_parameters[i] *= .95;
-				  }
-			  }
-		  }
+      				  tune_parameters[i] *= 1.1 ;
+      				  pid.twiddle_best_error_ = twiddle_current_error ;
+      				  // exit, since increase worked, -> loop
+      			  }
+      			  else {
+
+      				  parameters[i] -= 2 * tune_parameters[i] ;
+      				  pid.UpdateError(cte) ;
+                twiddle_current_error = pid.mean_squared_error_  ;
+
+      				  // check if decrease worked, if not, do a "reset" on the parameters
+      				  if (twiddle_current_error < pid.twiddle_best_error_) {
+
+      					  pid.twiddle_best_error_ = twiddle_current_error ;
+      					  tune_parameters[i] *= 1.1 ;
+      				  }
+      				  else {
+      					  parameters[i] += tune_parameters[i] ;
+      					  tune_parameters[i] *= .95 ;
+      				  }
+      			  }
+            }
+
+
+            pid.Kp = parameters[0] ;
+            pid.Ki = parameters[1] ;
+            pid.Kd = parameters[2] ;
+
+            pid.tune_Kp = tune_parameters[0] ;
+            pid.tune_Ki = tune_parameters[1] ;
+            pid.tune_Kd = tune_parameters[2] ;
+
+            cout << "P: " << pid.Kp << "\t P-tune: " << pid.tune_Kp << endl ;
+            cout << "I: " << pid.Ki << "\t I-tune: " << pid.tune_Ki << endl ;
+            cout << "D: " << pid.Kd << "\t D-tune: " << pid.tune_Kd << endl ;
+
+            // restart simulation every x steps
+            if (pid.twiddle_counter % 1000 == 0){ 
+              
+              std::string reset_msg = "42[\"reset\",{}]"; 
+              ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT); 
+
+            }
+
+    		  }
+          
+          pid.twiddle_counter += 1 ;
+
 
           /*****************************************************************************
            *  Proportional integral derivative controller
            ****************************************************************************/
-            
-          diff_cte = cte - prev_cte ;
-          int_cte += cte ;
+      
+          double speed_difference ;
+          speed_difference = pid_throttle.speed_goal - speed ;
 
-          steer_value = -parameters[0] * cte - parameters[1] * diff_cte - parameters[2] * int_cte ;
-          
-          prev_cte = cte ;    // update CTE for next loop
-          counter += 1 ;
+          pid_throttle.UpdateError(speed_difference) ;
 
+          pid.UpdateError(cte) ;
 
-          // DEBUG
-          std::cout << "CTE: " << cte << " Steering Value: " << steer_value << std::endl;
+          double throttle_speed = pid_throttle.TotalError() ;
+
+          // normalize 
+          throttle_speed = fabs(throttle_speed) / 40 ;
+
+          double raw_steer_value = pid.TotalError() ;
+
+          // normalize steering angle between 0 and 1:
+          double steer_value = raw_steer_value / 25 ;
+
+          // TODO refactor into something more pleasent 
+          if ( fabs(steer_value) > .10 ) {
+             
+             throttle_speed = throttle_speed / 2 ;
+
+             if ( fabs(steer_value) > .20 ) {
+             
+              throttle_speed = 0 ;
+
+                 if ( fabs(steer_value) > .30 ) {
+             
+                  throttle_speed = - throttle_speed / 2;
+              } 
+            }
+          }
+
+          if (pid.counter_ % 10 == 0) {
+
+            cout << "CTE: " << cte << " Steering Value: " << steer_value << "  speed difference "
+            << speed_difference << "  throttle_speed  " << throttle_speed << endl;
+          }
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;
-          msgJson["throttle"] = 0.3;
+          msgJson["throttle"] = throttle_speed;
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
           std::cout << msg << std::endl;
           (ws).send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+          cout << "\t" << endl;
         }
       }
       else {
