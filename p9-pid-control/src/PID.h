@@ -36,6 +36,11 @@ public:
 
   float speed_goal ;
 
+  double sum_speed ;
+  double mean_speed ;
+  double previous_steer_value ; 
+  double max_speed ;
+
   /*
   * Constructor
   */

@@ -5,7 +5,7 @@
 #include "json.hpp"
 #include "PID.h"
 #include <math.h>
-
+#include <stdlib.h>
 
 using namespace std;
 
@@ -38,7 +38,7 @@ std::stringstream hasData(std::string s) {
 }
 
 
-int main()
+int main(int argc, const char *argv[])
 {
   uWS::Hub h;
 
@@ -49,16 +49,46 @@ int main()
     /*****************************************************************************
    *  Setup
    ****************************************************************************/
-  double kp = 0 ;   
-  double ki = 0 ;    
-  double kd = 0 ;    
+
+  double kp = 0.0 ;   
+  double ki = 0.0 ;    
+  double kd = 0.0 ;
+  double speed_goal_local = 0.0 ;
+
+  double throttle_kp = 0.0 ;   
+  double throttle_ki = 0.0 ;    
+  double throttle_kd = 0.0 ;
+
+  if (argc == 8 ) {
+    
+    kp = strtod( argv[1], NULL ) ;
+    ki = strtod( argv[2], NULL ) ;
+    kd = strtod( argv[3], NULL ) ;
+
+    speed_goal_local = strtod( argv[4], NULL ) ;
+
+    throttle_kp = strtod( argv[5], NULL ) ;
+    throttle_ki = strtod( argv[6], NULL ) ;
+    throttle_kd = strtod( argv[7], NULL ) ;
+
+  } else {
+
+    cout << "Usage ./pid.exe kp ki kd speed_goal throttle_kp throttle_ki throttle_kd (Requires program + 7 parameter arguments)" << endl ;
+    return -1 ;
+  }
+
+  // double kp = 1.35969e-38 ;   
+  // double ki = 7.33154e-46 ;    
+  // double kd = 2.15613e-37 ;  
 
   //double kp = 1.6 ;   
   //double ki = 0.010 ;    
   //double kd = 55.0  
 
   pid.Init(kp, ki, kd) ;
-  pid_throttle.Init(.8, 0, .8) ;
+  //pid_throttle.Init(.95, .01, 2) ;
+  pid_throttle.Init(throttle_kp, throttle_ki, throttle_kd) ;
+  pid_throttle.speed_goal = speed_goal_local ;
 
 
   h.onMessage([&pid_throttle, &pid](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
@@ -88,11 +118,12 @@ int main()
            *  Twiddle
            ****************************************************************************/
 
+          /*
           // put to true to use twiddle
           bool twiddleFlag = false ; 
 
 
-          if (twiddleFlag == true && pid.twiddle_counter % 10 == 0) {
+          if (twiddleFlag == true && pid.twiddle_counter % 100 == 0) {
 
             vector<double> parameters;
             parameters = { pid.Kp, pid.Ki, pid.Kd} ;
@@ -134,7 +165,7 @@ int main()
       				  }
       				  else {
       					  parameters[i] += tune_parameters[i] ;
-      					  tune_parameters[i] *= .95 ;
+      					  tune_parameters[i] *= .80 ;
       				  }
       			  }
             }
@@ -148,29 +179,52 @@ int main()
             pid.tune_Ki = tune_parameters[1] ;
             pid.tune_Kd = tune_parameters[2] ;
 
-            cout << "P: " << pid.Kp << "\t P-tune: " << pid.tune_Kp << endl ;
-            cout << "I: " << pid.Ki << "\t I-tune: " << pid.tune_Ki << endl ;
+            cout << "P: " << pid.Kp << "\t P-tune: " << pid.tune_Kp << "\t P-tune / I-Tune " << 
+            pid.tune_Kp / pid.tune_Ki << endl ;
+            cout << "I: " << pid.Ki << "\t I-tune: " << pid.tune_Ki << "\t P-tune / D-Tune " <<
+            pid.tune_Kp / pid.tune_Kd << endl ;
             cout << "D: " << pid.Kd << "\t D-tune: " << pid.tune_Kd << endl ;
 
             // restart simulation every x steps
-            if (pid.twiddle_counter % 1000 == 0){ 
+            
+            double raw_steer_value = pid.TotalError() ; ;
+            double normalizer ;
+            if (pid.Kd == 0.0) {
+              normalizer = pid.tune_Kd ;
+            } 
+            else {
+              normalizer = pid.Kd ;
+            }
+            double steer_value = raw_steer_value / normalizer ;
+
+            // if (pid.twiddle_counter % 2000 == 0){ 
+
+            if (steer_value > .25 ){ 
               
               std::string reset_msg = "42[\"reset\",{}]"; 
               ws.send(reset_msg.data(), reset_msg.length(), uWS::OpCode::TEXT); 
 
             }
+            
 
     		  }
           
           pid.twiddle_counter += 1 ;
 
-
+          */
           /*****************************************************************************
-           *  Proportional integral derivative controller
+           *  Proportional integral derivative controllers
            ****************************************************************************/
-      
+          
+          /*
+          if (pid.previous_steer_value > .20) {
+              pid.Kp = 1.59969e-38 ;
+              pid.Kd = 2.05613e-37 ;
+          } 
+          */
+
           double speed_difference ;
-          speed_difference = pid_throttle.speed_goal - speed ;
+          speed_difference = fabs(pid_throttle.speed_goal - speed );
 
           pid_throttle.UpdateError(speed_difference) ;
 
@@ -178,31 +232,56 @@ int main()
 
           double throttle_speed = pid_throttle.TotalError() ;
 
+          // positive
+          throttle_speed = fabs(throttle_speed) ;
+
+          // TODO cleaner way to do this
+          if (speed > pid_throttle.speed_goal){
+            throttle_speed = 0 ;
+          }
+
           // normalize 
-          throttle_speed = fabs(throttle_speed) / 40 ;
+          // speed is out of 0 to 1
+          throttle_speed = throttle_speed / (10 * pid_throttle.speed_goal) ;
 
           double raw_steer_value = pid.TotalError() ;
 
           // normalize steering angle between 0 and 1:
-          double steer_value = raw_steer_value / 25 ;
 
-          // TODO refactor into something more pleasent 
-          if ( fabs(steer_value) > .10 ) {
-             
-             throttle_speed = throttle_speed / 2 ;
+          double normalizer ;
 
-             if ( fabs(steer_value) > .20 ) {
-             
-              throttle_speed = 0 ;
-
-                 if ( fabs(steer_value) > .30 ) {
-             
-                  throttle_speed = - throttle_speed / 2;
-              } 
-            }
+          // Assumes if Kp == 0 we are using tune function
+          if (pid.Kp == 0.0) {
+            normalizer = pid.tune_Kp ;
+          } 
+          // angles 0 to 1 (gets  converted to )
+          else {
+            normalizer = pid.Kp * 10;
           }
 
-          if (pid.counter_ % 10 == 0) {
+          double steer_value = raw_steer_value / normalizer ;
+
+          // TODO refactor into something more pleasent
+          /*
+          if ( fabs(steer_value) > .20 && speed > (pid_throttle.speed_goal / 3 )) {
+             
+                  throttle_speed = - throttle_speed ;
+            
+          }  
+          */   
+
+          pid.previous_steer_value = steer_value ; 
+
+          pid.sum_speed += speed ;
+          pid.mean_speed =  pid.sum_speed / pid.twiddle_counter ;
+
+          if (pid.max_speed < speed) {
+            pid.max_speed = speed ;
+          }
+
+          if (pid.counter_ % 100 == 0) {
+
+            cout <<  "  mean_speed  " << pid.mean_speed << "\t max_speed " << pid.max_speed << endl ;
 
             cout << "CTE: " << cte << " Steering Value: " << steer_value << "  speed difference "
             << speed_difference << "  throttle_speed  " << throttle_speed << endl;
