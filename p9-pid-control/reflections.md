@@ -61,6 +61,12 @@ In further work I would be curious about the interplay between those two systems
 
 Over time I added mean_speed and max_speed to get a better handle empirically on how the car was performing.
 
+
+### Don't use the brakes
+
+I tried using the brakes, and also adding conditional statments like a steering booster: "if sharp turn, turn sharper". I found generally these were band-aid solutions and not robust, better to find good parameters for the PID controllers themselves.
+
+
 ## Final hyperparameters
 
 Usage `./pid.exe kp ki kd speed_goal throttle_kp throttle_ki throttle_kd`
@@ -69,6 +75,7 @@ Usage `./pid.exe kp ki kd speed_goal throttle_kp throttle_ki throttle_kd`
 `./pid.exe 1.60 0.018 76. 100. 9 .3 15`
 
 [Here is a link to the video.](video/100-run.mp4)
+
 
 ![96-corner](images/96-corner.png)
 

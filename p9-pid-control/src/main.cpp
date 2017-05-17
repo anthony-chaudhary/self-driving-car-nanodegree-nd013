@@ -77,16 +77,11 @@ int main(int argc, const char *argv[])
     return -1 ;
   }
 
-  // double kp = 1.35969e-38 ;   
-  // double ki = 7.33154e-46 ;    
-  // double kd = 2.15613e-37 ;  
-
   //double kp = 1.6 ;   
   //double ki = 0.010 ;    
   //double kd = 55.0  
 
   pid.Init(kp, ki, kd) ;
-  //pid_throttle.Init(.95, .01, 2) ;
   pid_throttle.Init(throttle_kp, throttle_ki, throttle_kd) ;
   pid_throttle.speed_goal = speed_goal_local ;
 
@@ -106,19 +101,12 @@ int main(int argc, const char *argv[])
           double cte = std::stod(j[1]["cte"].get<std::string>());
           double speed = std::stod(j[1]["speed"].get<std::string>());
           double angle = std::stod(j[1]["steering_angle"].get<std::string>());
-          /*
-          * TODO: Calcuate steering value here, remember the steering value is
-          * [-1, 1].
-          * NOTE: Feel free to play around with the throttle and speed. Maybe use
-          * another PID controller to control the speed!
-          */
-
-          
+         
           /*****************************************************************************
            *  Twiddle
            ****************************************************************************/
 
-          /*
+          
           // put to true to use twiddle
           bool twiddleFlag = false ; 
 
@@ -170,7 +158,6 @@ int main(int argc, const char *argv[])
       			  }
             }
 
-
             pid.Kp = parameters[0] ;
             pid.Ki = parameters[1] ;
             pid.Kd = parameters[2] ;
@@ -189,11 +176,11 @@ int main(int argc, const char *argv[])
             
             double raw_steer_value = pid.TotalError() ; ;
             double normalizer ;
-            if (pid.Kd == 0.0) {
-              normalizer = pid.tune_Kd ;
+            if (pid.Kp == 0.0) {
+              normalizer = pid.tune_Kp ;
             } 
             else {
-              normalizer = pid.Kd ;
+              normalizer = pid.Kp * 25 ;
             }
             double steer_value = raw_steer_value / normalizer ;
 
@@ -211,31 +198,21 @@ int main(int argc, const char *argv[])
           
           pid.twiddle_counter += 1 ;
 
-          */
+          
           /*****************************************************************************
            *  Proportional integral derivative controllers
            ****************************************************************************/
           
-          /*
-          if (pid.previous_steer_value > .20) {
-              pid.Kp = 1.59969e-38 ;
-              pid.Kd = 2.05613e-37 ;
-          } 
-          */
-
           double speed_difference ;
           speed_difference = fabs(pid_throttle.speed_goal - speed );
 
           pid_throttle.UpdateError(speed_difference) ;
-
           pid.UpdateError(cte) ;
 
           double throttle_speed = pid_throttle.TotalError() ;
-
-          // positive
           throttle_speed = fabs(throttle_speed) ;
 
-          // TODO cleaner way to do this
+          // Hard cap on speed instead of allowing PID to overshoot here.
           if (speed > pid_throttle.speed_goal){
             throttle_speed = 0 ;
           }
@@ -243,13 +220,10 @@ int main(int argc, const char *argv[])
           // normalize 
           // speed is out of 0 to 1
           throttle_speed = throttle_speed / (10 * pid_throttle.speed_goal) ;
-
           double raw_steer_value = pid.TotalError() ;
 
           // normalize steering angle between 0 and 1:
-
           double normalizer ;
-
           // Assumes if Kp == 0 we are using tune function
           if (pid.Kp == 0.0) {
             normalizer = pid.tune_Kp ;
@@ -260,18 +234,8 @@ int main(int argc, const char *argv[])
           }
 
           double steer_value = raw_steer_value / normalizer ;
-
-          // TODO refactor into something more pleasent
-          /*
-          if ( fabs(steer_value) > .20 && speed > (pid_throttle.speed_goal / 3 )) {
-             
-                  throttle_speed = - throttle_speed ;
-            
-          }  
-          */   
-
-          pid.previous_steer_value = steer_value ; 
-
+          
+          // stats for speed
           pid.sum_speed += speed ;
           pid.mean_speed =  pid.sum_speed / pid.twiddle_counter ;
 
@@ -279,6 +243,7 @@ int main(int argc, const char *argv[])
             pid.max_speed = speed ;
           }
 
+          // debugging
           if (pid.counter_ % 100 == 0) {
 
             cout <<  "  mean_speed  " << pid.mean_speed << "\t max_speed " << pid.max_speed << endl ;
@@ -286,6 +251,8 @@ int main(int argc, const char *argv[])
             cout << "CTE: " << cte << " Steering Value: " << steer_value << "  speed difference "
             << speed_difference << "  throttle_speed  " << throttle_speed << endl;
           }
+
+
 
           json msgJson;
           msgJson["steering_angle"] = steer_value;

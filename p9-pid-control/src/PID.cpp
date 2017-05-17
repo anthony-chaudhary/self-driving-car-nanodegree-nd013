@@ -53,35 +53,6 @@ cte = cross track error
   // tune_Ki = 2.76871e-46 ;
   // tune_Kd = 8.1425e-38  ;
 
-  // tune_Kp = 1.42703e-29 ;
-  // tune_Ki = 2.13856e-36 ;
-  // tune_Kd = 3.91131e-28 ;
-
-  // tune_Kp = 2.79719e-25 ;
-  // tune_Ki = 6.0334e-32 ;
-  // tune_Kd = 7.84659e-24 ;
-
-
-  // tune_Kp = 6.81194e-20 ;
-  // tune_Ki = 2.7779e-26 ;
-  // tune_Kd = 2.02459e-18 ;
-
-  // tune_Kp = 3.48451e-15 ;
-  // tune_Ki = 1.05255e-19 ;
-  // tune_Kd = 15.01853e-14 ;
-
-  // tune_Kp = 7.68667e-14 ;
-  // tune_Ki = 3.19257e-18 ;
-  // tune_Kd = 15.22216e-13 ;
-
-  // tune_Kp = 1.96493 ;
-  // tune_Ki = 0.00682968 ;
-  // tune_Kd = 37.5763 ;
-
-  // tune_Kp = 1.44317 ;
-  // tune_Ki = 0.000152481 ;
-  // tune_Kd = 15.38937 ;
-
 }
 
 void PID::UpdateError(double cte) {
@@ -107,7 +78,7 @@ void PID::UpdateError(double cte) {
 	// 2.
 	mean_squared_error_ = sum_square_error_ / counter_ ;
 
-
+	// debugging
 	if (counter_ % 100 == 0) {
 		
 		cout << "\t" << endl ;
