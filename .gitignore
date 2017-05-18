@@ -131,3 +131,5 @@ p6-Extended-Kalman-Filter/kalman_tracker_windows/kalman_tracker_Data/output_log.
 p6-Extended-Kalman-Filter/data_out.txt
 p6-Extended-Kalman-Filter/data_in.txt
 term2_sim_windows
+p9-pid-control/Thumbs.db
+p9-pid-control/pid_control_document.pdf
