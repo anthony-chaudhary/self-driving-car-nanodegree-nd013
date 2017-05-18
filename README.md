@@ -15,21 +15,21 @@ Self-driving cars represent one of the most significant advances in modern histo
 
 # Term 2:
 
-## 01, [Extended Kalman filter](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p6-Extended-Kalman-Filter)
+## 06, [Extended Kalman filter](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p6-Extended-Kalman-Filter)
 The goal of this project is to build an extended Kalman filter and sensor fusion pipeline. We take Lidar and Radar measurements, run a Predict/Update cycle through a Kalman filter, and output the results.
 
-## 02, [Unscented Kalman filter](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p7-Unscented-Kalman-Filter)
+## 07, [Unscented Kalman filter](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p7-Unscented-Kalman-Filter)
 I developed an UKF in C++ to detect a bicycle using Laser and Radar data.
 The filter successfully achieved RMSE results < .1 on px and py.
 [More information.](https://medium.com/@anthony_sarkis/what-is-a-kalman-filter-and-why-is-there-an-unscented-version-bc5f6e77c509)
 
-## 03, [Kidnapped vehicle](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p8-kidnapped-vehicle)
+## 08, [Kidnapped vehicle](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p8-kidnapped-vehicle)
 I developed a 2 dimensional particle filter in C++ for localization use.
 
-## 04, [PID controller](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/blob/master/p9-pid-control/reflections.md)
+## 09, [PID controller](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/blob/master/p9-pid-control/reflections.md)
 I developed a proportional integral derivative controller in C++. The car reached 95 mph on the most difficult corner of the virtual test track. [Video here. :)](https://youtu.be/Zuy0vBc8LYU)
 
-## 03, [Model predictive control](#)
+## 10, [Model predictive control](#)
 
 
 # Term 1:
