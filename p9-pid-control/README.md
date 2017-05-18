@@ -9,6 +9,7 @@ Self-Driving Car Engineer Nanodegree Program
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: Usage `./pid.exe kp ki kd speed_goal throttle_kp throttle_ki throttle_kd`
+5. For example `./pid.exe 1.60 0.018 76. 100. 9 .3 15`
 
 ## Dependencies
 
