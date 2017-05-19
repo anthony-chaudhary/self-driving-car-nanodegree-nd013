@@ -4,7 +4,7 @@ cmake_minimum_required (VERSION 3.5)
 
 add_definitions(-W3)
 
-set(sources global_kinematic_model.cpp)
+set(sources fit_polynomials.cpp)
 
 add_executable(mpc-quiz ${sources})
 

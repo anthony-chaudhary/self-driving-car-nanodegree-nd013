@@ -48,10 +48,13 @@ int main() {
 
   // TODO: use `polyfit` to fit a third order polynomial to the (x, y)
   // coordinates.
+  auto result = polyfit(xvals, yvals, 3) ;
 
   for (double x = 0; x <= 20; x += 1.0) {
     // TODO: use `polyeval` to evaluate the x values.
-    std::cout << "YOUR CODE HERE" << std::endl; 
+
+    auto poly_eval_result = polyeval(result , x) ;
+    std::cout << poly_eval_result << std::endl; 
   }
 
   // Expected output
