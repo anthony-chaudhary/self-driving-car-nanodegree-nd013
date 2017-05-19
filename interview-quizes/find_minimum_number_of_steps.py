@@ -53,7 +53,7 @@ def smallest_number_of_steps(destination, valid_moves):
 
         # 1. Cycle while valid moves in search space don't overshoot target
         validMoveReturned = False
-        attemptsCounter = 10
+        attemptsCounter = 100
 
         while (validMoveReturned is False):
 
@@ -136,10 +136,10 @@ def smallest_number_of_steps(destination, valid_moves):
         print("")
 
 
-# Smalle test
-# destination = 56188989653.1565
-# valid_moves = [1, 2, 1.1, 2.2, -1, -2, 3.2, -6, 5, 5.5, 2.1, .5]
-# smallest_number_of_steps(destination, valid_moves)
+# Tiny test
+destination = 56188989653.2
+valid_moves = [.1, 2, 1.0, 7, -1, -2, 3, -6, 5, 6, 2, .5]
+smallest_number_of_steps(destination, valid_moves)
 
 import time
 
@@ -152,7 +152,7 @@ def float_range(x, y, step):
         x += step
 
 
-def test_destination_size(valid_moves_length=10, destinations_length=10000):
+def test_destination_size(valid_moves_length=10, destinations_length=98658):
 
     #valid_moves_list = [1, 2, 1.1, 2.2, -1, -2, 3.2, -6, 5, 5.5, 2.1, .5]
     #destinations_list = [1, -1, 0, 1.1, 1.22, -1.1, 200, 300, 56188989653.1565]
@@ -182,12 +182,10 @@ def test_destination_size(valid_moves_length=10, destinations_length=10000):
         print("For length", length, times[i])
 
 
-def float_range(x, y, step):
-    while x < y:
-        yield x
-        x += step
+# test with larger numbers
+# Uncomment to run
 
-test_destination_size()
+# test_destination_size()
 
 
 # Test changes in search space and destination space
