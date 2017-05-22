@@ -50,7 +50,7 @@ One of the hardest simulator turns may not be labeled correctly. The "edge" is d
 
 I'm sure there is something that can be done here and open to ideas.
 
-Here is an example of twiddle results, using pre-tuned paramters to start:
+Here is an example of twiddle results, using pre-tuned parameters to start:
 ![twiddle-testing](images/twiddle-testing.jpg)
 
 ### Importance of speed
