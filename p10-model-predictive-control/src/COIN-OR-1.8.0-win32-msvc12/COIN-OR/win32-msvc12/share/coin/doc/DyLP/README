@@ -1,0 +1,71 @@
+
+	Dylp: An implementation of the dynamic simplex algorithm
+
+  Dylp is a linear programming solver, based on the dynamic simplex algorithm.
+  Roughly, this means that dylp attempts to maintain an active constraint
+  system which consists of only those constraints and variables that are
+  relevant at the current extreme point. The bet is that this will be a
+  useful property in situations where the same constraint system is
+  repeatedly modified and reoptimised (e.g., in a branch-cut-price MIP
+  code).  You can also tell dylp to operate with the full constraint system,
+  which is useful for obtaining an initial solution.
+
+  Dylp is built to be a research and development code. It can produce a range
+  of statistics, and it can tell you more about how it's solving your problem
+  than most people will ever want to know. It also includes extensive cross
+  checks to catch errors during program development.
+
+  Dylp development takes place in a Sun Solaris/Workshop programming
+  environment, most recently Solaris 10 and Sun Studio 12 (cc 5.9).  It is
+  also tested in Linux and Windows environments.  COIN-OR places some
+  importance on Windows compatibility, and if you can build COIN at all, then
+  dylp should run. If it doesn't, please report the problem by filing a
+  ticket at https://projects.coin-or.org/DyLP/
+
+  Generally speaking, if your computing environment supports IEEE floating
+  point then it should be possible to port dylp with very little effort.
+
+  ============================================================================
+
+  Maintainer: Lou Hafer
+
+	      School of Computing Science
+	      Simon Fraser University
+	      Burnaby, B.C., V5A 1S6, Canada
+
+	      lou@cs.sfu.ca
+
+
+  Web pages: 
+
+   Eh, what to say here. COIN is still settling into its infrastructure, so
+   this may be out-of-date by the time you read it. But, if you've managed to
+   acquire the code, you're probably over that already.
+
+   Here's a selection of resources:
+   
+   http://www.coin-or.org/projects	The main COIN-OR projects page.
+   
+   https://projects.coin-or.org/DyLP	Dylp's Trac page. From here, you can
+					read about dylp, browse the code, and
+					file tickets for bug reports.
+
+  SVN repository:
+
+  https://www.coin-or.org/svn/DyLP/trunk	development branch
+  https://www.coin-or.org/svn/DyLP/stable	stable branches
+  https://www.coin-or.org/svn/DyLP/releases	releases
+ 
+  The releases are frozen snapshots of the corresponding stable branches.
+  Stable branches get bug fixes, which eventually trigger a new release. Unless
+  you have some good reason to do otherwise, pick the highest numbered stable
+  branch or release.
+
+
+  Mailing list:
+
+  http://list.coin-or.org/mailman/listinfo/dylp
+
+  If you're using DyLP via the OsiDylp interface, you probably want to monitor
+  the Osi mailing list.
+

@@ -1,0 +1,9 @@
+
+	Lou Hafer (lou@cs.sfu.ca) is the author and maintainer of DyLP.
+
+	The basis inverse code in the files glp*.[ch] was written by
+	Andrew Makhorin and comes from the GLPK package. It is used by
+	kind permission of the author.
+
+	Much of the original OsiDylp code was written by Stephen Tse.
+

@@ -1,0 +1,2 @@
+#TargetFrameworkVersion=v4.0:PlatformToolSet=v141:EnableManagedIncrementalBuild=false:VCToolArchitecture=Native32Bit:WindowsTargetPlatformVersion=8.1
+Release|Win32|C:\Users\Anthony\Documents\GitHub\self-driving-car-nanodegree-nd013\p10-model-predictive-control\src\Ipopt-3.5.3\Ipopt\MSVisualStudio\v8\|

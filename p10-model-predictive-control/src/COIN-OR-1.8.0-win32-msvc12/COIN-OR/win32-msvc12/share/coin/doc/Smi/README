@@ -1,0 +1,18 @@
+Smi - Stochastic Modeling Interface
+
+To install this package, please look at the INSTALL file.
+
+This package contains several subdirectories corresponding to COIN-OR
+projects (www.coin-or.org). The AUTHORS, LICENSE and README files in 
+each of the subdirectories give more information about these projects.
+
+
+The examples directory contains a few use cases.
+
+* stoch.cpp is the main repository of use cases -- it contains several
+  distinct examples of input styles.
+
+* investment.cpp is a use case using FlopC++.  This is under active development
+  but is stable enough to be included in trunk
+
+Active development is proceeding on the SmiBenders branch.

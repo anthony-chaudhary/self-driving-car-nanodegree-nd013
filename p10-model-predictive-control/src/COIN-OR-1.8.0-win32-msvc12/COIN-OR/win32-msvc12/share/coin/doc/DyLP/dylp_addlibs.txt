@@ -1,0 +1,1 @@
+-libpath:C:\cygwin64\home\ted\COIN\1.8.0\build-msvc12\lib libDyLP.lib 

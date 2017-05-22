@@ -1,5 +1,5 @@
 #include <math.h>
-#include <uWS/uWS.h>
+#include "uWS/uWS.h"
 #include <chrono>
 #include <iostream>
 #include <thread>
@@ -137,6 +137,8 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
+
+          // TODO look at chrono::high_resolution_clock() 
           this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }

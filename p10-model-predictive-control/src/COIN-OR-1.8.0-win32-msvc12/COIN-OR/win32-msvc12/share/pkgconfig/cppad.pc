@@ -1,0 +1,20 @@
+# $Id: cppad.pc.in 2600 2012-12-14 02:08:51Z bradbell $
+# -----------------------------------------------------------------------------
+# CppAD: C++ Algorithmic Differentiation: Copyright (C) 2003-12 Bradley M. Bell
+#
+# CppAD is distributed under multiple licenses. This distribution is under
+# the terms of the 
+#                     Eclipse Public License Version 1.0.
+#
+# A copy of this license is included in the COPYING file of this distribution.
+# Please visit http://www.coin-or.org/CppAD/ for information on other licenses.
+# -----------------------------------------------------------------------------
+# This file is used with pkg-config to include CppAD after it is installed
+
+Name:         cppad
+Description:  Differentiation of C++ Algorithms
+Version:      20150000.9
+URL:          http://www.coin-or.org/CppAD
+Cflags:       -I/home/ted/COIN/1.8.0/build-msvc12/include
+Libs:         
+Requires:     

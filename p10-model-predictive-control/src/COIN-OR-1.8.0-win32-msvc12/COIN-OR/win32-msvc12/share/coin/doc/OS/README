@@ -1,0 +1,23 @@
+The Optimization Services (OS) Package:
+
+The objective of Optimization Services (OS) is to provide a set of standards 
+for representing optimization instances, results, solver options, and 
+communication between clients and solvers in a distributed environment 
+using Web Services.  This COIN-OR project provides source code for libraries 
+and executable programs that implement OS standards. 
+
+DOCUMENTATION:
+
+See the doc subdirectory for documenation. This subdirectory contains a 
+User's Manual in pdf format. See also:
+ 	
+ http://projects.coin-or.org/OS/
+ http://www.optimizationservices.org
+
+INSTALLATION
+
+See the INSTALL file in the root directory (one level up).
+
+
+
+ 

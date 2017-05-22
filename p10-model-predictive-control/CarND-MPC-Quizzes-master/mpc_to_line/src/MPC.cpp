@@ -1,7 +1,7 @@
 #include "MPC.h"
 #include <math.h>
-#include <cppad/cppad.hpp>
-#include <cppad/ipopt/solve.hpp>
+#include "COIN-OR-1.8.0-win32-msvc12/COIN-OR/win32-msvc12/include/cppad/cppad.hpp"
+#include "COIN-OR-1.8.0-win32-msvc12/COIN-OR/win32-msvc12/include/cppad/ipopt/solve.hpp"
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "matplotlibcpp.h"
