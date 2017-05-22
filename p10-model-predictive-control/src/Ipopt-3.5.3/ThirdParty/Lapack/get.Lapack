@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -e
+
+wgetcmd=wget
+wgetcount=`which wget 2>/dev/null | wc -w`
+if test ! $wgetcount = 1; then
+  echo "Utility wget not found in your PATH."
+  if test `uname` = Darwin; then
+    wgetcmd=ftp
+    echo "Using ftp command instead."
+  else
+    exit -1
+  fi
+fi
+
+echo " "
+echo "Running script for downloading the source code for LAPACK"
+echo " "
+
+rm -f lapack.tgz
+echo "Downloading the source code from www.netlib.org..."
+$wgetcmd ftp://www.netlib.org/lapack/lapack-lite-3.1.0.tgz
+
+echo "Uncompressing the tarball..."
+gunzip -f lapack-lite-3.1.0.tgz
+
+echo "Unpacking the source code..."
+tar xf lapack-lite-3.1.0.tar lapack-3.1.0/SRC lapack-3.1.0/INSTALL/dlamch.f
+rm -rf LAPACK
+mv lapack-3.1.0 LAPACK
+
+echo "Deleting the tar file..."
+rm lapack-lite-3.1.0.tar
+
+echo " "
+echo "Done downloading the source code for LAPACK."
+echo " "

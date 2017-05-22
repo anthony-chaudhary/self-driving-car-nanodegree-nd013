@@ -1,0 +1,149 @@
+#!/bin/sh
+
+# Copyright (C) 2006, 2007  International Business Machines.
+# All Rights Reserved.
+# This file is distributed under the Common Public License.
+# It is part of the BuildTools project in COIN-OR (www.coin-or.org)
+#
+## $Id: run_autotools 1189 2008-09-17 16:32:51Z ladanyi $
+#
+# Author: Andreas Waechter     IBM      2006-04-14
+
+# Make sure we bail out if there is an error
+set -e
+
+ver_autoconf='2.59'
+ver_automake='1.9.6'
+ver_libtool='1.5.22'
+EGREP='grep -E'
+
+# Check if the correct version of the autotools is used
+if test x$AUTOTOOLS_DIR = x; then
+  AUTOTOOLS_DIR=$HOME
+fi
+
+grep_version=`echo  $ver_autoconf | sed -e 's/\\./\\\\\\./g'`
+autoconf --version > confauto.out 2>&1
+if $EGREP $grep_version confauto.out >/dev/null 2>&1; then :; else
+  echo You are not using the correct version of autoconf
+  rm -f confauto.out
+  exit -2
+fi
+rm -f confauto.out
+autoconf_dir=`which autoconf | sed -e 's=/autoconf=='`
+autoconf_dir=`cd $autoconf_dir; pwd`
+if test $autoconf_dir = `cd $AUTOTOOLS_DIR/bin; pwd`; then :; else
+  echo autoconf is not picked up from the correct location
+  exit -2
+fi
+
+grep_version=`echo  $ver_automake | sed -e 's/\\./\\\\\\./g'`
+automake --version > confauto.out 2>&1
+if $EGREP $grep_version confauto.out >/dev/null 2>&1; then :; else
+  echo You are not using the correct version of automake
+  rm -f confauto.out
+  exit -2
+fi
+rm -f confauto.out
+autoconf_dir=`which automake | sed -e 's=/automake=='`
+autoconf_dir=`cd $autoconf_dir; pwd`
+if test $autoconf_dir = `cd $AUTOTOOLS_DIR/bin; pwd`; then :; else
+  echo automake is not picked up from the correct location
+  exit -2
+fi
+
+grep_version=`echo  $ver_libtool | sed -e 's/\\./\\\\\\./g'`
+ltfile=$AUTOTOOLS_DIR/share/libtool/ltmain.sh
+if test -r $ltfile; then :; else
+  echo Cannot file $ltfile
+fi
+if $EGREP $grep_version $ltfile >/dev/null 2>&1; then :; else
+  echo You are not using the correct verion of libtool
+fi
+
+# Find directories which contain a file configure.ac. When all is said and
+# done, each entry in dirs will be of the form `./path/to/directory'
+
+if test $# != 0; then
+  dirs="$*"
+else
+  pos_dirs=`find . -name configure.ac | sed -e s%/configure.ac%%g | grep -v 'ThirdParty/[^/]*/[^/]*'`
+  dirs=
+  for dir in $pos_dirs; do
+    if test -r $dir/configure.ac; then
+      dirs="$dirs $dir"
+    else
+      echo "$dir/configure.ac doesn't appear to be a regular file; skipping."
+    fi
+  done
+fi
+
+# Now compare against the skip entries in COIN_SKIP_PROJECTS. To match the
+# entries we just collected, add `./' to the front of each skip entry.
+
+pos_dirs=$dirs
+if test x${COIN_SKIP_PROJECTS+set} = xset ; then
+  dirs=
+  for dir in $COIN_SKIP_PROJECTS ; do
+    skip_dirs="$skip_dirs ./$dir"
+  done
+  for dir in $pos_dirs ; do
+    skip=0
+    for skipdir in $skip_dirs ; do
+      if test $dir = $skipdir ; then
+	skip=1
+	break
+      fi
+    done
+    if test $skip = 0 ; then
+      dirs="$dirs $dir"
+    else
+      echo "$dir listed in COIN_SKIP_PROJECTS; skipping."
+    fi
+  done
+fi
+
+echo Running autotools in $dirs
+
+currdir=`pwd`
+if test -r $currdir/BuildTools/coin.m4; then
+  toolsdir=$currdir/BuildTools
+else
+  echo Cannot find BuildTools directory.
+  exit
+fi
+
+echo Copying autotools scripts into this directory
+cp $toolsdir/config.guess $toolsdir/config.sub $toolsdir/depcomp $toolsdir/install-sh $toolsdir/ltmain.sh $toolsdir/missing .
+
+if test x$AUTOTOOLS_DIR = x; then
+  AUTOTOOLS_DIR=$HOME
+fi
+
+for dir in $dirs; do
+  (if test -r $dir/configure.ac; then
+     cd $dir
+     echo creating acinclude.m4 in $dir
+     cat $AUTOTOOLS_DIR/share/aclocal/libtool.m4 $toolsdir/coin.m4> acinclude.m4
+     echo running aclocal in $dir
+     if test -d m4; then
+       aclocal -I m4 || exit -1
+     else
+       aclocal || exit -1
+     fi
+     if grep AC_CONFIG_HEADER configure.ac >/dev/null 2>&1; then
+       echo running autoheader in $dir
+       autoheader || exit -1
+     fi
+     echo running automake in $dir
+     automake || exit -1
+     echo running autoconf in $dir
+     autoconf || exit -1
+   else
+     echo "*** No configure.ac file in $dir - SKIPPING! ***"
+   fi
+  )
+  if test $? -ne 0; then
+    exit -2;
+  fi
+done
