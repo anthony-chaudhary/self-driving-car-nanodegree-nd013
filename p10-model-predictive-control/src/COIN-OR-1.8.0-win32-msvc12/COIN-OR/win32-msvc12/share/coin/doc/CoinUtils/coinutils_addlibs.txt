@@ -1,1 +1,0 @@
--libpath:C:\cygwin64\home\ted\COIN\1.8.0\build-msvc12\lib libCoinUtils.lib   -libpath:C:\cygwin64\home\ted\COIN\1.8.0\build-msvc12\lib libcoinglpk.lib   mkl_intel_c.lib mkl_sequential.lib mkl_core.lib mkl_intel_c.lib mkl_sequential.lib mkl_core.lib 

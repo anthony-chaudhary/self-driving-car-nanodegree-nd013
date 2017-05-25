@@ -8,6 +8,20 @@ using namespace std;
 
 class MPC {
  public:
+
+  double throttle ;
+  double steering_angle ;
+
+  /*
+  const double coefficient_cost_ref_cte ;
+  const double coefficient_cost_ref_epsi ;
+  const double coefficient_cost_ref_v ;
+  const double coefficient_cost_ref_val_throttle ;
+  const double coefficient_cost_ref_val_steering ;
+  const double coefficient_cost_ref_seq_throttle ;
+  const double coefficient_cost_ref_seq_steering ;
+  */
+
   MPC();
 
   virtual ~MPC();

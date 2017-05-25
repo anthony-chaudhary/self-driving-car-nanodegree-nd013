@@ -1,5 +1,330 @@
-# CarND-Controls-MPC
-Self-Driving Car Engineer Nanodegree Program
+# Model predictive control (MPC)
+
+
+![Example from simulator](images/car.png)
+
+#### A MPC optimizes the current controls while keeping future information in mind.
+
+![Video available here.](videos/sdc-mpc-run.mkv)
+
+
+## Overview
+
+While driving we aim to stay in a lane, keep to a speed, and turn smoothly.
+To do this we look ahead. For example, if a sharp turn is coming we will slow down in advance.
+If we see we have reached the middle of a curve, we will start to reverse the steering wheel.
+
+For a self driving car this challenging. Let's say for example that our perception and localization systems have identified a path we wish to follow. Great! Now we simply look at how far we are from the path right? If we are far from the path we set a higher steering angle, and if we are 
+close to the path we set a lower steering angle. Easy, just set it in proportion right?
+
+Slight problem, doing this means we will always overshoot the path. Ok, so we add in some function (say a derivative) to make it more graceful, and maybe even something to counter drifts over time (integral). Perfect. Now we have a PID controller. 
+
+Now I'll just take my car onto the highway and go straight for a while... or not! The PID controller keeps overshooting! That's no good.
+
+Hmm how about I take this side street with a few sharp corners then... hmmm seems to be having trouble! uh oh... now it's raining! I hope this PID controller accounts for the rain! Snow, ice, mud? Maybe we need something else.
+
+#### Model predictive control to the rescue! :)
+A MPC controller can keep a perfectly straight line, solving our constant overshooting problem. Great! And it even looks into the near future to predict outcomes, similar to the way we look ahead when we drive. Perfect! Plus it can even account for an arbitrarily complex environment, including allowing for things like snow and ice.
+
+The primary trade-off is that a MPC adds more complexity.
+
+#### Ok how does it work? 
+
+MPCs are complicated! This has been one of the more complex projects of the nanodegree so far. There is a lot going on in the code in main.cpp and MPC.cpp, and that's not even included the small mountain of libraries we are using.
+
+It makes sense this is complicated, real life MPCs do some serious work including critical control functions for nuclear power plants -- so this is some tough stuff.
+
+Below is a fairly verbose walk through designed for someone interested in getting a basic intuition of the technical detail and the specifics of this implementation. It's focused on the engineering and programming side.
+
+
+## The model
+
+A MPC has a model that includes costs for dynamics you wish to consider. 
+When we use the MPC we optimize the total cost to 0.
+
+Our MPC has two key steps
+1. Evaluation
+2. Solve
+
+### 1. Evaluation
+
+Here we define costs and our model.
+
+#### 1.1 Costs
+
+We define costs as a numerical value where higher costs are worse than lower costs.
+For example if our car is going at 20 mph and the goal is 40 mph the cost for being at the reduced speed should be > 0. (ie "2.0"). Then as we get closer to 40 mph that cost will be reduced. Let's go to the code:
+
+We start with `fg[0] = cost = 0`
+
+Then we add in costs for reference (target) state:
+```
+for (int t = 0;   t < N;  t++) {
+  fg[0] += CppAD::pow( vars[cte_start + t]   - ref_cte,  2) ;
+}
+```
+Here, `N` is the number of time steps we are forecasting. Essentially how far into the future we are looking.
+
+We are comparing the current cte (cross track error) to our reference. Since we want our car to go straight, our reference CTE is 0. For our target speed, we set `ref_v` to a speed, ie 64 (mph).
+
+Adding another cost is easy, we add it to the same running sum.
+
+```
+for (int t = 0;   t < N;  t++) {
+  fg[0] += CppAD::pow( vars[cte_start + t]   - ref_cte,  2) ;
+  fg[0] += CppAD::pow( vars[v_start + t]     - ref_v,  2) ;
+}
+```
+This however presents a slight challenge, what if we care more about the cte than we do about velocity?
+Hyperparameters to the rescue! 
+
+By adding a multiplier ie `coeff_cost_ref_cte = 32` to our cost function we are able to control how much each concept effects our system.
+
+```
+for (int t = 0;   t < N;  t++) {
+  fg[0] += coeff_cost_ref_cte   * CppAD::pow( vars[cte_start + t]   - ref_cte,  2) ;
+  fg[0] += coeff_cost_ref_epsi  * CppAD::pow( vars[epsi_start + t]  - ref_epsi,  2) ;
+}
+```
+See the full function line 77 in MPC.cpp
+
+
+
+#### 1.2 Kinematic model
+
+Great now that we have costs, let's specify our model.
+Again we will do this for each timestep `N`
+
+```
+for (int i = 0; i < N - 1; i++) {
+  AD<double> x_t1     = vars[x_start    + i + 1] ;
+  AD<double> x_t0     = vars[x_start    + i] ;
+  // ... further states
+}
+```
+In this model we define 
+```
+x = x position
+y = y position
+psi = angle
+cte = cross track error
+e_psi = error of angle
+delta = steering target
+a = acceleration / throttle target
+```
+Then we define for a given time step
+` fg[2 + x_start + i]    = x_t1   - (x_t0 + v_t0 * CppAD::cos(psi_t0) * dt ) ; `
+
+Here we introduce `dt = delta time = (ie) .016`.
+This is the frequency to which we are looking into the future.
+So for example if we set `N = 16` and `dt = .016`, we are looking `N * dt = 16 * .016 = .256` time steps into the future.
+
+Here `x prime` = x_t1` - `x_t+1`.
+We are using Udacity's suggested model of x​t+1​​=x​t​​+v​t​​∗cos(ψ​t​​)∗dt
+This models allows for our velocity, angle (psi), and timestep*(dt) for which we are predicting.
+
+After we repeat this for y, psi, v, cte, and epsi using the following models provided by Udacity:
+
+```
+y​t + 1​​ = y​t​​ + v​t​​ * sin(ψ​t​​) * dt
+
+ψ​t + 1​​ = ψ​t​​ +​ L​f​​​​ * v *​ t ​​​​* δ * dt
+
+v​t + 1​​ = v​t​​ + a​ * t​​ ∗ dt
+
+cte​t + 1​​ = f(x​t​​) − y​t​​ + (v​t​​∗sin(eψ​t​​)∗dt)
+
+eψ​t+1​​ = ψ​t​​ − ψdes​t​​ + (​L​f​​​​ * v *​ t * δ​t​​ * dt)
+```
+
+
+---
+
+### 2. Solve
+
+Our solve function takes a state and coeffs and returns the results of the COIN-OP solve().
+The coeffs are of a polynomial fitted line and the state represent things like x, y, and velocity.
+
+
+#### 2.1 Coeffs
+
+`coeffs = polyfit(x_car_space, y_car_space, 3) ;`
+
+In order to get x_car_space to make sense we must first transform the coordinates from map coordinates to car coordinates. 
+
+In car coordinates x is positive dead ahead, and y is positive to the left of x.
+In map ordinates x is positive to the right and y is positive going up (like a normal graph).
+
+```
+Eigen::VectorXd   x_car_space = Eigen::VectorXd( ptsx.size() ) ;
+for (int i = 0;   i < ptsx.size() ;   i++) {
+  x_car_space(i) = (ptsx[i] - px) * cos(psi) + (ptsy[i] - py) * sin(psi)  ;
+}
+```
+
+
+
+#### 2.2 State vector
+
+The state vector is defined in main.cpp main() line 153 `state << px, y, psi, v, cte, epsi ;`
+and unpacked in MPC.cpp Solve()
+
+We pass the coeffs of the fitted line to our evaluation functions,
+and the 2nd coeffs to our arc tangent function to calculate our angle error.
+```
+cte  = polyeval(coeffs, px) ;
+epsi = atan( coeffs[1] ) ;
+```
+
+
+
+#### 2.3 Latency
+Now we introduce the concept of latency. Later in our process we purposely do:
+`this_thread::sleep_for(chrono::milliseconds(100));`
+
+The latency is introduced to mimic real world driving, where actuators are limited by wire distance, mechanical properties and other variables, and so are unlikely to respond instantaneously.
+
+Circling back to the state vector, we define `px = v * latency ;` where `latency = .1`
+to allow for this latency in our predictions.
+
+
+
+#### 2.4 Constraints
+
+Now we define actuator constraints (these were provided by Udacity)
+```
+for (int i = delta_start; i < a_start; i++) {
+  vars_lowerbound[i] = -0.436332; // in radians , represents 25 degrees
+  vars_upperbound[i] =  0.436332;
+}
+```
+These constraints are required for the COIN-Op function reach reasonable values.
+
+
+Now we perform the earlier discussed eval() function passing our coefficients.
+`FG_eval fg_eval(coeffs);`
+which updates our model and costs.
+Stated another way, the costs represent our objective since our objective is to minimize our total cost.
+
+
+
+#### 2.5 Solve()
+Now using COIN-OP Solve we can get the mathematical result of the problem we have
+spent most of the program framing.
+```
+  CppAD::ipopt::solve<Dvector, FG_eval>( options, vars, vars_lowerbound, 
+                                         vars_upperbound, constraints_lowerbound,
+                                         constraints_upperbound, fg_eval, solution);
+```
+
+As the focus of the MPC is the model, constraints, processing, hyperparameters, and input/output for the project, we treated this function as a magic blackbox. As discussed below in more detail I'm curious to learn more about this.
+
+We store the result of this function in a vector thats returned.
+For use by Solve() we have been somewhat cumbersomely storing all variables in a vector with defined indexes. To simplify this for the key `steering_angle (delta)` and `throttle (a)` values we store the values in a class variable which is retrieved in main.cpp.
+
+This returned result is the end of MPC()s work for one cycle.
+
+
+
+### General processing pipeline
+
+Moving on we review the general processing pipeline.
+
+Steps 6 is the key step that kicks off the above described MPC process.
+
+1. Initialize mpc class
+2. Collect data from simulator
+3. Convert map space to car space
+4. Fit line to get coefficients
+5. Error calculation (Cross track and Psi) and state definition.
+6. Solve KEY STEP 
+7. Pass output to simulator
+8. Predicted line visual for simulator
+9. Way point visual for simulator
+10.Add latency to mimic real world driving conditions
+
+
+Example output from console
+![Example output from console](images/console-output.png)
+
+
+### Comparison to PID controller
+
+While touched on above here we get a bit more specific:
+
+* Better integration of speed and steering angle. While you can use two different PID controllers (ie one for speed and one for steering), they don't directly interact with each other. You can use a heuristic, such as at higher speeds `steering = steering_PID / ~speed_or_something`, but this is not the same as having both concepts directly integrated together.
+
+* Better performance going straight. A PID controller will never strictly converge, where as a MPC controller can in theory reach 0. This is visible in practice, in the PID project to get good performance on tight corners the model generally needed to wander a bit on straightaways. Where as in the MPC project you can get good performance on corners and straight lines. 
+
+* Smoother performance in the real world. The ability to "look ahead" helps mimic a human driver as discussed above. Further our model can account for arbitrary dynamics including latency. More advanced models could consider tire performance, snow, etc. Related to this is better recovery. While a far off course PID controller sometimes gets a little "lost" the MPC appears to be more robust. I'm guessing this is due to the "look ahead" nature, which more naturally follows the target path, where as the PID controller tries to get back to the "goal of the moment", so as the complexity of the target path increases, the PID can get more and more "lost".
+
+
+The primary draw back seems to be complexity.
+
+MPC is more complex. It's clearly more complex to setup and I'm guessing it requires more computational resources. Complexity is generally bad in safety critical systems. Complexity also increases development time etc.
+
+---
+
+### Hyperparameters
+
+#### Look ahead
+
+```
+N   = 16.;
+dt  =  0.016 ;
+```
+
+I started with higher values for dt and found lower seemed to perform better.
+As discussed above this is looking .256 time steps ahead and we have a latency of .1 time steps.
+This seems like a reasonable time frame. I would like to experiment further with larger values here.
+
+These factors can be quite important for convergence for example here is a comparison of two dt values in an earlier quiz:
+
+`dt = .05`
+![dt.05](images/dt_.05.png)
+
+`dt = .10`
+![dt.10](images/dt_.10.png)
+
+#### Target speed
+
+`ref_v = 64;`
+
+The model requires further tuning to go above 64 mph
+
+#### Cost coefficients
+```
+coeff_cost_ref_cte           = 320;
+coeff_cost_ref_epsi          = 64;
+coeff_cost_ref_v             = 1;
+coeff_cost_ref_val_throttle  = 16;
+coeff_cost_ref_val_steering  = 160;
+coeff_cost_ref_seq_throttle  = 32;
+coeff_cost_ref_seq_steering  = 6400;
+```
+
+I started without even using these. Then tried only using the `coeff_cost_ref_seq_steering`.
+Generally I found if it was too high, it simply wouldn't turn and too low it would wobble too much.
+
+---
+
+## Further research and opportunities
+
+* Further diving into the theory side of MPCs
+* Further tuning of this project.
+* Review of Magic functions() like the COIN-OP Solve().
+* Deeper understanding of space transformations
+* Code refactoring, especially the 3 God size functions. And there has got to be a better way to keep those vector indexes straight even if Solve() does need it in one vector!
+
+## Sources and credits
+
+This is a student project with the primary goal being to learn and understand the concepts behind a model predictive controller.
+
+1. Udacity provided starter code, quiz code, and lessons.
+2. Ideas from other students and mentors through forums, chat channel, and github.
+3. The various dependency libraries.
+4. [Wikipedia](https://en.wikipedia.org/wiki/Model_predictive_control)
+
 
 ---
 
@@ -31,8 +356,6 @@ Self-Driving Car Engineer Nanodegree Program
 * [Eigen](http://eigen.tuxfamily.org/index.php?title=Main_Page). This is already part of the repo so you shouldn't have to worry about it.
 * Simulator. You can download these from the [releases tab](https://github.com/udacity/CarND-MPC-Project/releases).
 
-
-
 ## Basic Build Instructions
 
 
@@ -40,67 +363,3 @@ Self-Driving Car Engineer Nanodegree Program
 2. Make a build directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
 4. Run it: `./mpc`.
-
-## Tips
-
-1. It's recommended to test the MPC on basic examples to see if your implementation behaves as desired. One possible example
-is the vehicle starting offset of a straight line (reference). If the MPC implementation is correct, after some number of timesteps
-(not too many) it should find and track the reference line.
-2. The `lake_track_waypoints.csv` file has the waypoints of the lake track. You could use this to fit polynomials and points and see of how well your model tracks curve. NOTE: This file might be not completely in sync with the simulator so your solution should NOT depend on it.
-3. For visualization this C++ [matplotlib wrapper](https://github.com/lava/matplotlib-cpp) could be helpful.
-
-## Editor Settings
-
-We've purposefully kept editor configuration files out of this repo in order to
-keep it as simple and environment agnostic as possible. However, we recommend
-using the following settings:
-
-* indent using spaces
-* set tab width to 2 spaces (keeps the matrices in source code aligned)
-
-## Code Style
-
-Please (do your best to) stick to [Google's C++ style guide](https://google.github.io/styleguide/cppguide.html).
-
-## Project Instructions and Rubric
-
-Note: regardless of the changes you make, your project must be buildable using
-cmake and make!
-
-More information is only accessible by people who are already enrolled in Term 2
-of CarND. If you are enrolled, see [the project page](https://classroom.udacity.com/nanodegrees/nd013/parts/40f38239-66b6-46ec-ae68-03afd8a601c8/modules/f1820894-8322-4bb3-81aa-b26b3c6dcbaf/lessons/b1ff3be0-c904-438e-aad3-2b5379f0e0c3/concepts/1a2255a0-e23c-44cf-8d41-39b8a3c8264a)
-for instructions and the project rubric.
-
-## Hints!
-
-* You don't have to follow this directory structure, but if you do, your work
-  will span all of the .cpp files here. Keep an eye out for TODOs.
-
-## Call for IDE Profiles Pull Requests
-
-Help your fellow students!
-
-We decided to create Makefiles with cmake to keep this project as platform
-agnostic as possible. Similarly, we omitted IDE profiles in order to we ensure
-that students don't feel pressured to use one IDE or another.
-
-However! I'd love to help people get up and running with their IDEs of choice.
-If you've created a profile for an IDE that you think other students would
-appreciate, we'd love to have you add the requisite profile files and
-instructions to ide_profiles/. For example if you wanted to add a VS Code
-profile, you'd add:
-
-* /ide_profiles/vscode/.vscode
-* /ide_profiles/vscode/README.md
-
-The README should explain what the profile does, how to take advantage of it,
-and how to install it.
-
-Frankly, I've never been involved in a project with multiple IDE profiles
-before. I believe the best way to handle this would be to keep them out of the
-repo root to avoid clutter. My expectation is that most profiles will include
-instructions to copy files to a new location to get picked up by the IDE, but
-that's just a guess.
-
-One last note here: regardless of the IDE used, every submitted project must
-still be compilable with cmake and make./
