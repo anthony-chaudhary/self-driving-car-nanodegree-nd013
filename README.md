@@ -29,8 +29,8 @@ I developed a 2 dimensional particle filter in C++ for localization use.
 ## 09, [PID controller](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/blob/master/p9-pid-control/reflections.md)
 I developed a proportional integral derivative controller in C++. The car reached 95 mph on the most difficult corner of the virtual test track. [Video here. :)](https://youtu.be/Zuy0vBc8LYU)
 
-## 10, [Model predictive control](#)
-
+## 10, [Model predictive control](https://github.com/swirlingsand/self-driving-car-nanodegree-nd013/tree/master/p10-model-predictive-control)
+A MPC optimizes the current controls while keeping future information in mind.
 
 # Term 1:
 
