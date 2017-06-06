@@ -136,11 +136,13 @@ class FG_eval {
       // for 3rd degree polynomial
       AD<double> f_t0 = coeffs[0] + 
                         coeffs[1] * x_t0 + 
-                        coeffs[2] * x_t0 * x_t0 ;
+                        coeffs[2] * x_t0 * x_t0 +
+                        coeffs[3] * (x_t0 * x_t0 * x_t0) ;
       
       // rate of cahnge of f0
       AD<double> f_t0_rate_of_change = coeffs[1] +
-                                       coeffs[2] * x_t0 * x_t0 ;       
+                                       (2 * coeffs[2] * x_t0) +
+                                       (3 * coeffs[3] * (x_t0 * x_t0) );       
        
       AD<double> psides_t0 = CppAD::atan( f_t0_rate_of_change) ;
 
@@ -156,13 +158,13 @@ class FG_eval {
       fg[2 + y_start + i]    = y_t1   - (y_t0 + v_t0 * CppAD::sin(psi_t0) * dt ) ;
 
       fg[2 + psi_start + i]  = psi_t1 - (psi_t0 + v_t0 * delta_t0 / Lf * dt ) ;
-      //fg[2 + psi_start + i]   = (psi_t1 + v_t1 * delta_t0 / Lf * dt ) ;
-      fg[2 + v_start + i]    = v_t1   - (v_t0 - a_t0 * dt) ;
+
+      fg[2 + v_start + i]    = v_t1   - (v_t0 + a_t0 * dt) ;
 
       fg[2 + cte_start + i]  = cte_t1 - ( (f_t0 - y_t0) + 
                               (v_t0 * CppAD::sin(e_psi_t0) * dt) ) ;
       
-      fg[2 + epsi_start + i] = e_psi_t1 - ( ( psi_t0 + psides_t0) + 
+      fg[2 + epsi_start + i] = e_psi_t1 - ( ( psi_t0 - psides_t0) + 
                                v_t0 * delta_t0 / Lf * dt ) ;
 
     }

@@ -148,7 +148,12 @@ int main() {
           cout << "psi transformed" << psi << endl ;
 
           double cte  = polyeval(coeffs, px) ;
-          double epsi = atan( coeffs[1] ) ;
+          // double epsi = atan( coeffs[1] ) ;
+
+          // using derivative at px 
+          double epsi = - atan( coeffs[1] +
+                              (2 * coeffs[2] * px) +
+                              (3 * coeffs[3] * (px * px) ) );
 
           state << px, 0, psi, v, cte, epsi ;
           cout << "state " << psi << endl ;
@@ -161,8 +166,10 @@ int main() {
 
           auto vars = mpc.Solve(state, coeffs) ;
 
+          // Convert from radians to normalized range.
+          steer_value           = steer_value / deg2rad(25)
           steer_value           = - mpc.steering_angle ;
-          double throttle_value = - mpc.throttle ;
+          double throttle_value = mpc.throttle ;
 
           /****************************************
            * 7. Pass output to simulator
@@ -224,8 +231,6 @@ int main() {
           // Feel free to play around with this value but should be to drive
           // around the track with 100ms latency.
           //
-          // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
-          // SUBMITTING.
 
           // TODO look at chrono::high_resolution_clock() 
           this_thread::sleep_for(chrono::milliseconds(100));
