@@ -6,8 +6,28 @@
 using CppAD::AD;
 using namespace std ;
 
-size_t N = 16;
-double dt = .016;
+/// N == 16 and dt == .016 seems to work pretty darn well...
+//   ./mpc 80 128 1 8 160 16 40000
+//  ./mpc 64 128 1 8 32 16 40000  ref 115 
+// 82 mph or so
+// seems like valuing epsi 2x as cte??
+
+/*
+
+Good settings 8*.035
+./mpc 512 4000 1 4 64 8 30000
+ref_v == 100
+gets ~85 mph on tough corner with 100 ms latency
+
+
+BEST YET
+./mpc 512 7000 1 3 64 8 37000
+gets 86 mph continous
+
+*/
+
+size_t N = 8;
+double dt = .035;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -23,7 +43,7 @@ const double Lf = 2.67;
 
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 64;
+double ref_v = 90;   
 
 // A. Solver takes 1 vector.
 //  This is to create an index to access variables in that fector
@@ -37,18 +57,37 @@ size_t delta_start  = epsi_start  + N ;
 size_t a_start      = delta_start + N - 1 ;
 /// end A.
 
-/****************************************
- * cost hyperparamters
- ****************************************/
-// TO DO refector to optional command line arguments
+double coeff_cost_ref_cte ;
+double coeff_cost_ref_epsi ;
+double coeff_cost_ref_v ;
+double coeff_cost_ref_val_throttle ;
+double coeff_cost_ref_val_steering ;
+double coeff_cost_ref_seq_throttle ;
+double coeff_cost_ref_seq_steering ;
 
-const double coeff_cost_ref_cte           = 320;
-const double coeff_cost_ref_epsi          = 64;
-const double coeff_cost_ref_v             = 1;
-const double coeff_cost_ref_val_throttle  = 16;
-const double coeff_cost_ref_val_steering  = 160;
-const double coeff_cost_ref_seq_throttle  = 32;
-const double coeff_cost_ref_seq_steering  = 6400;
+
+//
+// MPC class definition implementation.
+//
+MPC::MPC() {}
+MPC::~MPC() {}
+
+void MPC::Init(vector<double> coeff_hyper_parameters ){
+
+  /****************************************
+   * cost hyperparamters
+   ****************************************/
+
+  coeff_cost_ref_cte           = coeff_hyper_parameters[0];
+  coeff_cost_ref_epsi          = coeff_hyper_parameters[1];
+  coeff_cost_ref_v             = coeff_hyper_parameters[2];
+  coeff_cost_ref_val_throttle  = coeff_hyper_parameters[3];
+  coeff_cost_ref_val_steering  = coeff_hyper_parameters[4];
+  coeff_cost_ref_seq_throttle  = coeff_hyper_parameters[5];
+  coeff_cost_ref_seq_steering  = coeff_hyper_parameters[6];
+}
+
+
 
 class FG_eval {
 
@@ -71,6 +110,8 @@ class FG_eval {
      * Cost vectors
      ****************************************/
 
+    cout << "coeff_cost_ref_cte" << coeff_cost_ref_cte << endl; 
+    
     fg[0] = 0 ;
 
     // Cost for reference state
@@ -171,11 +212,8 @@ class FG_eval {
   }
 };
 
-//
-// MPC class definition implementation.
-//
-MPC::MPC() {}
-MPC::~MPC() {}
+
+
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;

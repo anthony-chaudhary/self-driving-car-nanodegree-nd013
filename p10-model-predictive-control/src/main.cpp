@@ -9,6 +9,7 @@
 #include "MPC.h"
 #include "json.hpp"
 #include <math.h>
+#include <stdlib.h>
 
 // for convenience
 using json = nlohmann::json;
@@ -67,14 +68,32 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
-int main() {
+int main( int argc, const char *argv[] ) {
+  
   uWS::Hub h;
-
 
   /****************************************
    * 1. Initialize mpc class
    ****************************************/
   MPC mpc;
+
+  vector<double> hyper_parameters ;
+
+  // ie ./mpc 320 64 1 1 160 8 6400 64 15 .016
+  if (argc != 8 ) {
+    cout << " Usage ./mpc ref_cte ref_epsi v val_throttle coeff_cost_ref_val_steering seq_throttle seq_steering" << endl ;
+    return -1 ;
+  }
+  else {
+
+    for (int i = 1; i < 8; i++) {
+      hyper_parameters.push_back( strtod( argv[i], NULL ) ) ;
+      cout << strtod( argv[i], NULL ) << endl  ;
+    }
+  }
+
+  mpc.Init(hyper_parameters) ;
+
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> *ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -139,6 +158,10 @@ int main() {
           // where * latency is used to allow for latency in state calculation
           const double latency = .1 ;
           cout << "px original " << px << endl ;
+
+          // convert to m/s 
+          // v = v * 0.44704;
+
           px = v * latency ;
           cout << "px transformed" << px << endl ;
 
@@ -167,7 +190,7 @@ int main() {
           auto vars = mpc.Solve(state, coeffs) ;
 
           // Convert from radians to normalized range.
-          steer_value           = steer_value / deg2rad(25)
+          steer_value           = steer_value / deg2rad(25) ;
           steer_value           = - mpc.steering_angle ;
           double throttle_value = mpc.throttle ;
 
