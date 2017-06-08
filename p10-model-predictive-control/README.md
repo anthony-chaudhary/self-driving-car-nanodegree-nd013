@@ -5,7 +5,7 @@
 
 #### A MPC optimizes the current controls while keeping future information in mind.
 
-![Video available here.](https://youtu.be/LAraiCWi8iY)
+[Video available here.](https://youtu.be/LAraiCWi8iY)
 
 
 ## Overview
