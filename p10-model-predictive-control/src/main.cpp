@@ -79,7 +79,7 @@ int main( int argc, const char *argv[] ) {
 
   vector<double> hyper_parameters ;
 
-  // ie ./mpc 320 64 1 1 160 8 6400 64 15 .016
+  // ie ./mpc 512 7000 1 3 64 8 37000
   if (argc != 8 ) {
     cout << " Usage ./mpc ref_cte ref_epsi v val_throttle coeff_cost_ref_val_steering seq_throttle seq_steering" << endl ;
     return -1 ;
@@ -145,6 +145,9 @@ int main( int argc, const char *argv[] ) {
           /****************************************
            * 4. Fit line to get coefficients
            ****************************************/
+
+          cout << "xvals" << x_car_space << endl ;
+          cout << "yvals" << y_car_space << endl ;
 
           auto coeffs = polyfit(x_car_space, y_car_space, 3) ;
           cout << "coeffs\t" << coeffs << endl ;
@@ -213,9 +216,15 @@ int main( int argc, const char *argv[] ) {
           vector<double> mpc_y_vals;
 
           int x_car_space_len = x_car_space.size() ;
-          for (int i = 0; i < x_car_space_len; i ++) {
-            mpc_x_vals.push_back( x_car_space[i])  ;
-            mpc_y_vals.push_back(polyeval(coeffs, x_car_space[i]) ) ;
+          for (int i = 2; i < vars.size(); i ++) {
+            if (i % 2 == 0 ){ 
+              
+              mpc_x_vals.push_back( vars[i] ) ;
+
+            } else {
+              
+              mpc_y_vals.push_back( vars[i] ) ;
+            }
           }
 
           msgJson["mpc_x"] = mpc_x_vals;
@@ -231,7 +240,7 @@ int main( int argc, const char *argv[] ) {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          for (int i = 0;  i < x_car_space.size();  i++) {
+          for (int i = 1;  i < x_car_space.size();  i++) {
             next_x_vals.push_back(x_car_space[i] ) ;
             next_y_vals.push_back(y_car_space[i] ) ;
           }
