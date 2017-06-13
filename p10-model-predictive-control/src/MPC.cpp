@@ -6,27 +6,8 @@
 using CppAD::AD;
 using namespace std ;
 
-/// N == 16 and dt == .016 seems to work pretty darn well...
-//   ./mpc 80 128 1 8 160 16 40000
-//  ./mpc 64 128 1 8 32 16 40000  ref 115 
-// 82 mph or so
-// seems like valuing epsi 2x as cte??
 
-/*
-
-Good settings 8*.035
-./mpc 512 4000 1 4 64 8 30000
-ref_v == 100
-gets ~85 mph on tough corner with 100 ms latency
-
-
-BEST YET
-./mpc 512 7000 1 3 64 8 37000
-gets 86 mph continous
-
-*/
-
-size_t N = 8;
+size_t N = 9;
 double dt = .035;
 
 // This value assumes the model presented in the classroom is used.
@@ -39,11 +20,11 @@ double dt = .035;
 // presented in the classroom matched the previous radius.
 //
 // This is the length from front to CoG that has a similar radius.
-const double Lf = 2.67;
+const double Lf = 2.9;
 
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 90;   
+double ref_v = 115;   
 
 // A. Solver takes 1 vector.
 //  This is to create an index to access variables in that fector
@@ -110,7 +91,12 @@ class FG_eval {
      * Cost vectors
      ****************************************/
 
-    cout << "coeff_cost_ref_cte" << coeff_cost_ref_cte << endl; 
+    /*
+    Why?
+    Later in our code solve() will need tounderstand what we care about 
+    */
+
+    // cout << "coeff_cost_ref_cte" << coeff_cost_ref_cte << endl; 
     
     fg[0] = 0 ;
 
@@ -138,6 +124,12 @@ class FG_eval {
     /****************************************
      * Initial constraints
      ****************************************/
+
+    /*
+    Why is this next?
+    Solve() doesn't know the car can't teleport. We need to define what's reasonable
+
+    */
 
     // We add 1 to each of the starting indices due to cost being located at
     // index 0 of `fg`.
@@ -349,8 +341,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   this->steering_angle = solution.x[ delta_start ] ;
   this->throttle       = solution.x[ a_start ] ;
 
-  cout << "steering_angle" << solution.x[ delta_start ] << 
-  "throttle" << solution.x[ a_start ] << endl;
+  //cout << "steering_angle" << solution.x[ delta_start ] << 
+  // "throttle" << solution.x[ a_start ] << endl;
 
   vector<double> results ;
   results.push_back(solution.x[psi_start + 1]) ;
@@ -370,6 +362,19 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   // cout << "results[0] " << results[0] << "results[1]" << results[1] << endl ;
+
+  /*
+  Why? We need to pass this for the prediction visauls
+  */
+
+  /*
+  for (int i = 0; i < N; i++) {
+    std::cout << solution.x[i + x_start] << " " << solution.x[i + y_start]
+              << " " << solution.x[i + psi_start] << " "
+              << solution.x[i + v_start] << " " << solution.x[i + cte_start]
+              << " " << solution.x[i + epsi_start] << std::endl;
+  }
+  */
 
   return results;
 }

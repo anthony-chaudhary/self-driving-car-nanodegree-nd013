@@ -1,7 +1,7 @@
 changelog 06 06 17
 
 MPC.cpp
--> Added cubic term to 3rd degree polynomail
+-> Added cubic term to 3rd degree polynomial
 -> Fixed first deriviative
 -> should be addition fg[2 + v_start + i]    = v_t1   - (v_t0 + a_t0 * dt) ;
 -> fix fg[2 + epsi_start + i] = e_psi_t1 - ( ( psi_t0 - psides_t0) + 

@@ -79,9 +79,9 @@ int main( int argc, const char *argv[] ) {
 
   vector<double> hyper_parameters ;
 
-  // ie ./mpc 512 7000 1 3 64 8 37000
+
   if (argc != 8 ) {
-    cout << " Usage ./mpc ref_cte ref_epsi v val_throttle coeff_cost_ref_val_steering seq_throttle seq_steering" << endl ;
+    cout << " Usage ./mpc ref_cte ref_epsi v val_throttle coeff_cost_ref_val_steering seq_throttle seq_steering \n ie  ./mpc 20 20 1 8 1100 16 600" << endl ;
     return -1 ;
   }
   else {
@@ -146,11 +146,11 @@ int main( int argc, const char *argv[] ) {
            * 4. Fit line to get coefficients
            ****************************************/
 
-          cout << "xvals" << x_car_space << endl ;
-          cout << "yvals" << y_car_space << endl ;
+          // cout << "xvals" << x_car_space << endl ;
+          // cout << "yvals" << y_car_space << endl ;
 
           auto coeffs = polyfit(x_car_space, y_car_space, 3) ;
-          cout << "coeffs\t" << coeffs << endl ;
+          // cout << "coeffs\t" << coeffs << endl ;
 
            /****************************************
            * 5. Error calculation (Cross track and Psi) and state definition.
@@ -159,19 +159,19 @@ int main( int argc, const char *argv[] ) {
           Eigen::VectorXd state(6) ;
         
           // where * latency is used to allow for latency in state calculation
-          const double latency = .1 ;
-          cout << "px original " << px << endl ;
+          const double latency = .10 ;
+          // cout << "px original " << px << endl ;
 
           // convert to m/s 
           // v = v * 0.44704;
 
           px = v * latency ;
-          cout << "px transformed" << px << endl ;
+          // cout << "px transformed" << px << endl ;
 
-          const double Lf = 2.67;
-          cout << "psi original" << psi << endl ;
+          const double Lf = 2.9;
+          // cout << "psi original" << psi << endl ;
           psi = - v * steer_value / Lf * latency ;
-          cout << "psi transformed" << psi << endl ;
+          // cout << "psi transformed" << psi << endl ;
 
           double cte  = polyeval(coeffs, px) ;
           // double epsi = atan( coeffs[1] ) ;
@@ -182,7 +182,7 @@ int main( int argc, const char *argv[] ) {
                               (3 * coeffs[3] * (px * px) ) );
 
           state << px, 0, psi, v, cte, epsi ;
-          cout << "state " << psi << endl ;
+          // cout << "state " << psi << endl ;
 
           /****************************************
            * 6. Solve (Computational Infastructure for Operations Research library)
@@ -216,7 +216,7 @@ int main( int argc, const char *argv[] ) {
           vector<double> mpc_y_vals;
 
           int x_car_space_len = x_car_space.size() ;
-          for (int i = 2; i < vars.size(); i ++) {
+          for (int i = 6; i < vars.size(); i ++) {
             if (i % 2 == 0 ){ 
               
               mpc_x_vals.push_back( vars[i] ) ;
