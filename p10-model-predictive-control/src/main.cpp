@@ -9,6 +9,7 @@
 #include "MPC.h"
 #include "json.hpp"
 #include <math.h>
+#include <stdlib.h>
 
 // for convenience
 using json = nlohmann::json;
@@ -67,14 +68,32 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
   return result;
 }
 
-int main() {
+int main( int argc, const char *argv[] ) {
+  
   uWS::Hub h;
-
 
   /****************************************
    * 1. Initialize mpc class
    ****************************************/
   MPC mpc;
+
+  vector<double> hyper_parameters ;
+
+
+  if (argc != 8 ) {
+    cout << " Usage ./mpc ref_cte ref_epsi v val_throttle coeff_cost_ref_val_steering seq_throttle seq_steering \n ie  ./mpc 20 20 1 8 1100 16 600" << endl ;
+    return -1 ;
+  }
+  else {
+
+    for (int i = 1; i < 8; i++) {
+      hyper_parameters.push_back( strtod( argv[i], NULL ) ) ;
+      cout << strtod( argv[i], NULL ) << endl  ;
+    }
+  }
+
+  mpc.Init(hyper_parameters) ;
+
 
   h.onMessage([&mpc](uWS::WebSocket<uWS::SERVER> *ws, char *data, size_t length,
                      uWS::OpCode opCode) {
@@ -127,8 +146,11 @@ int main() {
            * 4. Fit line to get coefficients
            ****************************************/
 
+          // cout << "xvals" << x_car_space << endl ;
+          // cout << "yvals" << y_car_space << endl ;
+
           auto coeffs = polyfit(x_car_space, y_car_space, 3) ;
-          cout << "coeffs\t" << coeffs << endl ;
+          // cout << "coeffs\t" << coeffs << endl ;
 
            /****************************************
            * 5. Error calculation (Cross track and Psi) and state definition.
@@ -137,21 +159,30 @@ int main() {
           Eigen::VectorXd state(6) ;
         
           // where * latency is used to allow for latency in state calculation
-          const double latency = .1 ;
-          cout << "px original " << px << endl ;
-          px = v * latency ;
-          cout << "px transformed" << px << endl ;
+          const double latency = .10 ;
+          // cout << "px original " << px << endl ;
 
-          const double Lf = 2.67;
-          cout << "psi original" << psi << endl ;
+          // convert to m/s 
+          // v = v * 0.44704;
+
+          px = v * latency ;
+          // cout << "px transformed" << px << endl ;
+
+          const double Lf = 2.9;
+          // cout << "psi original" << psi << endl ;
           psi = - v * steer_value / Lf * latency ;
-          cout << "psi transformed" << psi << endl ;
+          // cout << "psi transformed" << psi << endl ;
 
           double cte  = polyeval(coeffs, px) ;
-          double epsi = atan( coeffs[1] ) ;
+          // double epsi = atan( coeffs[1] ) ;
+
+          // using derivative at px 
+          double epsi = - atan( coeffs[1] +
+                              (2 * coeffs[2] * px) +
+                              (3 * coeffs[3] * (px * px) ) );
 
           state << px, 0, psi, v, cte, epsi ;
-          cout << "state " << psi << endl ;
+          // cout << "state " << psi << endl ;
 
           /****************************************
            * 6. Solve (Computational Infastructure for Operations Research library)
@@ -161,8 +192,10 @@ int main() {
 
           auto vars = mpc.Solve(state, coeffs) ;
 
+          // Convert from radians to normalized range.
+          steer_value           = steer_value / deg2rad(25) ;
           steer_value           = - mpc.steering_angle ;
-          double throttle_value = - mpc.throttle ;
+          double throttle_value = mpc.throttle ;
 
           /****************************************
            * 7. Pass output to simulator
@@ -183,9 +216,15 @@ int main() {
           vector<double> mpc_y_vals;
 
           int x_car_space_len = x_car_space.size() ;
-          for (int i = 0; i < x_car_space_len; i ++) {
-            mpc_x_vals.push_back( x_car_space[i])  ;
-            mpc_y_vals.push_back(polyeval(coeffs, x_car_space[i]) ) ;
+          for (int i = 6; i < vars.size(); i ++) {
+            if (i % 2 == 0 ){ 
+              
+              mpc_x_vals.push_back( vars[i] ) ;
+
+            } else {
+              
+              mpc_y_vals.push_back( vars[i] ) ;
+            }
           }
 
           msgJson["mpc_x"] = mpc_x_vals;
@@ -201,7 +240,7 @@ int main() {
           vector<double> next_x_vals;
           vector<double> next_y_vals;
 
-          for (int i = 0;  i < x_car_space.size();  i++) {
+          for (int i = 1;  i < x_car_space.size();  i++) {
             next_x_vals.push_back(x_car_space[i] ) ;
             next_y_vals.push_back(y_car_space[i] ) ;
           }
@@ -224,8 +263,6 @@ int main() {
           // Feel free to play around with this value but should be to drive
           // around the track with 100ms latency.
           //
-          // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
-          // SUBMITTING.
 
           // TODO look at chrono::high_resolution_clock() 
           this_thread::sleep_for(chrono::milliseconds(100));

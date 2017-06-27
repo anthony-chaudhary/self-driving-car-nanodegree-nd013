@@ -6,8 +6,9 @@
 using CppAD::AD;
 using namespace std ;
 
-size_t N = 16;
-double dt = .016;
+
+size_t N = 9;
+double dt = .035;
 
 // This value assumes the model presented in the classroom is used.
 //
@@ -19,11 +20,11 @@ double dt = .016;
 // presented in the classroom matched the previous radius.
 //
 // This is the length from front to CoG that has a similar radius.
-const double Lf = 2.67;
+const double Lf = 2.9;
 
 double ref_cte = 0;
 double ref_epsi = 0;
-double ref_v = 64;
+double ref_v = 115;   
 
 // A. Solver takes 1 vector.
 //  This is to create an index to access variables in that fector
@@ -37,18 +38,37 @@ size_t delta_start  = epsi_start  + N ;
 size_t a_start      = delta_start + N - 1 ;
 /// end A.
 
-/****************************************
- * cost hyperparamters
- ****************************************/
-// TO DO refector to optional command line arguments
+double coeff_cost_ref_cte ;
+double coeff_cost_ref_epsi ;
+double coeff_cost_ref_v ;
+double coeff_cost_ref_val_throttle ;
+double coeff_cost_ref_val_steering ;
+double coeff_cost_ref_seq_throttle ;
+double coeff_cost_ref_seq_steering ;
 
-const double coeff_cost_ref_cte           = 320;
-const double coeff_cost_ref_epsi          = 64;
-const double coeff_cost_ref_v             = 1;
-const double coeff_cost_ref_val_throttle  = 16;
-const double coeff_cost_ref_val_steering  = 160;
-const double coeff_cost_ref_seq_throttle  = 32;
-const double coeff_cost_ref_seq_steering  = 6400;
+
+//
+// MPC class definition implementation.
+//
+MPC::MPC() {}
+MPC::~MPC() {}
+
+void MPC::Init(vector<double> coeff_hyper_parameters ){
+
+  /****************************************
+   * cost hyperparamters
+   ****************************************/
+
+  coeff_cost_ref_cte           = coeff_hyper_parameters[0];
+  coeff_cost_ref_epsi          = coeff_hyper_parameters[1];
+  coeff_cost_ref_v             = coeff_hyper_parameters[2];
+  coeff_cost_ref_val_throttle  = coeff_hyper_parameters[3];
+  coeff_cost_ref_val_steering  = coeff_hyper_parameters[4];
+  coeff_cost_ref_seq_throttle  = coeff_hyper_parameters[5];
+  coeff_cost_ref_seq_steering  = coeff_hyper_parameters[6];
+}
+
+
 
 class FG_eval {
 
@@ -71,6 +91,13 @@ class FG_eval {
      * Cost vectors
      ****************************************/
 
+    /*
+    Why?
+    Later in our code solve() will need tounderstand what we care about 
+    */
+
+    // cout << "coeff_cost_ref_cte" << coeff_cost_ref_cte << endl; 
+    
     fg[0] = 0 ;
 
     // Cost for reference state
@@ -97,6 +124,12 @@ class FG_eval {
     /****************************************
      * Initial constraints
      ****************************************/
+
+    /*
+    Why is this next?
+    Solve() doesn't know the car can't teleport. We need to define what's reasonable
+
+    */
 
     // We add 1 to each of the starting indices due to cost being located at
     // index 0 of `fg`.
@@ -136,11 +169,13 @@ class FG_eval {
       // for 3rd degree polynomial
       AD<double> f_t0 = coeffs[0] + 
                         coeffs[1] * x_t0 + 
-                        coeffs[2] * x_t0 * x_t0 ;
+                        coeffs[2] * x_t0 * x_t0 +
+                        coeffs[3] * (x_t0 * x_t0 * x_t0) ;
       
       // rate of cahnge of f0
       AD<double> f_t0_rate_of_change = coeffs[1] +
-                                       coeffs[2] * x_t0 * x_t0 ;       
+                                       (2 * coeffs[2] * x_t0) +
+                                       (3 * coeffs[3] * (x_t0 * x_t0) );       
        
       AD<double> psides_t0 = CppAD::atan( f_t0_rate_of_change) ;
 
@@ -156,24 +191,21 @@ class FG_eval {
       fg[2 + y_start + i]    = y_t1   - (y_t0 + v_t0 * CppAD::sin(psi_t0) * dt ) ;
 
       fg[2 + psi_start + i]  = psi_t1 - (psi_t0 + v_t0 * delta_t0 / Lf * dt ) ;
-      //fg[2 + psi_start + i]   = (psi_t1 + v_t1 * delta_t0 / Lf * dt ) ;
-      fg[2 + v_start + i]    = v_t1   - (v_t0 - a_t0 * dt) ;
+
+      fg[2 + v_start + i]    = v_t1   - (v_t0 + a_t0 * dt) ;
 
       fg[2 + cte_start + i]  = cte_t1 - ( (f_t0 - y_t0) + 
                               (v_t0 * CppAD::sin(e_psi_t0) * dt) ) ;
       
-      fg[2 + epsi_start + i] = e_psi_t1 - ( ( psi_t0 + psides_t0) + 
+      fg[2 + epsi_start + i] = e_psi_t1 - ( ( psi_t0 - psides_t0) + 
                                v_t0 * delta_t0 / Lf * dt ) ;
 
     }
   }
 };
 
-//
-// MPC class definition implementation.
-//
-MPC::MPC() {}
-MPC::~MPC() {}
+
+
 
 vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   bool ok = true;
@@ -309,8 +341,8 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   this->steering_angle = solution.x[ delta_start ] ;
   this->throttle       = solution.x[ a_start ] ;
 
-  cout << "steering_angle" << solution.x[ delta_start ] << 
-  "throttle" << solution.x[ a_start ] << endl;
+  //cout << "steering_angle" << solution.x[ delta_start ] << 
+  // "throttle" << solution.x[ a_start ] << endl;
 
   vector<double> results ;
   results.push_back(solution.x[psi_start + 1]) ;
@@ -330,6 +362,19 @@ vector<double> MPC::Solve(Eigen::VectorXd state, Eigen::VectorXd coeffs) {
   }
 
   // cout << "results[0] " << results[0] << "results[1]" << results[1] << endl ;
+
+  /*
+  Why? We need to pass this for the prediction visauls
+  */
+
+  /*
+  for (int i = 0; i < N; i++) {
+    std::cout << solution.x[i + x_start] << " " << solution.x[i + y_start]
+              << " " << solution.x[i + psi_start] << " "
+              << solution.x[i + v_start] << " " << solution.x[i + cte_start]
+              << " " << solution.x[i + epsi_start] << std::endl;
+  }
+  */
 
   return results;
 }

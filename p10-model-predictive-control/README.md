@@ -5,7 +5,7 @@
 
 #### A MPC optimizes the current controls while keeping future information in mind.
 
-![Video available here.](videos/sdc-mpc-run.mkv)
+[Video available here.](https://youtu.be/DZM3X-vBERg)
 
 
 ## Overview
