@@ -62,11 +62,15 @@ class space():
 def search(grid,init,goal,cost):
 
     # 0. Init
+    expanded_grid = [[-1 for i in range(len(grid[0]))] for i in range(len(grid))]
+
     a = node()
     a.x, a.y = init[0], init[1]  # first node
+    expanded_grid[a.x][a.y] = a.id
     nodes = [a]
     explored_dict = {(a.x, a.y): "Explored"}
     expanded_dict = {}
+    #print(expanded_grid)
 
     while True:
 
@@ -96,12 +100,10 @@ def search(grid,init,goal,cost):
         # 2. Check if at goal
         if (c.x, c.y) == (goal[0], goal[1]):
             "At goal"
-            return nodes, (c.g, c.x, c.y)
+            return nodes, [c.g, c.x, c.y], expanded_grid
 
         # 3. Expand node if possible
         for d in delta:
-
-            #print(d)
             if (d[0], d[1]) == (0, 1):   # If we have reached last move, mark cell as expanded
                 expanded_dict.update({c.id: "Expanded"})
                 print("Added node", c.id, "position", c.x, ",", c.y, "to expanded.")
@@ -119,11 +121,13 @@ def search(grid,init,goal,cost):
                         new.x, new.y = x, y
                         nodes.append(new)
 
+                        expanded_grid[x][y] = new.g
+
                         explored_dict.update({(x, y): "Explored"})
                         break
 
 
-nodes, result = search(grid, init, goal, cost)
+nodes, result, expanded_grid = search(grid, init, goal, cost)
 nodes.sort(key=lambda x: x.g)
 #set(nodes)
 #previous_cost = 0
@@ -132,4 +136,19 @@ for n in nodes:
     #if n.g != previous_cost:
     print(n.x+1, "down,", n.y+1, "right. cost", n.g)    #plus one for easy of reading
 
-print(result)
+
+path_grid = [[-1 for i in range(len(grid[0]))] for i in range(len(grid))]
+x, y = 0, 0
+for i in range(result[0]):
+    #path_flag = False
+    for x in range(5):
+        for y in range(6):
+            if expanded_grid[x][y] == (result[0] - i) #and path_flag is False:
+                path_grid[x][y] = "*"
+                path_flag = True
+
+for i in expanded_grid:
+    print(i)
+
+for i in path_grid:
+    print(i)
