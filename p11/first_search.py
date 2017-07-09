@@ -21,7 +21,7 @@ import itertools
 # (down, right)
 
 grid = [[0, 0, 1, 0, 0, 0],
-        [0, 0, 1, 0, 0, 0],
+        [0, 0, 1, 0, 1, 0],
         [0, 0, 0, 0, 1, 0],
         [0, 0, 1, 1, 1, 0],
         [0, 0, 0, 0, 1, 0]]
@@ -35,7 +35,7 @@ delta = [[-1, 0], # go up
          [ 1, 0], # go down
          [ 0, 1]] # go right
 
-delta_name = ['^', '<', 'v', '>']
+delta_name = ['v', '>', '^', '<']
 
 
 class node():
@@ -48,6 +48,7 @@ class node():
         self.y = None
         self.ep = False  # fully expanded
         self.p = None   # previous node?
+        self.d = None   # delta action ?
         self.id = node.newid.__next__()
 
 
@@ -137,18 +138,33 @@ for n in nodes:
     print(n.x+1, "down,", n.y+1, "right. cost", n.g)    #plus one for easy of reading
 
 
-path_grid = [[-1 for i in range(len(grid[0]))] for i in range(len(grid))]
-x, y = 0, 0
-for i in range(result[0]):
-    #path_flag = False
-    for x in range(5):
-        for y in range(6):
-            if expanded_grid[x][y] == (result[0] - i) #and path_flag is False:
-                path_grid[x][y] = "*"
-                path_flag = True
+
+def path(expanded_grid):
+
+    path_grid = [[" " for i in range(len(grid[0]))] for i in range(len(grid))]
+    a = node()
+    a.x, a.y = 4, 5
+    a.p = None   # previous
+    path_grid[result[1]][result[2]] = "*"
+    l = result[0]
+    for i in range(l):
+        for d_i, d in enumerate(delta):
+            x, y = a.x + d[0], a.y + d[1]
+            #print(x, y)
+            if x >= 0 and y >=0 and x <= (len(grid)-1) and y <= len(grid[0])-1: 
+                if expanded_grid[x][y] < (l - i) and expanded_grid[x][y] >=0 and (l-i) != a.p:
+                    
+                    path_grid[x][y] = delta_name[d_i]
+                    a.x, a.y = x, y
+                    a.p = (l-i)
+
+    return path_grid
+
 
 for i in expanded_grid:
     print(i)
 
+print()
+path_grid = path(expanded_grid)
 for i in path_grid:
     print(i)
