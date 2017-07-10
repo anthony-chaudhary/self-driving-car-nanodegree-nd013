@@ -79,7 +79,8 @@ def compute_value(grid,goal,cost):
     # 0. Init
     # TODO assigning
     dynamic_grid = [[node() for i in range(len(grid[0]))] for i in range(len(grid))]
-
+    path_grid = [[node() for i in range(len(grid[0]))] for i in range(len(grid))]
+    
     a = node()
     a.x, a.y = goal[0], goal[1]  #start at goal
     dynamic_grid[a.x][a.y] = a
@@ -98,7 +99,7 @@ def compute_value(grid,goal,cost):
         try:
             m = min(costs)
         except:
-            return dynamic_grid
+            return dynamic_grid, path_grid
         #print("Lowest cost:", m, "Costs", costs)
 
         for n in e_nodes:
@@ -109,7 +110,7 @@ def compute_value(grid,goal,cost):
         #print("Node", c.id," at:", c.x, ",", c.y)
 
         # 3. Expand node if possible
-        for d in delta:
+        for d_i, d in enumerate(delta):
             if (d[0], d[1]) == (0, 1):   # If we have reached last move, mark cell as expanded
                 expanded_dict.update({c.id: "Expanded"})
                 e_nodes.remove(c)
@@ -130,57 +131,14 @@ def compute_value(grid,goal,cost):
                         e_nodes.append(new)
                         dynamic_grid[x][y] = new
                         explored_dict.update({(x, y): "Explored"})
+                        
+                        path_grid[x][y].d = delta_name[d_i]
+
                         break
 
 
-
-def path(dynamic_grid):
-
-    path_grid = [[node() for i in range(len(grid[0]))] for i in range(len(grid))]
-    
-    e_nodes = []
-    for i, x in enumerate(dynamic_grid):
-        for n in dynamic_grid[i]:
-            if n.x is not None:
-                e_nodes.append(n)
-            if n.x is None:
-                n.g = -1
-
-    while True:
-
-        costs = [n.g for n in e_nodes]
-        try:
-            m = min(costs)
-        except:
-            return path_grid
-        #print("On cost:", m, "\t Nodes remaining:", len(e_nodes))
-
-        for n in e_nodes:
-            if n.g <= m:
-                c = n
-                e_nodes.remove(c)
-                break
-
-        for d_i, d in enumerate(delta):
-            x, y = c.x + d[0], c.y + d[1]
-            if x >= 0 and y >=0 and x <= (len(grid)-1) and y <= len(grid[0])-1: 
-                if dynamic_grid[x][y].g > dynamic_grid[c.x][c.y].g and dynamic_grid[x][y].g != -1:
-                    path_grid[x][y].d = delta_name[d_i]                        
-
-        #print()
-        #for i, x in enumerate(path_grid):
-            #for y in path_grid[i]:
-                #print("{x}".format(x=y.d), " ", end="")
-            #print()
-
-
-    return path_grid
-
-
-dynamic_grid = compute_value(grid, goal, cost)
+dynamic_grid, path_grid = compute_value(grid, goal, cost)
 print()
-#path_grid = dynamic_grid
-path_grid = path(dynamic_grid)
 
 print("\nCosts:")
 for i, x in enumerate(dynamic_grid):
