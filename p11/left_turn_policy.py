@@ -66,6 +66,7 @@ class path():
         self.id = path.newid.__next__()
         self.nodes = []
         self.g = 0   # running cost
+        self.goal = None   # Path reaches goal
 
 
 class space():
@@ -117,10 +118,6 @@ def search(grid, init, goal):
             e_nodes.remove(n)
             break
 
-        # 2. Check if at goal
-        if (c.x, c.y) == (goal[0], goal[1]):
-            return expanded_grid
-
         # 3. Expand node if possible
         valid_actions = []
         for a in actions:
@@ -150,13 +147,20 @@ def search(grid, init, goal):
             e_nodes.append(n)
             branches.append(n)
 
-            if path_dict.get(c, False) not False:
-                p_prior = path_dict[c] # previous path
+            goal_reached = False
+            if (x, y) == (goal[0], goal[1]):
+                goal_reached = True
+
+            if l == 1 and l != 0:  # use previous path
+                p_prior = path_dict[c]
                 p_prior.nodes.append(n)
                 p_prior.g += n.g
+                p_prior.goal = goal_reached
                 path_dict.update({n: p_prior})
             else:
+                p_prior = path_dict[c]
                 p = path()  # spawn new path
+                p.goal = goal_reached
                 p.nodes = p_prior.nodes  # copy previous nodes
                 p.nodes.append(n)  # add current node
                 p.g = p_prior.g + n.g   # update running cost for path
@@ -164,7 +168,14 @@ def search(grid, init, goal):
                 print("Length of paths", len(paths))
                 path_dict.update({n: p}) # update dictionary
 
-        expanded_grid[y][x] = branches
+        expanded_grid[x][y] = branches  # ??
+
+        # Check if at goal
+        #for p in paths:
+            #print(p.g, p.goal)
+        
+        if len(e_nodes) == 0:
+            return expanded_grid
 
 
 def path_2(expanded_grid):
