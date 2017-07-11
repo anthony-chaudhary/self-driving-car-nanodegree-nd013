@@ -88,12 +88,16 @@ right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
 
 
-def debug(grid, x, y, o):
-    
+def debug(grid, x_p, y_p, x_d, y_d, o):
+    # x_p x previous
+    # x_d x destination
+
     for i in range(len(grid)):  # rows
         for ii in range(len(grid[i])):  # column
-            if i == x and ii == y:
+            if i == x_d and ii == y_d:
                 print(" {} ".format(forward_symbol[o]), end="")
+            elif i == x_p and ii == y_p:
+                print(" {} ".format("*"), end="")
             else:
                 print(" - ", end="")
         print()
@@ -104,7 +108,7 @@ def search(grid, init, goal):
     n = node()
     n.x, n.y = init[0], init[1]  # first node
     e_nodes = [n] # eligible nodes
-    debug(grid, n.x, n.y, n.o)
+    debug(grid, n.x, n.y, n.x, n.y, n.o)
     print()
 
     p = path()
@@ -112,9 +116,9 @@ def search(grid, init, goal):
     path_dict = {n: p}  # map node to path
     paths = [p] 
 
-    for i in range(20):
+    while True:
 
-        #print("Length of e_nodes", len(e_nodes))
+        print("Length of e_nodes", len(e_nodes))
         for n in e_nodes:  # get next eligible nodes
             c = n  # c == current_node
             e_nodes.remove(n)
@@ -135,7 +139,7 @@ def search(grid, init, goal):
                 if grid[x][y] == 0:
                     print("Car orientation:", forward_name[c.o], c.o)
                     print("Action:", a.n, d, a_o)  
-                    debug(grid, x, y, a_o)
+                    debug(grid, c.x, c.y, x, y, a_o)
                     valid_actions.append([x, y, a, a_o])
            
         l = len(valid_actions)
@@ -146,53 +150,53 @@ def search(grid, init, goal):
 
             x, y = v[0],v[1]
             n = node()
-            n.g = c.g + v[2].g                  
+            n.g = c.g + v[2].g                 
             n.x, n.y = x, y
             n.p = c.id
             n.o = v[3]   # Update nodes oreintation
             e_nodes.append(n)
 
             goal_reached = False
+
+            p_prior = path_dict[c]
+
+            ### RETURN CONDITION
             if (x, y) == (goal[0], goal[1]):
                 goal_reached = True
+                p_prior.goal = goal_reached
+                return p_prior, paths
 
             if l == 1 and l != 0:  # use previous path
-                p_prior = path_dict[c]
                 p_prior.nodes.append(n)
-                p_prior.g += n.g
-                p_prior.goal = goal_reached
+                p_prior.g = n.g
                 path_dict.update({n: p_prior})
             elif l !=0:
-                p_prior = path_dict[c]
                 p = path()  # spawn new path
                 p.goal = goal_reached
                 p.nodes = p_prior.nodes  # copy previous nodes
                 p.nodes.append(n)  # add current node
-                p.g = p_prior.g + n.g   # update running cost for path
+                p.g = n.g   # update running cost for path
                 paths.append(p)
                 print("Length of paths", len(paths))
                 path_dict.update({n: p}) # update dictionary
 
 
         #Check if at goal
-        for p in paths:
-            print(p.g, p.goal)
+        #for p in paths:
+            #print(p.g, p.goal)
         print("--------\n")
-        if len(e_nodes) == 0:
+        if len(e_nodes) == 0:    # typically if haven't reached goal
             return paths
 
     return paths
 
 
-paths = search(grid, init, goal)
+p_prior, paths = search(grid, init, goal)
 
 print()
 
 print("\nNodes:")
 
 for p in paths:
-    for i in range(len(grid)):  # rows
-        for ii in range(len(grid[i])):  # column
-            print("{x:2d}".format(x=p.g ), " ", end="")
-        print()
-    print()
+    print("Path ID", p.id, "cost:", p.g, " Goal reached:", p.goal)
+
