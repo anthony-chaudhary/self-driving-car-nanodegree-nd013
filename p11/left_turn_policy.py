@@ -16,23 +16,27 @@
 import random
 import itertools
 
+# x = row
+# y = coloumn
+
 grid = [[1, 1, 1, 0, 0, 0],
         [1, 1, 1, 0, 1, 0],
         [0, 0, 0, 0, 0, 0],
         [1, 1, 1, 0, 1, 1],
         [1, 1, 1, 0, 1, 1]]
 
-goal = [0, 2] # given in the form [row,col]
+goal = [2, 0] 
 print("\n Goal:", goal)
 
-delta = [[0, -1], # go up
-         [ -1, 0], # go left
-         [ 0, 1], # go down
-         [ 1, 0]] # go right
+forward_moves = [[-1,  0], # go up
+           [ 0, -1], # go left
+           [ 1,  0], # go down
+           [ 0,  1]] # go right
 
-delta_name = ['^', '<', 'V', '>']
+forward_symbol = ['^', '<', 'V', '>']
+forward_name = ['up', 'left', 'down', 'right']
 
-init = [3, 4, 0]
+init = [4, 3, 0]
 
 class action():
 
@@ -80,16 +84,16 @@ class space():
 right, forward, left = action(), action(), action()
 actions = [right, forward, left]
 right.g, forward.g, left.g = 2, 1, 20
-right.o, forward.o, left.o = -1, 0 ,1
+right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
 
 
 def debug(grid, x, y, o):
     
-    for i in range(len(grid)):
-        for ii in range(len(grid[i])):
-            if i == y and ii == x:
-                print(" {} ".format(delta_name[o]), end="")
+    for i in range(len(grid)):  # rows
+        for ii in range(len(grid[i])):  # column
+            if i == x and ii == y:
+                print(" {} ".format(forward_symbol[o]), end="")
             else:
                 print(" - ", end="")
         print()
@@ -97,22 +101,20 @@ def debug(grid, x, y, o):
 def search(grid, init, goal):
 
     # 0. Init
-    expanded_grid = [[[node()] for i in range(len(grid[0]))] for i in range(len(grid))]
-
     n = node()
     n.x, n.y = init[0], init[1]  # first node
-    expanded_grid[n.x][n.y] = [n]
     e_nodes = [n] # eligible nodes
     debug(grid, n.x, n.y, n.o)
+    print()
 
     p = path()
     p.nodes.append(n)
     path_dict = {n: p}  # map node to path
     paths = [p] 
 
-    for i in range(15):
+    for i in range(20):
 
-        print("Length of e_nodes", len(e_nodes))
+        #print("Length of e_nodes", len(e_nodes))
         for n in e_nodes:  # get next eligible nodes
             c = n  # c == current_node
             e_nodes.remove(n)
@@ -121,17 +123,21 @@ def search(grid, init, goal):
         # 3. Expand node if possible
         valid_actions = []
         for a in actions:
-            o = c.o + a.o   # Update car orientation based on action orientation
-            d = delta[o]  # get move based on car orientation
+            a_o = c.o + a.o   # Update car orientation based on action orientation
+            if a_o == 4:
+                a_o = 0   # Reset if at end of index
+            if a_o == -1:
+                a_o = 3
+
+            d = forward_moves[a_o]  # get move based on car orientation
             x, y = c.x + d[0], c.y + d[1]   # do move
             if x >= 0 and y >=0 and x <= (len(grid)-1) and y <= len(grid[0])-1:  # check if valid move.
-                if grid[y][x] == 0:
-                    print(d, o)  
-                    a.o = o
-                    debug(grid, x, y, o)
-                    valid_actions.append([x, y, a])
+                if grid[x][y] == 0:
+                    print("Car orientation:", forward_name[c.o], c.o)
+                    print("Action:", a.n, d, a_o)  
+                    debug(grid, x, y, a_o)
+                    valid_actions.append([x, y, a, a_o])
            
-        branches = []
         l = len(valid_actions)
         print("Valid actions", l)
         #print(path_dict)
@@ -143,9 +149,8 @@ def search(grid, init, goal):
             n.g = c.g + v[2].g                  
             n.x, n.y = x, y
             n.p = c.id
-            n.o = v[2].o   # Update nodes oreintation
+            n.o = v[3]   # Update nodes oreintation
             e_nodes.append(n)
-            branches.append(n)
 
             goal_reached = False
             if (x, y) == (goal[0], goal[1]):
@@ -157,7 +162,7 @@ def search(grid, init, goal):
                 p_prior.g += n.g
                 p_prior.goal = goal_reached
                 path_dict.update({n: p_prior})
-            else:
+            elif l !=0:
                 p_prior = path_dict[c]
                 p = path()  # spawn new path
                 p.goal = goal_reached
@@ -168,53 +173,26 @@ def search(grid, init, goal):
                 print("Length of paths", len(paths))
                 path_dict.update({n: p}) # update dictionary
 
-        expanded_grid[x][y] = branches  # ??
 
-        # Check if at goal
-        #for p in paths:
-            #print(p.g, p.goal)
-        
+        #Check if at goal
+        for p in paths:
+            print(p.g, p.goal)
+        print("--------\n")
         if len(e_nodes) == 0:
-            return expanded_grid
+            return paths
+
+    return paths
 
 
-def path_2(expanded_grid):
+paths = search(grid, init, goal)
 
-    path_grid = [[" " for i in range(len(grid[0]))] for i in range(len(grid))]
-    a = node()
-    a.x, a.y = goal[0], goal[1]
-    a.p = None  # previous
-    path_grid[goal[0]][goal[1]] = "*"
-    l = result[0]
-    for i in range(l):
-        for d_i, d in enumerate(delta):
-            x, y = a.x + d[0], a.y + d[1]
-            #print(x, y)
-            if x >= 0 and y >=0 and x <= (len(grid)-1) and y <= len(grid[0])-1: 
-                if expanded_grid[x][y] < (l - i) and expanded_grid[x][y] >=0 and (l-i) != a.p:
-                    
-                    path_grid[x][y] = delta_name[d_i]
-                    a.x, a.y = x, y
-                    a.p = (l-i)
-
-    return path_grid
-
-
-expanded_grid = search(grid, init, goal)
-path_grid = expanded_grid
-#path_grid = path(expanded_grid)
 print()
 
 print("\nNodes:")
-for i, x in enumerate(expanded_grid):
-    for y in expanded_grid[i]:
-        print("{x:2d}".format(x=len(y) ), " ", end="")
+
+for p in paths:
+    for i in range(len(grid)):  # rows
+        for ii in range(len(grid[i])):  # column
+            print("{x:2d}".format(x=p.g ), " ", end="")
+        print()
     print()
-
-
-
-#print("\nPaths")
-#for i, x in enumerate(path_grid):
-    #for y in path_grid[i]:
-        #print("{x}".format(x=y.d), " ", end="")
-    #print()
