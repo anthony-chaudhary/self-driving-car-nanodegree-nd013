@@ -20,10 +20,10 @@ import itertools
 # y = coloumn
 
 grid = [[1, 1, 1, 0, 0, 0],
-        [1, 1, 1, 0, 1, 0],
-        [0, 0, 0, 0, 0, 0],
-        [1, 1, 1, 0, 1, 1],
-        [1, 1, 1, 0, 1, 1]]
+        [1, 0, 0, 0, 1, 0],
+        [0, 0, 1, 0, 0, 0],
+        [1, 0, 1, 1, 0, 1],
+        [1, 0, 1, 0, 0, 1]]
 
 goal = [2, 0] 
 print("\n Goal:", goal)
@@ -77,7 +77,7 @@ class path():
 
 right, forward, left = action(), action(), action()
 actions = [right, forward, left]
-right.g, forward.g, left.g = 2, 1, 20
+right.g, forward.g, left.g = 1, 1, 1
 right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
 right.s, forward.s, left.s = "R", "#", "L"
@@ -105,13 +105,13 @@ def print_chart(grid, nodes):
         for j in range(len(grid[i])):  # column
 
             flag = False
-            for k in range(len(nodes)-1):
+            for k in range(len(nodes)):
                 # TODO, way to print paths that intersect back on self...
                 if flag is False:
                     if i == nodes[k].x and j == nodes[k].y:
-                        #index = min(len(nodes), k+1)
-                        #print(" {} ".format(forward_symbol[nodes[k].o]), end="")
-                        print(" {} ".format(nodes[k+1].a.s), end="")
+
+                        print(" {} ".format(forward_symbol[nodes[k].o]), end="")
+                        #print(" {} ".format(nodes[k].a.s), end="")
                         flag = True
 
             if flag is False:
@@ -134,7 +134,7 @@ def search(grid, init, goal):
     e_nodes = [n] # eligible nodes
     #debug(grid, n, n.x, n.y)
     print()
-    goal_paths = 3
+    goal_paths = 5
     goal_counter = 0
 
     p = path()
@@ -166,10 +166,7 @@ def search(grid, init, goal):
             valid_actions = []
             for a in actions:
                 a_o = c.o + a.o   # Update car orientation based on action orientation
-                if a_o == 4:
-                    a_o = 0   # Reset if at end of index
-                if a_o == -1:
-                    a_o = 3
+                a_o = a_o % 4  # Rest if at end of index
 
                 d = forward_moves[a_o]  # get move based on car orientation
                 x, y = c.x + d[0], c.y + d[1]   # do move
