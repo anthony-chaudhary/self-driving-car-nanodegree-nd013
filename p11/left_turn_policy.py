@@ -83,7 +83,7 @@ class space():
 
 right, forward, left = action(), action(), action()
 actions = [right, forward, left]
-right.g, forward.g, left.g = 1, 2, 30
+right.g, forward.g, left.g = 2, 1, 20
 right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
 
@@ -111,9 +111,11 @@ def print_chart(grid, nodes):
 
             flag = False
             for n in nodes:
-                if i == n.x and ii == n.y:
-                    print(" {} ".format(forward_symbol[n.o]), end="")
-                    flag = True
+                # TODO, way to print paths that intersect back on self...
+                if flag is False:
+                    if i == n.x and ii == n.y:
+                        print(" {} ".format(forward_symbol[n.o]), end="")
+                        flag = True
 
             if flag is False:
                 if i == goal[0] and ii == goal[1]:
@@ -131,13 +133,15 @@ def search(grid, init, goal):
     e_nodes = [n] # eligible nodes
     debug(grid, n.x, n.y, n.x, n.y, n.o)
     print()
+    goal_paths = 3
+    goal_counter = 0
 
     p = path()
     p.nodes.append(n)
     path_dict = {n: p}  # map node to path
     paths = [p]
 
-    for i in range(100):
+    while True:
 
         print("Length of e_nodes", len(e_nodes))
         for n in e_nodes:  # get next eligible nodes
@@ -145,16 +149,18 @@ def search(grid, init, goal):
             e_nodes.remove(n)
             break
 
-              ### RETURN CONDITION
+        ### RETURN CONDITION
         p_prior = path_dict[c]
         if (c.x, c.y) == (goal[0], goal[1]):
             goal_reached = True
             p_prior.goal = goal_reached
+            goal_counter += 1
+            if goal_counter == goal_paths:
+                break
 
-        elif (c.x, c.y) == (init[0], init[1]) and c.id > 0:  # condition on returning to start
-            return p_prior, paths 
-
-        else:
+        # if at start, or first node
+        elif (c.x, c.y) != (init[0], init[1]) or c.id == 0: 
+         
             # 3. Expand node if possible
             valid_actions = []
             for a in actions:
@@ -202,33 +208,38 @@ def search(grid, init, goal):
                     print("Length of paths", len(paths))
                     path_dict.update({n: p}) # update dictionary
 
-                    for p_n in p_prior.nodes:
-                        p.nodes.append(p_n)
+                    for i in p_prior.nodes:
+                        p.nodes.append(i)
             
             #Check if at goal
             #for p in paths:
                 #print(p.g, p.goal)
         print("--------\n")
-        if len(e_nodes) == 0:    # typically if haven't reached goal
-            return p_prior, paths
+       
+    # TODO condition on say 3 paths reaching goal?? 
+    # Return best path
+    paths.sort(key=lambda x: x.g)
+    for p in paths:
+        if p.goal is True:
+            print(p.id)
+            return p, paths
 
-    return p_prior, paths
 
-
-p_prior, paths = search(grid, init, goal)
+best_path, paths = search(grid, init, goal)
 
 print()
-
 print("\nNodes:")
 
 for p in paths:
-    print("Path ID", p.id, "cost:", p.g, " Goal reached:", p.goal)
+    if p.goal is True:
+        print("Path ID", p.id, "cost:", p.g, " Goal reached:", p.goal)
 
 
+paths.sort(key=lambda x: x.g)
 
-p_prior.nodes.sort(key=lambda x: x.g)
+print("\nBest path:")
+print_chart(grid, best_path.nodes)
 
-for p in p_prior.nodes:
-    print(p.id)
-
-print_chart(grid, p_prior.nodes)
+#for i in paths:
+#    print(i.id, i.g)
+#    print_chart(grid, i.nodes)
