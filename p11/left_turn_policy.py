@@ -16,75 +16,76 @@
 import random
 import itertools
 
-# x = row
-# y = coloumn
-
 grid = [[1, 1, 1, 0, 0, 0],
         [1, 0, 0, 0, 1, 0],
         [0, 0, 1, 0, 0, 0],
         [1, 0, 1, 1, 0, 1],
         [1, 0, 1, 0, 0, 1]]
+# Generate grid
+w = 10
+h = 10
+grid = [[1 for x in range(w)] for y in range(h)]
+for i in range(w):
+    for j in range(w):
+        if j % 1 or j % 7 == 0:
+            grid[i][j] = 0
+            grid[j][i] = 0
 
-goal = [2, 0] 
+for i in grid:
+    print(i)
+
+goal = [len(grid)-3, len(grid[0])-3]
 print("\n Goal:", goal)
-
 forward_moves = [[-1,  0], # go up
            [ 0, -1], # go left
            [ 1,  0], # go down
            [ 0,  1]] # go right
-
-forward_symbol = ['^', '<', 'V', '>']
 forward_name = ['up', 'left', 'down', 'right']
-
-init = [4, 3, 0]
+forward_symbol = ['^', '<', 'V', '>']
+init = [0, 0, 3]
 
 class action():
 
     def __init__(self):
         self.g = None   # Cost
-        self.o = None   # Orentation adjustment
-        self.n = None
-        self.s = None  # Symbol
+        self.o = None   # Orentation
+        self.n = None   # Name
+        self.s = None   # Symbol
+
 
 class node():
 
     newid = itertools.count()
-
     def __init__(self):
         self.o = None  #  Orentation
-        self.a = None  # Action
-        self.g = 0   # cost
-        self.f = 0    # A* 
-        self.x = None
-        self.y = None
-        self.ep = False  # fully expanded
-        self.p = None   # previous node
-        self.path = None   # path
-        self.d = 0   # delta action 
+        self.a = None  #  Action
+        self.g = 0     #  Cost
+        self.x = None  #  Row position
+        self.y = None  #  Column position 
         self.id = node.newid.__next__()
 
 
 class path():
     
     newid = itertools.count()
-
     def __init__(self):
         self.id = path.newid.__next__()
         self.nodes = []
-        self.g = 0   # running cost
-        self.goal = False   # Path reaches goal
+        self.g = 0       # Total path cost
+        self.goal = False   # True if path reaches goal
 
 
+#### INIT ###
 right, forward, left = action(), action(), action()
 actions = [right, forward, left]
-right.g, forward.g, left.g = 1, 1, 1
+right.g, forward.g, left.g = 30, 1, 3
 right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
 right.s, forward.s, left.s = "R", "#", "L"
 
+
+### Prints grid cell with current car position and offered action ####
 def debug(grid, c, x, y, a_o):
-    # x_p x previous
-    # x_d x destination
 
     for i in range(len(grid)):  # rows
         for ii in range(len(grid[i])):  # column
@@ -98,6 +99,7 @@ def debug(grid, c, x, y, a_o):
         print()
 
 
+### Prints final path (prints entire path while debug() prints single point)
 def print_chart(grid, nodes):
     # x_p x previous
     # x_d x destination
@@ -122,19 +124,18 @@ def print_chart(grid, nodes):
  
         print()
 
-def search(grid, init, goal):
+
+## Main entry
+def search(grid, init, goal, debug=False, info=False):
 
     # 0. Init
     n = node()
     n.x, n.y = init[0], init[1]  # first node
     n.o = init[2]
-    a = action()
-    a.o = n.o
-    n.a = a
     e_nodes = [n] # eligible nodes
-    #debug(grid, n, n.x, n.y)
+ 
     print()
-    goal_paths = 5
+    goal_paths = 3   # Number of True goals to find.
     goal_counter = 0
 
     p = path()
@@ -144,13 +145,15 @@ def search(grid, init, goal):
 
     while True:
 
-        print("Length of e_nodes", len(e_nodes))
-        for n in e_nodes:  # get next eligible nodes
+        if info is True: print("Length of e_nodes", len(e_nodes))
+
+        # 1. Get node.
+        for n in e_nodes:
             c = n  # c == current_node
-            e_nodes.remove(n)
+            e_nodes.remove(n)   # Remove node for efficiency 
             break
 
-        ### RETURN CONDITION
+        # 2. Check if reached goal
         p_prior = path_dict[c]
         if (c.x, c.y) == (goal[0], goal[1]):
             goal_reached = True
@@ -159,10 +162,10 @@ def search(grid, init, goal):
             if goal_counter == goal_paths:
                 break
 
-        # if at start, or first node
+        # 3. Check if at start, or first node
         elif (c.x, c.y) != (init[0], init[1]) or c.id == 0: 
          
-            # 3. Expand node if possible
+            # 4. Determine valid actions
             valid_actions = []
             for a in actions:
                 a_o = c.o + a.o   # Update car orientation based on action orientation
@@ -173,16 +176,16 @@ def search(grid, init, goal):
                 if x >= 0 and y >=0 and x <= (len(grid)-1) and y <= len(grid[0])-1:  # check if valid move.
                     if grid[x][y] == 0:
                         
-                        valid_actions.append([x, y, a, a_o])
-
-                        print("Car orientation:", forward_name[c.o], c.o)
-                        print("Action:", a.n, d, a_o)  
-                        debug(grid, c, x, y, a_o)
+                        valid_actions.append([x, y, a, a_o]) 
+                        if debug is True: 
+                            print("Car orientation:", forward_name[c.o], c.o)
+                            print("Action:", a.n, d, a_o) 
+                            debug(grid, c, x, y, a_o)
 
             l = len(valid_actions)
-            print("Valid actions", l)
-            #print(path_dict)
-
+            if debug is True: print("Valid actions", l)
+            
+            # 5. Construct new node for each valid action
             for v in valid_actions:
 
                 x, y = v[0],v[1]
@@ -193,9 +196,10 @@ def search(grid, init, goal):
                 n.o = v[3]
                 e_nodes.append(n)
 
-                goal_reached = False
-
-                if l == 1 and l != 0:  # use previous path
+                # 6. Branch paths as required
+                # If we have a single action continue on prior path
+                # Else build new path.
+                if l == 1 and l != 0:  
 
                     p_prior.nodes.append(n)
                     p_prior.g = n.g
@@ -207,41 +211,39 @@ def search(grid, init, goal):
                     p.nodes.append(n)  # add current node
                     p.g = n.g   # update running cost for path
                     paths.append(p)
-                    print("Length of paths", len(paths))
+                    if debug is True: print("Length of paths", len(paths))
                     path_dict.update({n: p}) # update dictionary
 
                     for n_ in p_prior.nodes:
                         p.nodes.append(n_)
             
-            #Check if at goal
-            #for p in paths:
-                #print(p.g, p.goal)
-        print("--------\n")
+        if debug is True:
+            print("--------\n")
        
-    # TODO condition on say 3 paths reaching goal?? 
-    # Return best path
+    # 7. Return best pathm, and other paths
     paths.sort(key=lambda x: x.g)
+    best_paths = []
     for p in paths:
         if p.goal is True:
-            print(p.id)
-            return p, paths
+            best_paths.append(p)
+    
+    best_path = best_paths[0]
+
+    return best_path, best_paths
 
 
-best_path, paths = search(grid, init, goal)
-
-print()
+best_path, paths = search(grid, init, goal, info=True)
 print("\nNodes:")
 
+# General information on paths
 for p in paths:
     if p.goal is True:
-        print("Path ID", p.id, "cost:", p.g, " Goal reached:", p.goal)
+        print("Path ID {x:2d} ".format(x=p.id), "Cost: {x:2d} ".format(x=p.g), "Steps:", len(p.nodes), " Goal reached:", p.goal )
 
 
-paths.sort(key=lambda x: x.g)
 
 print("\nBest path:")
 print_chart(grid, best_path.nodes)
 
-#for i in paths:
-#    print(i.id, i.g)
-#    print_chart(grid, i.nodes)
+print("\nNext best path")
+print_chart(grid, paths[1].nodes)
