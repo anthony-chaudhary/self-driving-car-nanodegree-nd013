@@ -44,13 +44,15 @@ class action():
         self.g = None   # Cost
         self.o = None   # Orentation adjustment
         self.n = None
+        self.s = None  # Symbol
 
 class node():
 
     newid = itertools.count()
 
     def __init__(self):
-        self.o = init[2]  #  Orentation
+        self.o = None  #  Orentation
+        self.a = None  # Action
         self.g = 0   # cost
         self.f = 0    # A* 
         self.x = None
@@ -73,31 +75,24 @@ class path():
         self.goal = False   # Path reaches goal
 
 
-class space():
-
-    def __init__(self):
-        self.x = None
-        self.y = None
-        self.max_moves = False  # Explored
-
-
 right, forward, left = action(), action(), action()
 actions = [right, forward, left]
 right.g, forward.g, left.g = 2, 1, 20
 right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
+right.s, forward.s, left.s = "R", "#", "L"
 
-
-def debug(grid, x_p, y_p, x_d, y_d, o):
+def debug(grid, c, x, y, a_o):
     # x_p x previous
     # x_d x destination
 
     for i in range(len(grid)):  # rows
         for ii in range(len(grid[i])):  # column
-            if i == x_d and ii == y_d:
-                print(" {} ".format(forward_symbol[o]), end="")
-            elif i == x_p and ii == y_p:
-                print(" {} ".format("*"), end="")
+            if i == x and ii == y:
+                #print(" {} ".format(c.a.n), end="")
+                print(" {} ".format(forward_symbol[a_o]), end="")
+            elif i == c.x and ii == c.y:
+                print(" {} ".format(forward_symbol[c.o]), end="")
             else:
                 print(" - ", end="")
         print()
@@ -107,18 +102,20 @@ def print_chart(grid, nodes):
     # x_p x previous
     # x_d x destination
     for i in range(len(grid)):  # rows
-        for ii in range(len(grid[i])):  # column
+        for j in range(len(grid[i])):  # column
 
             flag = False
-            for n in nodes:
+            for k in range(len(nodes)-1):
                 # TODO, way to print paths that intersect back on self...
                 if flag is False:
-                    if i == n.x and ii == n.y:
-                        print(" {} ".format(forward_symbol[n.o]), end="")
+                    if i == nodes[k].x and j == nodes[k].y:
+                        #index = min(len(nodes), k+1)
+                        #print(" {} ".format(forward_symbol[nodes[k].o]), end="")
+                        print(" {} ".format(nodes[k+1].a.s), end="")
                         flag = True
 
             if flag is False:
-                if i == goal[0] and ii == goal[1]:
+                if i == goal[0] and j == goal[1]:
                     print(" {} ".format("*"), end="")
                 else:
                     print(" - ", end="")
@@ -130,8 +127,12 @@ def search(grid, init, goal):
     # 0. Init
     n = node()
     n.x, n.y = init[0], init[1]  # first node
+    n.o = init[2]
+    a = action()
+    a.o = n.o
+    n.a = a
     e_nodes = [n] # eligible nodes
-    debug(grid, n.x, n.y, n.x, n.y, n.o)
+    #debug(grid, n, n.x, n.y)
     print()
     goal_paths = 3
     goal_counter = 0
@@ -174,10 +175,12 @@ def search(grid, init, goal):
                 x, y = c.x + d[0], c.y + d[1]   # do move
                 if x >= 0 and y >=0 and x <= (len(grid)-1) and y <= len(grid[0])-1:  # check if valid move.
                     if grid[x][y] == 0:
+                        
+                        valid_actions.append([x, y, a, a_o])
+
                         print("Car orientation:", forward_name[c.o], c.o)
                         print("Action:", a.n, d, a_o)  
-                        debug(grid, c.x, c.y, x, y, a_o)
-                        valid_actions.append([x, y, a, a_o])
+                        debug(grid, c, x, y, a_o)
 
             l = len(valid_actions)
             print("Valid actions", l)
@@ -189,7 +192,8 @@ def search(grid, init, goal):
                 n = node()
                 n.g = c.g + v[2].g                 
                 n.x, n.y = x, y
-                n.o = v[3]   # Update nodes oreintation
+                n.a = v[2]
+                n.o = v[3]
                 e_nodes.append(n)
 
                 goal_reached = False
@@ -201,15 +205,16 @@ def search(grid, init, goal):
                     path_dict.update({n: p_prior})
                 
                 elif l != 0:
-                    p = path()  # spawn new path
+                      # spawn new path
+                    p = path()
                     p.nodes.append(n)  # add current node
                     p.g = n.g   # update running cost for path
                     paths.append(p)
                     print("Length of paths", len(paths))
                     path_dict.update({n: p}) # update dictionary
 
-                    for i in p_prior.nodes:
-                        p.nodes.append(i)
+                    for n_ in p_prior.nodes:
+                        p.nodes.append(n_)
             
             #Check if at goal
             #for p in paths:
