@@ -16,11 +16,11 @@
 import random
 import itertools
 
-#grid = [[1, 1, 1, 0, 0, 0],
-#        [1, 0, 1, 0, 1, 0],
-#        [0, 0, 0, 0, 0, 0],
-#        [1, 1, 1, 0, 1, 1],
-#        [1, 1, 1, 0, 1, 1]]
+grid = [[1, 1, 1, 0, 0, 0],
+        [1, 0, 1, 0, 1, 0],
+        [0, 0, 0, 0, 0, 0],
+        [1, 1, 1, 0, 1, 1],
+        [1, 1, 1, 0, 1, 1]]
 # Generate grid
 #w = 10
 #h = 10
@@ -32,9 +32,9 @@ import itertools
             #grid[j][i] = 0
 
 grid = [[0, 0, 0, 0, 0, 0],
-        [0, 1, 1, 0, 1, 0],
+        [0, 1, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 0],
+        [1, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0]]
 
 for i in grid:
@@ -51,7 +51,7 @@ forward_name = ['up', 'left', 'down', 'right']
 forward_symbol = ['^', '<', 'V', '>']
 
 #init = [0, 0, 3]  # for larger 
-init = [2, 5, 3]
+init = [2, 5, 1]
 
 class action():
 
@@ -72,6 +72,7 @@ class node():
         self.x = None  #  Row position
         self.y = None  #  Column position 
         self.id = node.newid.__next__()
+        self.expanded = False
 
 
 class path():
@@ -83,12 +84,13 @@ class path():
         self.g = 0       # Total path cost
         self.goal = False   # True if path reaches goal
         self.init_passes = 0  # Times passed through origin
+        self.expanded = False
 
 
 #### INIT ###
 right, forward, left = action(), action(), action()
 actions = [forward, left, right]
-right.g, forward.g, left.g = 1, 1, 200
+right.g, forward.g, left.g = 2, 2, 200
 right.o, forward.o, left.o = -1, 0 , 1
 right.n, forward.n, left.n = "right", "forward", "left"
 right.s, forward.s, left.s = "R", "#", "L"
@@ -147,45 +149,59 @@ def search(grid, init, goal, debug_flag=False, info=False):
     e_nodes = [n] # eligible nodes
  
     print()
-    goal_paths = 500   # Number of True goals to find.
+    goal_paths = 10   # Number of True goals to find.
     pass_through_init_attempts = 2  # Max times can pass through origin
     goal_counter = 0
     debug(grid, n, n.x, n.y, n.o)
 
     p = path()
     p.nodes.append(n)
-    path_dict = {n: p}  # map node to path
-    paths = [p]
-    #e_paths = [p]  # eligible paths
+    paths, all_paths = path(), path()
+    paths.nodes.append(p)
+    all_paths.nodes.append(p)
 
     while True:
 
         if info is True: print("Length of e_nodes", len(e_nodes))
 
-        # 1. Get node.
-        for n in e_nodes:
-            c = n  # c == current_node
-            e_nodes.remove(n)   # Remove node for efficiency 
-            break
+        # 1. Find lowest cost path, get last node
+        costs = []
+        for i in paths.nodes:
+            if i.expanded is False:
+                costs.append(i.g)
+        current_path = None
+        m = min(costs)
+        for a_path in paths.nodes:
+            if a_path.g <= m and a_path.expanded is False:
+                current_path = a_path
+
+        if debug_flag is True: print("current_path_id", current_path.id)
+
+        costs = []
+        for i in current_path.nodes:
+            if i.expanded is False:
+                costs.append(i.g)
+
+        for i, n in enumerate(current_path.nodes):
+            if n.g <= m and n.expanded is False:
+                c = n
+                c.expanded = True
+                a_path.expanded = True
+                paths.nodes.remove(current_path)
 
         # 2. Check if reached goal
-        p_prior = path_dict[c]
         if (c.x, c.y) == (goal[0], goal[1]):
             goal_reached = True
-            p_prior.goal = goal_reached
+            current_path.goal = goal_reached
             goal_counter += 1
-            #e_paths.remove(p_prior)
-            #print(e_paths)
             if goal_counter == goal_paths:
                 break
 
         # 3. Check if at start, or first node
-        elif p_prior.init_passes <= pass_through_init_attempts or c.id == 0 or (c.x, c.y) != (init[0], init[1]): 
+        elif current_path.init_passes <= pass_through_init_attempts or c.id == 0 or (c.x, c.y) != (init[0], init[1]): 
         
             if (c.x, c.y) == (init[0], init[1]):
-                p_prior.init_passes += 1
-                #if p_prior.init_passes <= pass_through_init_attempts:
-                    #e_paths.remove(p_prior)
+                current_path.init_passes += 1
 
             # 4. Determine valid actions
             valid_actions = []
@@ -204,63 +220,58 @@ def search(grid, init, goal, debug_flag=False, info=False):
                             print("Action:", a.n, d, a_o) 
                             debug(grid, c, x, y, a_o)
 
-            l = len(valid_actions)
-            if debug_flag is True: print("Valid actions", l)
+            l_ = len(valid_actions)
+            if debug_flag is True: print("Valid actions", l_)
             
             # 5. Construct new node for each valid action
-            #if len(valid_actions) == 0:
-                #e_paths.remove(p_prior)
-
             for v in valid_actions:
-                x, y = v[0],v[1]
+
                 n = node()
+                x, y = v[0],v[1]
                 n.g = c.g + v[2].g                 
                 n.x, n.y = x, y
                 n.a = v[2]
                 n.o = v[3]
-                e_nodes.append(n)
+
+                current_path.expanded = False
 
                 # 6. Branch paths as required
-                # If we have a single action continue on prior path
-                # Else build new path.
-                if l == 1 and l != 0:  
+                # If we have a single action continue on prior path Else build new path.
+                if l_ == 1 and l_ != 0:  
 
-                    p_prior.nodes.append(n)
-                    p_prior.g = n.g
-                    path_dict.update({n: p_prior})
+                    current_path.nodes.append(n)
+                    current_path.g = n.g
+                    paths.nodes.append(current_path)
+                    all_paths.nodes.append(current_path)
                 
-                elif l != 0:
+                elif l_ != 0:
                       # spawn new path
-                    p = path()
-                    p.nodes.append(n)  # add current node
-                    p.g = n.g   # update running cost for path
-                    paths.append(p)
-                    if debug is True: print("Length of paths", len(paths))
-                    path_dict.update({n: p}) # update dictionary
-                    #e_paths.append(p)
+                    p_a = path()
+                    p_a.nodes.append(n)  # add current node
+                    p_a.g = n.g   # update running cost for path
+                     
+                    for n_ in current_path.nodes:
+                        p_a.nodes.append(n_)
 
-                    for n_ in p_prior.nodes:
-                        p.nodes.append(n_)
+                    paths.nodes.append(p_a)
+                    all_paths.nodes.append(p_a)
+
+        if debug_flag is True: print("Length current_path.nodes", len(current_path.nodes ) )
         
+        if debug_flag is True: 
+            print("Length of all paths", len(paths.nodes))
         if debug_flag is True:
             print("--------\n")
 
-        # What other reason would you remove a path???
-        #if debug_flag is True:
-            #print("Eligible paths:", len(e_paths))
 
-            if len(e_nodes) == 0 and len(valid_actions) == 0:
-                break
-
-
-    # TO DO better handling if no path
-    
     # 7. Return best path, and other paths
-    paths.sort(key=lambda x: x.g)
+    all_paths.nodes.sort(key=lambda x: x.g)
     best_paths = []
-    for p in paths:
+    for p in all_paths.nodes:
         if p.goal is True:
             best_paths.append(p)
+
+    print("Best paths:", len(best_paths))
     
     try:
         best_path = best_paths[0]
@@ -271,8 +282,7 @@ def search(grid, init, goal, debug_flag=False, info=False):
 
 
 best_path, paths = search(grid, init, goal, debug_flag=False, info=False)
-print("\nNodes:")
-
+#print("\nNodes:")
 # General information on paths
 #for p in paths:
     #if p.goal is True:
@@ -281,13 +291,11 @@ print("\nNodes:")
 
 
 print("\nBest path:")
-print_chart(grid, best_path.nodes)
 print("Path ID {x:2d} ".format(x=best_path.id), "Cost: {x:2d} ".format(x=best_path.g), "Steps:", len(best_path.nodes), " Goal reached:", best_path.goal )
+print_chart(grid, best_path.nodes)
 
-try:
+for i in range(10):
     print("\nNext best path")
-    print_chart(grid, paths[1].nodes)
-    print("Path ID {x:2d} ".format(x=paths[1].id), "Cost: {x:2d} ".format(x=paths[1].g), "Steps:", len(paths[1].nodes), " Goal reached:", paths[1].goal )
+    print("Path ID {x:2d} ".format(x=paths[i].id), "Cost: {x:2d} ".format(x=paths[i].g), "Steps:", len(paths[i].nodes), " Goal reached:", paths[i].goal )
+    print_chart(grid, paths[i].nodes)
 
-except:
-    print("Only one best path")
