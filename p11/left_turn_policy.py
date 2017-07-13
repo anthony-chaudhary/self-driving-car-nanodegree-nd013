@@ -51,7 +51,7 @@ forward_name = ['up', 'left', 'down', 'right']
 forward_symbol = ['^', '<', 'V', '>']
 
 #init = [0, 0, 3]  # for larger 
-init = [2, 5, 1]
+init = [2, 5, 3]
 
 class action():
 
@@ -294,7 +294,7 @@ print("\nBest path:")
 print("Path ID {x:2d} ".format(x=best_path.id), "Cost: {x:2d} ".format(x=best_path.g), "Steps:", len(best_path.nodes), " Goal reached:", best_path.goal )
 print_chart(grid, best_path.nodes)
 
-for i in range(10):
+for i in range(1, 10):
     print("\nNext best path")
     print("Path ID {x:2d} ".format(x=paths[i].id), "Cost: {x:2d} ".format(x=paths[i].g), "Steps:", len(paths[i].nodes), " Goal reached:", paths[i].goal )
     print_chart(grid, paths[i].nodes)
