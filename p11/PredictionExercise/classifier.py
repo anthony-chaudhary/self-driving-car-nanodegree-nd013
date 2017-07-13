@@ -22,7 +22,8 @@ class GNB(object):
 		labels - array of N labels
 		  - Each label is one of "left", "keep", or "right".
 		"""
-		pass
+		#print(data)
+		#print(labels)
 
 	def predict(self, observation):
 		"""
