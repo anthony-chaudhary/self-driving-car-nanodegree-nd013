@@ -1,9 +1,13 @@
 
+from sklearn.naive_bayes import GaussianNB
+from sklearn.ensemble import ExtraTreesClassifier
 
 class GNB(object):
 
 	def __init__(self):
 		self.possible_labels = ['left', 'keep', 'right']
+		#self.gnb = GaussianNB()
+		self.gnb = ExtraTreesClassifier(n_estimators=20, max_depth=45, min_samples_split=4, random_state=0)
 
 	def train(self, data, labels):
 		"""
@@ -24,6 +28,11 @@ class GNB(object):
 		"""
 		#print(data)
 		#print(labels)
+		#x = [[i[1], i[2], i[3], i[1]%4] for i in data]
+		#print(len(x))
+		#self.gnb.fit(x, labels)
+		self.gnb.fit(data, labels)
+
 
 	def predict(self, observation):
 		"""
@@ -41,4 +50,9 @@ class GNB(object):
 		be one of "left", "keep" or "right".
 		"""
 		# TODO - complete this
-		return self.possible_labels[1]
+		i = observation
+		#prediction = self.gnb.predict([[i[1], i[2], i[3], i[1]%4]])
+		prediction = self.gnb.predict([i])
+		#print(prediction)
+
+		return prediction
