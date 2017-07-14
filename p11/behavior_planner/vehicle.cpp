@@ -65,24 +65,25 @@ void Vehicle::update_state(map<int,vector < vector<int> > > predictions) {
     // cout << this->lane << endl;
     // cout << lanes_available << endl;
   
-   // for(auto elem : predictions)
-//{
- //  std::cout << elem << " " << elem.second.first << " " << elem.second.second << "\n";
-//}
+  
+	for (int i = 1; i < predictions.size(); ++i) {
+		for (int j = 0; j < predictions[i].size(); ++j) {
+			cout << "ID "    << i
+				 << " Lane:" << predictions[i][j][0] 
+				 << " S:"    << predictions[i][j][1] << endl;
+		}
+	}
 
-//for (auto elem = predictions.begin(); elem != predictions.end(); ++elem) 
-//{ std::cout << *elem << ' ';
-//}
+	// 	cout << this. << endl;
 
+	bool flag = true;
     if (this->lane != goal_lane) {
         
-        state = "PLCR" ;
+        state = "PLCL" ;
         
-        if ( state == "PLCR") {
-            //if (this->lane != goal_lane) {
-                //state = "LCR" ;
-            //}
-            // state = "LCR" ;
+        if ( flag == true) {
+            state = "LCL" ;
+			flag = false;
         }
     }
     else {
