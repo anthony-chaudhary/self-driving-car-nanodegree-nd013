@@ -28,6 +28,8 @@ public:
 
   int lane;
 
+  double cost;
+
   int s;
 
   int v;
