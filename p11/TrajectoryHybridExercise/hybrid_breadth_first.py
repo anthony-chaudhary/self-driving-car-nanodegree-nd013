@@ -44,7 +44,7 @@ def search(grid, start, goal):
 		test = (idx(x),idx(y))
 		# print "testing if {} is == {}".format(test, goal)
 		if (idx(x),idx(y)) == goal:
-			print "\n###############\nfound path to goal in {} expansions\n".format(total_closed)
+			print("\n###############\nfound path to goal in {} expansions\n".format(total_closed))
 			return closed, came_from, (g,x,y,theta)
 		for next_state in expand(next):
 			g2, x2, y2, theta2 = next_state
@@ -65,7 +65,7 @@ def search(grid, start, goal):
 			# 	print "ERROR"
 			# 	print "x2, y2, theta2: {}, {}, {}".format(x2,y2,theta2)
 			# 	print "as indices...: {}, {}, {}".format(idx(x2), idx(y2), stack2)  
-	print "no valid path."
+	print("no valid path.")
 	return closed, came_from, (g,x,y,theta)
 
 def reconstruct_path(came_from, goal, start, final):

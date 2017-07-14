@@ -32,7 +32,7 @@ START = (0.0,0.0,0.0)
 GOAL = (len(GRID)-1, len(GRID[0])-1)
 
 def main():
-	print "Finding path through grid:"
+	print("Finding path through grid:")
 	s = ""
 	for row in GRID :
 		row_s = ""
@@ -43,7 +43,7 @@ def main():
 				row_s += "##"
 		row_s += '\n'
 		s += row_s
-	print s
+	print(s)
 	closed, came_from, final = search(GRID, START, GOAL)
 	path = reconstruct_path(came_from, GOAL, START, final)
 	show_path(path, START, GOAL)
