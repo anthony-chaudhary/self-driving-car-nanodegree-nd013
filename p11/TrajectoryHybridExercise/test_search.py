@@ -24,15 +24,22 @@ MAZE = [
     [X,X,X,_,_,_,_,_,_,_,_,_,_,_,_,_,],
 ]
 
-EMPTY = [[_ for i in range(15)] for j in range(15)]
+EMPTY = [[_ for i in range(16)] for j in range(16)]
 
-GRID = EMPTY # change to MAZE for testing
+#heuristic = EMPTY
+
+GRID = MAZE # change to MAZE for testing
 
 START = (0.0,0.0,0.0)
 GOAL = (len(GRID)-1, len(GRID[0])-1)
+#GOAL = (0, len(GRID[0])-1)
 
 def main():
-	print("Finding path through grid:")
+	
+	#for i in range(len(heuristic)):
+		#print(heuristic[i])
+
+	print("\nFinding path through grid:")
 	s = ""
 	for row in GRID :
 		row_s = ""
@@ -44,9 +51,13 @@ def main():
 		row_s += '\n'
 		s += row_s
 	print(s)
-	closed, came_from, final = search(GRID, START, GOAL)
+	
+	closed, came_from, final = search(GRID, START, GOAL, heuristic)
+	
 	path = reconstruct_path(came_from, GOAL, START, final)
+	
 	show_path(path, START, GOAL)
+
 
 if __name__ == "__main__":
 	main()

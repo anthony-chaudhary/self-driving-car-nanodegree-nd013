@@ -22,7 +22,7 @@ def idx(float_num):
 	"""
 	return int(floor(float_num))
 
-def search(grid, start, goal):
+def search(grid, start, goal, heuristic):
 	"""
 	Working Implementation of breadth first search. Does NOT use a heuristic
 	and as a result this is pretty inefficient. Try modifying this algorithm 
@@ -32,61 +32,88 @@ def search(grid, start, goal):
 	came_from = [[[0 for row in range(len(grid[0]))] for col in range(len(grid))] for stack in range(NUM_THETA_CELLS)]
 	x,y,theta = start
 	stack = theta_to_stack_number(theta)
+
 	g = 0
-	closed[stack][idx(x)][idx(y)] = (g,x,y,theta)
-	came_from[stack][idx(x)][idx(y)] = (g,x,y,theta)
+	h = heuristic[idx(x)][idx(y)]
+	f = g + h
+
+	closed[stack][idx(x)][idx(y)] = (f, g, x, y, theta)
+	came_from[stack][idx(x)][idx(y)] = (f, g, x, y, theta)
 	total_closed = 1
-	opened = [(g,x,y,theta)]
+	opened = [(f, g, x, y,theta)]
+
 	while len(opened) > 0:
+		
 		opened.sort(reverse=True)
 		next = opened.pop()
-		g,x,y,theta = next
+		f, g, x, y, theta = next
+
 		test = (idx(x),idx(y))
 		# print "testing if {} is == {}".format(test, goal)
 		if (idx(x),idx(y)) == goal:
 			print("\n###############\nfound path to goal in {} expansions\n".format(total_closed))
-			return closed, came_from, (g,x,y,theta)
+			return closed, came_from, (f, g, x, y, theta)
+		
 		for next_state in expand(next):
-			g2, x2, y2, theta2 = next_state
+
+			f2, g2, x2, y2, theta2 = next_state
+
 			if x2 < 0 or x2 >= len(grid) or y2 < 0 or y2 >= len(grid[0]):
 				# invalid cell
 				continue
+			
 			stack2 = theta_to_stack_number(theta2)
 			# try:
 			# print "as indices...: {}, {}, {}".format(idx(x2), idx(y2), stack2)  
 			# print "closed dims {} x {} x {}".format(len(closed), len(closed[0]), len(closed[0][0]))
 			if closed[stack2][idx(x2)][idx(y2)] == 0 and grid[idx(x2)][idx(y2)] == 0:
 				
-				opened.append((g2, x2, y2, theta2))
+				h2 = heuristic[idx(x)][idx(y)]
+				f2 = g2 + h2
+
+				opened.append((f2, g2, x2, y2, theta2))
 				closed[stack2][idx(x2)][idx(y2)] = next_state
 				came_from[stack2][idx(x2)][idx(y2)] = next
 				total_closed += 1
+			
 			# except:
 			# 	print "ERROR"
 			# 	print "x2, y2, theta2: {}, {}, {}".format(x2,y2,theta2)
 			# 	print "as indices...: {}, {}, {}".format(idx(x2), idx(y2), stack2)  
 	print("no valid path.")
-	return closed, came_from, (g,x,y,theta)
+	return closed, came_from, (f, g, x, y, theta)
 
 def reconstruct_path(came_from, goal, start, final):
+	
 	path = [(final)]
-	g, x, y, theta = final
+
+	f, g, x, y, theta = final
+
 	stack = theta_to_stack_number(theta)
+
 	current = came_from[stack][idx(x)][idx(y)]
-	g, x, y, theta = current
+
+	f, g, x, y, theta = current
+
 	stack = theta_to_stack_number(theta)
+
 	while (x,y) != (start[0], start[1]):
+
 		path.append(current)
 		# print "came from is {}".format(came_from)
 		# print "stack, x, y: {}, {}, {}".format(stack, x, y)
 		current = came_from[stack][idx(x)][idx(y)]
-		g, x, y, theta = current
+		f, g, x, y, theta = current
 		stack = theta_to_stack_number(theta)
+	
 	return path
 
+
 def expand(state):
-	g, x, y, theta = state
+	f, g, x, y, theta = state
+
 	g2 = g+1
+
 	next_states = []
 	for delta in range(-35, 40, 5):
 		delta = pi / 180.0 * delta
@@ -94,15 +121,20 @@ def expand(state):
 		theta2 = theta + omega
 		x2 = x + SPEED * cos(theta2)
 		y2 = y + SPEED * sin(theta2)
-		next_states.append((g2, x2, y2, theta2))
+		next_states.append((f, g2, x2, y2, theta2))
+
 	return next_states
 
 def show_path(path, start, goal):
+    
     path.reverse()
-    X = [p[1] for p in path]
-    Y = [p[2] for p in path]
-    THETA = [p[3] for p in path]
-    plt.scatter(X,Y, color='black')
-    plt.scatter([start[0]], [start[1]], color='blue')
-    plt.scatter([goal[0]], [goal[1]], color='red')
+    print(path[2], path[3])
+
+    X = [-p[2] for p in path]
+    Y = [p[3] for p in path]
+    THETA = [p[4] for p in path]
+    plt.scatter(Y, X, color='black')
+    print(THETA)
+    plt.scatter([start[0]], [-start[1]], color='blue')
+    plt.scatter([goal[0]], [-goal[1]], color='red')
     plt.show()
