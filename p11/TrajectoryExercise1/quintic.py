@@ -41,14 +41,23 @@ def JMT(start, end, T):
     result_2 = s_f_dot - (s_i_dot + s_i_dot_dot * T)
     result_3 = s_f_dot_dot - s_i_dot_dot
 
-    t_1 = pow(T, 3) + pow(T, 4) + pow(T, 5)
-    t_2 = 3 * pow(T, 2) + 4 * pow(T, 3) + 5 * pow(T, 4)
-    t_3 = 6 * pow(T, 1) + 12 * pow(T, 2) + 20 * pow(T, 3)
+    t_1 = [pow(T, 3), pow(T, 4), pow(T, 5)]
+    t_2 = [3 * pow(T, 2), 4 * pow(T, 3), 5 * pow(T, 4)]
+    t_3 = [6 * pow(T, 1), 12 * pow(T, 2), 20 * pow(T, 3)]
  
-    a3 = result_1 / t_1
-    a4 = result_2 / t_2
-    a5 = result_3 / t_3
+    s_matrix = np.matrix([result_1, result_2, result_3])
+    T_matrix = np.matrix([t_1, t_2, t_3])
+
+    T_inverse = T_matrix.I
+    s_transpose = s_matrix.T
+
+    output = T_inverse * s_transpose
+
+    a_3 = round(float(output[0]), 3)
+    a_4 = round(float(output[1]), 3)
+    a_5 = round(float(output[2]), 3)
+
+    return [s_i, s_i_dot, s_i_dot_dot, a_3, a_4, a_5]
 
 
-
-    return [s_i, s_i_dot, s_i_dot_dot, a3, a4, a5]
+   #print(T_matrix, "\n", T_inverse)
