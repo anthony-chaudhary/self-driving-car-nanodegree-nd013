@@ -3,6 +3,7 @@
 #include <math.h>
 #include <vector>
 #include "hybrid_breadth_first.h"
+#include <algorithm>
 
 using namespace std;
 
@@ -39,6 +40,11 @@ vector< vector<int> > GRID = MAZE;
 vector<double> START = {0.0,0.0,0.0};
 vector<int> GOAL = {(int)GRID.size()-1, (int)GRID[0].size()-1};
 
+vector< vector<int> > heuristic = MAZE;
+
+
+
+
 int main() {
 
   cout << "Finding path through grid:" << endl;
@@ -55,9 +61,20 @@ int main() {
     cout << endl;
   }
 
+  for (int x = 0; x < GRID.size(); x++) {
+	 
+	  for (int y = 0; y < GRID[0].size(); y++) {
+		  heuristic[x][y] = max(16 - y, 16 - x);
+		  cout << "," << heuristic[x][y];
+	  }
+	  cout << endl;
+  }
+
+  
+
   HBF hbf = HBF();
 
-  HBF::maze_path get_path = hbf.search(GRID,START,GOAL);
+  HBF::maze_path get_path = hbf.search(GRID,START,GOAL, heuristic);
 
   vector<HBF::maze_s> show_path = hbf.reconstruct_path(get_path.came_from, START, get_path.final);
 

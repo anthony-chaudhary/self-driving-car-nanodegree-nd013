@@ -1,9 +1,12 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+
+#define _USE_MATH_DEFINES
 #include <math.h>
 #include <vector>
 #include "hybrid_breadth_first.h"
+
 
 using namespace std;
 
@@ -97,7 +100,7 @@ vector< HBF::maze_s> HBF::reconstruct_path(vector< vector< vector<HBF::maze_s> >
 
 }
 
-HBF::maze_path HBF::search(vector< vector<int> > grid, vector<double> start, vector<int> goal) {
+HBF::maze_path HBF::search(vector< vector<int> > grid, vector<double> start, vector<int> goal, vector< vector<int> > heuristic) {
   /*
   Working Implementation of breadth first search. Does NOT use a heuristic
   and as a result this is pretty inefficient. Try modifying this algorithm 
@@ -109,12 +112,16 @@ HBF::maze_path HBF::search(vector< vector<int> > grid, vector<double> start, vec
   vector< vector< vector<maze_s> > > came_from(NUM_THETA_CELLS, vector<vector<maze_s>>(grid[0].size(), vector<maze_s>(grid.size())));
   double theta = start[2];
   int stack = theta_to_stack_number(theta);
-  int g = 0;
 
+   
   maze_s state;
-  state.g = g;
+  
   state.x = start[0];
   state.y = start[1];
+
+  int h = heuristic[state.x][state.y];
+  int g = 0 + h;
+  state.g = g;
 
   closed[stack][idx(state.x)][idx(state.y)] = state;
   closed_value[stack][idx(state.x)][idx(state.y)] = 1;
@@ -145,7 +152,11 @@ HBF::maze_path HBF::search(vector< vector<int> > grid, vector<double> start, vec
 
     for(int i = 0; i < next_state.size(); i++)
     {
-      int g2 = next_state[i].g;
+		
+	  int h2 = heuristic[idx(x)][idx(y)] ;
+
+      int g2 = next_state[i].g + h2;
+
       double x2 = next_state[i].x;
       double y2 = next_state[i].y;
       double theta2 = next_state[i].theta;
