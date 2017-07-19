@@ -27,10 +27,11 @@ double rad2deg(double x) { return x * 180 / pi(); }
 stringstream hasData(string s) {
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
-  auto b2 = s.find_first_of("}");
+  auto b2 = s.find_last_of("]");
   if (found_null != string::npos) {
     return stringstream();
-  } else if (b1 != string::npos && b2 != string::npos) {
+  } 
+  else if (b1 != string::npos && b2 != string::npos) {
 	  stringstream tmp = stringstream();
 	  tmp.str(s.substr(b1, b2 - b1 + 1));
 	  return tmp;
@@ -209,7 +210,7 @@ int main() {
     //cout << sdata << endl;
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
-      auto s = hasData(data);
+      auto s = hasData(string(data));
 
       if (s.str() != "") {
         auto j = json::parse(s);
@@ -219,23 +220,24 @@ int main() {
         if (event == "telemetry") {
           // j[1] is the data JSON object
           
-        	// Main car's localization Data
-          	double car_x = stod(j[1]["x"].get<string>());
-          	double car_y = stod(j[1]["y"].get<string>());
-          	double car_s = stod(j[1]["s"].get<string>());
-          	double car_d = stod(j[1]["d"].get<string>());
-          	double car_yaw = stod(j[1]["yaw"].get<string>());
-          	double car_speed = stod(j[1]["speed"].get<string>());
+		  // Main car's localization Data
+			double car_x = j[1]["x"];
+			double car_y = j[1]["y"];
+			double car_s = j[1]["s"];
+			double car_d = j[1]["d"];
+			double car_yaw = j[1]["yaw"];
+			double car_speed = j[1]["speed"];
 
-          	// Previous path data given to the Planner
-          	auto previous_path_x = stod(j[1]["previous_path_x"].get<string>());
-          	auto previous_path_y = stod(j[1]["previous_path_y"].get<string>());
-          	// Previous path's end s and d values 
-          	double end_path_s = stod(j[1]["end_path_s"].get<string>());
-          	double end_path_d = stod(j[1]["end_path_d"].get<string>());
+			// Previous path data given to the Planner
+			auto previous_path_x = j[1]["previous_path_x"];
+			auto previous_path_y = j[1]["previous_path_y"];
+			// Previous path's end s and d values 
+			double end_path_s = j[1]["end_path_s"];
+			double end_path_d = j[1]["end_path_d"];
 
-          	// Sensor Fusion Data, a list of all other cars on the same side of the road.
-          	auto sensor_fusion = stod(j[1]["sensor_fusion"].get<string>());
+			// Sensor Fusion Data, a list of all other cars on the same side of the road.
+			auto sensor_fusion = j[1]["sensor_fusion"];
+
 
           	json msgJson;
 
