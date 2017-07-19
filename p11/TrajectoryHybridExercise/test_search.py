@@ -26,18 +26,19 @@ MAZE = [
 
 EMPTY = [[_ for i in range(16)] for j in range(16)]
 
-#heuristic = EMPTY
+heuristic = [[max(16-y, 16-x) for x in range(16)] for y in range(16)]
+heuristic = EMPTY
 
 GRID = MAZE # change to MAZE for testing
 
 START = (0.0,0.0,0.0)
 GOAL = (len(GRID)-1, len(GRID[0])-1)
-#GOAL = (0, len(GRID[0])-1)
+GOAL = (0, len(GRID[0])-1)
 
 def main():
 	
-	#for i in range(len(heuristic)):
-		#print(heuristic[i])
+	for i in range(len(heuristic)):
+		print(heuristic[i])
 
 	print("\nFinding path through grid:")
 	s = ""

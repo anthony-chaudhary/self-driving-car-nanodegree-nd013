@@ -69,6 +69,7 @@ def search(grid, start, goal, heuristic):
 			if closed[stack2][idx(x2)][idx(y2)] == 0 and grid[idx(x2)][idx(y2)] == 0:
 				
 				h2 = heuristic[idx(x)][idx(y)]
+				
 				f2 = g2 + h2
 
 				opened.append((f2, g2, x2, y2, theta2))
