@@ -31,11 +31,11 @@ grid = [[1, 1, 1, 0, 0, 0],
             #grid[i][j] = 0
             #grid[j][i] = 0
 
-grid = [[0, 0, 0, 0, 0, 0],
-        [0, 1, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 0, 0],
-        [0, 0, 0, 0, 0, 0]]
+#grid = [[0, 0, 0, 0, 0, 0],
+#        [0, 1, 0, 0, 0, 0],
+#        [0, 0, 0, 0, 0, 0],
+#        [1, 0, 0, 0, 0, 0],
+#        [0, 0, 0, 0, 0, 0]]
 
 for i in grid:
     print(i)
@@ -50,8 +50,8 @@ forward_moves = [[-1,  0], # go up
 forward_name = ['up', 'left', 'down', 'right']
 forward_symbol = ['^', '<', 'V', '>']
 
-#init = [0, 0, 3]  # for larger 
-init = [2, 5, 3]
+init = [4, 3, 0]  # for larger 
+#init = [2, 5, 3]
 
 class action():
 
@@ -149,7 +149,7 @@ def search(grid, init, goal, debug_flag=False, info=False):
     e_nodes = [n] # eligible nodes
  
     print()
-    goal_paths = 10   # Number of True goals to find.
+    goal_paths = 2   # Number of True goals to find.
     pass_through_init_attempts = 2  # Max times can pass through origin
     goal_counter = 0
     debug(grid, n, n.x, n.y, n.o)
@@ -294,7 +294,7 @@ print("\nBest path:")
 print("Path ID {x:2d} ".format(x=best_path.id), "Cost: {x:2d} ".format(x=best_path.g), "Steps:", len(best_path.nodes), " Goal reached:", best_path.goal )
 print_chart(grid, best_path.nodes)
 
-for i in range(1, 10):
+for i in range(1, 2):
     print("\nNext best path")
     print("Path ID {x:2d} ".format(x=paths[i].id), "Cost: {x:2d} ".format(x=paths[i].g), "Steps:", len(paths[i].nodes), " Goal reached:", paths[i].goal )
     print_chart(grid, paths[i].nodes)

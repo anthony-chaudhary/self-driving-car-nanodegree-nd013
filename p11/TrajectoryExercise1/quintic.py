@@ -57,6 +57,8 @@ def JMT(start, end, T):
     a_4 = round(float(output[1]), 3)
     a_5 = round(float(output[2]), 3)
 
+    #print(np.linalg.solve(T_matrix, s_transpose))
+
     return [s_i, s_i_dot, s_i_dot_dot, a_3, a_4, a_5]
 
 
