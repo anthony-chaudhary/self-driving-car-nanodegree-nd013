@@ -18,6 +18,7 @@ public:
 
 	struct maze_s {
 	
+		int f;  // heuristic
 		int g;	// iteration
 		double x;
 		double y;
@@ -48,7 +49,7 @@ public:
 
   	int idx(double float_num);
 
-  	vector<maze_s> expand(maze_s state);
+  	vector<maze_s> expand(maze_s state, vector< vector<int> > heuristic);
 
   	maze_path search(vector< vector<int> > grid, vector<double> start, vector<int> goal, vector< vector<int> > heuristic);
 
