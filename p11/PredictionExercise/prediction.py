@@ -4,13 +4,13 @@ from classifier import GNB
 import json
 
 def main():
-	gnb = GNB()
+	clf = GNB()
 	with open('train.json', encoding='utf-8') as f:
 		j = json.load(f)
 	print(j.keys())
 	X = j['states']
 	Y = j['labels']
-	gnb.train(X, Y)
+	clf.train(X, Y)
 
 	with open('test.json', encoding='utf-8') as f:
 		j = json.load(f)
@@ -19,7 +19,7 @@ def main():
 	Y = j['labels']
 	score = 0
 	for coords, label in zip(X,Y):
-		predicted = gnb.predict(coords)
+		predicted = clf.predict(coords)
 		if predicted == label:
 			score += 1
 	fraction_correct = float(score) / len(X)

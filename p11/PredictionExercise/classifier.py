@@ -1,13 +1,19 @@
 
 from sklearn.naive_bayes import GaussianNB
 from sklearn.ensemble import ExtraTreesClassifier
+from sklearn.neural_network import MLPClassifier
+from sklearn.preprocessing import StandardScaler
 
 class GNB(object):
 
 	def __init__(self):
 		self.possible_labels = ['left', 'keep', 'right']
-		#self.gnb = GaussianNB()
-		self.gnb = ExtraTreesClassifier(n_estimators=20, max_depth=45, min_samples_split=4, random_state=0)
+		#self.clf = GaussianNB()
+		#self.clf = ExtraTreesClassifier(n_estimators=20, max_depth=45, min_samples_split=4, random_state=0)
+		self.clf = MLPClassifier(hidden_layer_sizes=(4000), 
+			alpha=1e-8, momentum=.7, verbose=True, tol=1e-7, max_iter=400)
+		self.scaler = StandardScaler()
+
 
 	def train(self, data, labels):
 		"""
@@ -30,8 +36,11 @@ class GNB(object):
 		#print(labels)
 		#x = [[i[1], i[2], i[3], i[1]%4] for i in data]
 		#print(len(x))
-		#self.gnb.fit(x, labels)
-		self.gnb.fit(data, labels)
+		#self.clf.fit(x, labels)
+		
+		self.scaler.fit(data)
+		data = self.scaler.transform(data)
+		self.clf.fit(data, labels)
 
 
 	def predict(self, observation):
@@ -50,9 +59,11 @@ class GNB(object):
 		be one of "left", "keep" or "right".
 		"""
 		# TODO - complete this
-		i = observation
-		#prediction = self.gnb.predict([[i[1], i[2], i[3], i[1]%4]])
-		prediction = self.gnb.predict([i])
+	
+		i = self.scaler.transform([observation])
+		#i = observation
+		#prediction = self.clf.predict([[i[1], i[2], i[3], i[1]%4]])
+		prediction = self.clf.predict(i)
 		#print(prediction)
 
 		return prediction
