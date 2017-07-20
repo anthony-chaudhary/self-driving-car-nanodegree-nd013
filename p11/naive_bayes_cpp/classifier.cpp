@@ -64,8 +64,8 @@ void GNB::train(vector<vector<double>> data, vector<string> labels)
 			index = 2;
 		}
 		data_counts[index] += 1;
-		data_sums[index] += data[i][0];
-		data_variance[index].push_back(data[i][0]);
+		data_sums[index] += data[i][3];
+		data_variance[index].push_back(data[i][3]);
 
 	}
 
@@ -99,7 +99,9 @@ void GNB::train(vector<vector<double>> data, vector<string> labels)
 
 	}
 
-	double x = data[1][0];
+	double x = data[5][3];
+	cout << x << labels[5] << endl;
+
 	double mean_y = results[0][1];
 	double variance_y = results[0][2];
 	double p = 1 / sqrt(2 * M_PI * variance_y) 
