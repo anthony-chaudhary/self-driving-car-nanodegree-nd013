@@ -6,6 +6,7 @@
 #include <math.h>
 #include <vector>
 #include "classifier.h"
+#include <algorithm>
 
 /**
 * Initializes GNB
@@ -121,36 +122,35 @@ string GNB::predict(vector<double> observation)
 
 	double x = observation[3];
 
-	double mean_y = results_[0][1];
-	double variance_y = results_[0][2];
-	double p = (1 / sqrt(2 * M_PI * variance_y))
-		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
+	double mean_y, variance_y, p, posterior;
+	vector<double> posteriors;
 
-	double posterior = results_[0][0] * p;
+	for (size_t i = 0; i < 3; ++i) {
 
-	cout << "posterior " << posterior << " for " << possible_labels[0] << endl;
-	cout << endl;
+		mean_y = results_[i][1];
+		variance_y = results_[i][2];
 
-	mean_y = results_[1][1];
-	variance_y = results_[1][2];
-	p = 1 / sqrt(2 * M_PI * variance_y)
-		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
+		p = (1 / sqrt(2 * M_PI * variance_y))
+			* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
+		posterior = results_[i][0] * p;
 
-	posterior = results_[1][0] * p;
+		//cout << posterior << endl;
 
-	cout << "posterior " << posterior << " for " << possible_labels[1] << endl;
-	cout << endl;
-
-	mean_y = results_[2][1];
-	variance_y = results_[2][2];
-	p = 1 / sqrt(2 * M_PI * variance_y)
-		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
-
-	posterior = results_[2][0] * p;
-
-	cout << "posterior " << posterior << " for " << possible_labels[2] << endl;
-	cout << endl;
-
-	return this->possible_labels[1];
+		posteriors.push_back(posterior);
+	}
+	
+	int winner;
+	// TODO replace this with max_element()
+	if (posteriors[0] > posteriors[1] && posteriors[0] > posteriors[2]) {
+		winner = 0;
+	}
+	if (posteriors[1] > posteriors[2] && posteriors[1] > posteriors[2]) {
+		winner = 1;
+	}
+	if (posteriors[2] > posteriors[1] && posteriors[2] > posteriors[0]) {
+		winner = 2;
+	}
+	
+	return this->possible_labels[winner];
 
 }
