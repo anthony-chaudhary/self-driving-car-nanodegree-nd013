@@ -10,26 +10,26 @@ vector<vector<double> > Load_State(string file_name)
 {
 	ifstream in_state_(file_name.c_str(), ifstream::in);
 	vector< vector<double >> state_out;
-	string line;
-
-	while (getline(in_state_, line))
+	string start;
+	
+	while (getline(in_state_, start))
 	{
 
-		istringstream iss(line);
 		vector<double> x_coord;
-		double state1;
-		double state2;
-		double state3;
-		double state4;
-		iss >> state1;
-		x_coord.push_back(state1);
-		iss >> state2;
-		x_coord.push_back(state2);
-		iss >> state3;
-		x_coord.push_back(state3);
-		iss >> state4;
-		x_coord.push_back(state4);
 
+		istringstream ss(start);
+		double a;
+		ss >> a;
+		x_coord.push_back(a);
+
+		string value;
+
+		while (getline(ss, value, ',')) {
+			double b;
+			ss >> b;
+			x_coord.push_back(b);
+		}
+				
 		state_out.push_back(x_coord);
 	}
 	return state_out;

@@ -71,8 +71,7 @@ void GNB::train(vector<vector<double>> data, vector<string> labels)
 
 	cout << "Updating variables\n" << endl;
 	// update variables
-	vector <vector <double> >results;
-	results.resize(3);
+	results_.resize(3);
 	for (size_t i = 0; i < data_counts.size(); ++i) {
 		
 		cout << possible_labels[i] << endl;
@@ -88,9 +87,9 @@ void GNB::train(vector<vector<double>> data, vector<string> labels)
 
 		double data_variance_mean = data_variance_sum / data_counts[i];
 
-		results[i].push_back(chance);
-		results[i].push_back(data_mean);
-		results[i].push_back(data_variance_mean);
+		results_[i].push_back(chance);
+		results_[i].push_back(data_mean);
+		results_[i].push_back(data_variance_mean);
 
 		cout << "Chance " << chance << " count " << data_counts[i] << endl;
 		cout << "data_mean " << data_mean << " data_sum " << data_sums[i] << endl;
@@ -99,41 +98,9 @@ void GNB::train(vector<vector<double>> data, vector<string> labels)
 
 	}
 
-	double x = data[5][3];
-	cout << x << labels[5] << endl;
-
-	double mean_y = results[0][1];
-	double variance_y = results[0][2];
-	double p = 1 / sqrt(2 * M_PI * variance_y) 
-		* exp( (- pow(x - mean_y, 2) ) / (2 * variance_y) );
-
-	double posterior = results[0][0] * p;
-
-	cout << "posterior " << posterior << " for " << possible_labels[0] << endl;
-	cout << endl;
-
-	mean_y = results[1][1];
-	variance_y = results[1][2];
-	p = 1 / sqrt(2 * M_PI * variance_y)
-		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
-
-	posterior = results[1][0] * p;
-
-	cout << "posterior " << posterior << " for " << possible_labels[1] << endl;
-	cout << endl;
-
-	mean_y = results[2][1];
-	variance_y = results[2][2];
-	p = 1 / sqrt(2 * M_PI * variance_y)
-		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
-
-	posterior = results[2][0] * p;
-
-	cout << "posterior " << posterior << " for " << possible_labels[2] << endl;
-	cout << endl;
 }
 
-string GNB::predict(vector<double>)
+string GNB::predict(vector<double> observation)
 {
 	/*
 	Once trained, this method is called and expected to return
@@ -151,6 +118,38 @@ string GNB::predict(vector<double>)
 	"""
 	# TODO - complete this
 	*/
+
+	double x = observation[3];
+
+	double mean_y = results_[0][1];
+	double variance_y = results_[0][2];
+	double p = (1 / sqrt(2 * M_PI * variance_y))
+		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
+
+	double posterior = results_[0][0] * p;
+
+	cout << "posterior " << posterior << " for " << possible_labels[0] << endl;
+	cout << endl;
+
+	mean_y = results_[1][1];
+	variance_y = results_[1][2];
+	p = 1 / sqrt(2 * M_PI * variance_y)
+		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
+
+	posterior = results_[1][0] * p;
+
+	cout << "posterior " << posterior << " for " << possible_labels[1] << endl;
+	cout << endl;
+
+	mean_y = results_[2][1];
+	variance_y = results_[2][2];
+	p = 1 / sqrt(2 * M_PI * variance_y)
+		* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
+
+	posterior = results_[2][0] * p;
+
+	cout << "posterior " << posterior << " for " << possible_labels[2] << endl;
+	cout << endl;
 
 	return this->possible_labels[1];
 

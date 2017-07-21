@@ -14,6 +14,7 @@ class GNB {
 public:
 
 	vector<string> possible_labels = { "left","keep","right" };
+	vector <vector <double> >results_;
 
 
 	/**
