@@ -27,9 +27,28 @@ void path::init() {
 
 }
 
-void sensor_fusion_predict() {
-	// Predict for all cars in sensor fusion
-	// work in progress!
+void path::sensor_fusion_predict(vector<double> sensor_fusion) {
+/****************************************
+*  Turn raw sensor_fusion observations
+ into predictions for use by update_state() and trajectory_generation() 
+****************************************/
+
+}
+
+
+void path::update_state() {
+/****************************************
+* Behavior planning usine finite state machine
+****************************************/
+}
+
+
+
+void path::trajectory_generation() {
+/****************************************
+* find best trajectory according to weighted cost function
+
+****************************************/
 }
 
 
