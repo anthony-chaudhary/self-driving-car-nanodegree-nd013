@@ -47,9 +47,77 @@ void path::update_state() {
 void path::trajectory_generation() {
 /****************************************
 * find best trajectory according to weighted cost function
-
 ****************************************/
+
+	// 1. Generate random nearby goals
+
+	// 2. Store jerk minimal trajectories for all goals
+
+	// 3. Find best using weighted cost function
+
 }
+
+
+/****************************************
+* Cost functions
+****************************************/
+
+double collision_cost(vector< vector<double> > trajectory, predictions) {
+
+	Vehicle *vehicle = new Vehicle;
+
+	double a = nearest_approach_to_any_vehicle(trajectory, predicitons);
+	double b = 2 * vehicle->radius;
+	if (a < b) { return 1.0;	 }
+	else { return 0.0; }
+}
+
+double nearest_approach_to_any_vehicle(vector< vector<double> > trajectory, predictions) {
+// returns closest distance to any vehicle
+
+	double a = 1e9;
+	for (auto p : predictions) {
+		double b = nearest_approach(trajectory, p);
+		if (a < b) { a = b; }
+	}
+	return a;
+
+}
+
+double nearest_approach(vector< vector<double> > trajectory, p) {
+	vector<double> S, D;
+	double T, s_time, d_time, target_s, target_d, a, b, c, e, t;
+	a = 1e9;
+
+	S, D = trajectory[0], trajectory[1];
+	T = trajectory[0][0];
+
+	for (size_t i = 0; i < 100; ++i) {
+		t = double(i) / 100 * T;
+		s_time = coefficients_to_time_function(D, t);
+		d_time = coefficients_to_time_function(S, t);
+
+		target_s, target_d = vehicle.state_in(t);  // TO DO
+
+		b = pow((s_time - target_s), 2);
+		c = pow((d_time - target_d), 2);
+		e = sqrt(b + c);
+
+		if (e < a) { a = e; }
+	}
+	return a;
+}
+
+
+double coefficients_to_time_function(vector<double> coefficients, double t) {
+	// Returns a function of time given coefficients
+	double total = 0.0;
+	for (size_t i = 0; i < coefficients.size(); ++i) {
+		total += coefficients[i] * pow(t, i);
+	}
+	return total;
+}
+
 
 
 vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <double> end, double T)
