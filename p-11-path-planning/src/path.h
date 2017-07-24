@@ -1,7 +1,9 @@
 #ifndef path_h
 #define path_h
 
+#include <map>
 #include <vector>
+using namespace std;
 
 class path {
 public:
@@ -9,9 +11,7 @@ public:
 	path();
 	virtual ~path();
 
-	map<int, Vehicle > other_vehicles;
-	Vehicle *target;  // store target?
-
+	
 	double timestep;
 	double T;
 	double trajectory_samples;
@@ -22,15 +22,16 @@ public:
 
 	vector<double> wiggle_goal(double t);
 
+	double calculate_cost(vector<double> trajectory);
 	void sensor_fusion_predict(vector< vector<double>> sensor_fusion);
-	double nearest_approach_to_any_vehicle(vector< vector<double> > trajectory);
-	double nearest_approach(vector< vector<double> > trajectory, Vehicle *vehicle);
-	double collision_cost(vector< vector<double> > trajectory);
+	double nearest_approach_to_any_vehicle(vector<double> trajectory);
+	
+	double collision_cost(vector<double> trajectory);
 	double coefficients_to_time_function(vector<double> coefficients, double t);
 
 	void update_state();
 
-	void trajectory_generation();
+	vector<double> trajectory_generation();
 
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
 
@@ -41,6 +42,8 @@ public:
 class Vehicle : public path {
 
 	public: 
+
+		double nearest_approach(vector<double> trajectory, Vehicle vehicle);
 
 		double radius = 1.5; // model vehicle as circle to simplify collision detection
 

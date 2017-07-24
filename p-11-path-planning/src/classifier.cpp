@@ -59,6 +59,7 @@ vector<string> GNB::load_label(string file_name)
 	return label_out;
 
 }
+
 void GNB::train(vector<vector<double>> data, vector<string> labels)
 {
 
@@ -138,7 +139,7 @@ void GNB::train(vector<vector<double>> data, vector<string> labels)
 
 }
 
-string GNB::predict(vector<double> observation)
+string GNB::predict(double observation)
 {
 	/*
 	Once trained, this method is called and expected to return
@@ -156,19 +157,19 @@ string GNB::predict(vector<double> observation)
 	"""
 	*/
 
-	double x = observation[3];
+	double x = observation;
 
 	double mean_y, variance_y, p, posterior;
 	vector<double> posteriors;
 
 	for (size_t i = 0; i < 3; ++i) {
 
-		mean_y = results_[i][1];
-		variance_y = results_[i][2];
+		mean_y = this->results_[i][1];
+		variance_y = this->results_[i][2];
 
 		p = (1 / sqrt(2 * M_PI * variance_y))
 			* exp((-pow(x - mean_y, 2)) / (2 * variance_y));
-		posterior = results_[i][0] * p;
+		posterior = this->results_[i][0] * p;
 
 		//cout << posterior << endl;
 

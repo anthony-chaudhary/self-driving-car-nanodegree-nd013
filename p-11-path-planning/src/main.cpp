@@ -10,7 +10,6 @@
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
-
 #include "path.h"
 
 using namespace std;
@@ -205,6 +204,8 @@ int main() {
   ****************************************/
   path path;
 
+  path.init();
+
 
   h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode){
  
@@ -244,14 +245,14 @@ int main() {
 			// Sensor Fusion Data, a list of all other cars on the same side of the road.
 			auto sensor_fusion = j[1]["sensor_fusion"];
 
+			
 
 			// 2. Update vehicles with sensor fusion readings
 			path.sensor_fusion_predict(sensor_fusion);
 
-			// 3. 
-			
+			// 3. 	
 		
-
+			auto trajectory = path.trajectory_generation();
 
 
 
