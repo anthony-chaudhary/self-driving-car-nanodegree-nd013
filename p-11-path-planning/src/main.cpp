@@ -206,9 +206,8 @@ int main() {
   path path;
 
 
-
-  h.onMessage([&map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
-                     uWS::OpCode opCode) {
+  h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode){
+ 
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
     // The 2 signifies a websocket event
@@ -244,6 +243,18 @@ int main() {
 
 			// Sensor Fusion Data, a list of all other cars on the same side of the road.
 			auto sensor_fusion = j[1]["sensor_fusion"];
+
+
+			// 2. Update vehicles with sensor fusion readings
+			path.sensor_fusion_predict(sensor_fusion);
+
+			// 3. 
+			
+		
+
+
+
+
 
 
           	json msgJson;

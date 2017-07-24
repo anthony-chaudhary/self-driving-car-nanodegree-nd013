@@ -9,6 +9,10 @@
 path::path() {}
 path::~path() {}
 
+
+Vehicle *r_daneel_olivaw = new Vehicle;  // our self driving car
+GNB *gnb = new GNB;
+
 using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
@@ -18,21 +22,57 @@ void path::init() {
 	/****************************************
 	* 1. Prediction - classifier
 	****************************************/
-	GNB gnb = GNB();
-	vector< vector<double> > X_train = gnb.load_state("./train_states.txt");
-	vector< string > Y_train = gnb.load_label("./train_labels.txt");
-	gnb.train(X_train, Y_train);
-
-
+	vector< vector<double> > X_train = gnb->load_state("./train_states.txt");
+	vector< string > Y_train = gnb->load_label("./train_labels.txt");
+	gnb->train(X_train, Y_train);
+	
+	
 
 }
 
-void path::sensor_fusion_predict(vector<double> sensor_fusion) {
+void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 /****************************************
 *  Turn raw sensor_fusion observations
  into predictions for use by update_state() and trajectory_generation() 
 ****************************************/
 
+	// 1. Update vehicles list  (create new objects?)
+	for (size_t i = 0; i < sensor_fusion.size(); ++i) {
+		
+		int id = sensor_fusion[i][0];
+		if (other_vehicles.find(id) == other_vehicles.end()) {
+			
+			other_vehicles.insert(make_pair(id, new Vehicle));
+
+		}
+
+		// is there better way to do this?
+		Vehicle *vehicle = other_vehicles.find(id)->second;
+
+		// 2. Update sensor readings
+
+		// previous
+		vehicle->sf_x_p = vehicle->sf_x;
+		vehicle->sf_y_p = vehicle->sf_y;
+		vehicle->sf_vx_p = vehicle->sf_vx;
+		vehicle->sf_vy_p = vehicle->sf_vy_p;
+		vehicle->sf_s_p = vehicle->sf_d;
+		vehicle->sf_d_p = vehicle->sf_d;
+
+		// new
+		vehicle->sf_x	= sensor_fusion[i][1];
+		vehicle->sf_y	= sensor_fusion[i][2];
+		vehicle->sf_vx	= sensor_fusion[i][3];
+		vehicle->sf_vy	= sensor_fusion[i][4];
+		vehicle->sf_s	= sensor_fusion[i][5];
+		vehicle->sf_d	= sensor_fusion[i][6];
+
+		double d_dot = vehicle->sf_d_p - vehicle->sf_d;   // is this right?
+		
+		// run  classifier.predict() to see if changing lanes?
+		vehicle->predicted_state = gnb->predict(d_dot);	
+	
+	}
 }
 
 
@@ -49,6 +89,9 @@ void path::trajectory_generation() {
 * find best trajectory according to weighted cost function
 ****************************************/
 
+	r_daneel_olivaw->S = { 0, 0, 0 }; // TODO dynamic get this
+	r_daneel_olivaw->D = { 0, 0, 0 };
+
 	// 1. Generate random nearby goals
 
 	// 2. Store jerk minimal trajectories for all goals
@@ -62,45 +105,45 @@ void path::trajectory_generation() {
 * Cost functions
 ****************************************/
 
-double collision_cost(vector< vector<double> > trajectory, predictions) {
+double path::collision_cost(vector< vector<double> > trajectory) {
 
-	Vehicle *vehicle = new Vehicle;
-
-	double a = nearest_approach_to_any_vehicle(trajectory, predicitons);
-	double b = 2 * vehicle->radius;
+	
+	double a = nearest_approach_to_any_vehicle(trajectory);
+	double b = 2 * r_daneel_olivaw->radius;
 	if (a < b) { return 1.0;	 }
 	else { return 0.0; }
 }
 
-double nearest_approach_to_any_vehicle(vector< vector<double> > trajectory, predictions) {
+double path::nearest_approach_to_any_vehicle(vector< vector<double> > trajectory) {
 // returns closest distance to any vehicle
 
 	double a = 1e9;
-	for (auto p : predictions) {
-		double b = nearest_approach(trajectory, p);
+	for (auto& v : other_vehicles) {
+		double b = nearest_approach(trajectory, v);
 		if (a < b) { a = b; }
 	}
 	return a;
 
 }
 
-double nearest_approach(vector< vector<double> > trajectory, p) {
-	vector<double> S, D;
+double path::nearest_approach(vector< vector<double> > trajectory, Vehicle *vehicle) {
+	
 	double T, s_time, d_time, target_s, target_d, a, b, c, e, t;
 	a = 1e9;
-
-	S, D = trajectory[0], trajectory[1];
 	T = trajectory[0][0];
+
+	vector<double> S, D;
+	S, D = trajectory[0], trajectory[1];
 
 	for (size_t i = 0; i < 100; ++i) {
 		t = double(i) / 100 * T;
 		s_time = coefficients_to_time_function(D, t);
 		d_time = coefficients_to_time_function(S, t);
 
-		target_s, target_d = vehicle.state_in(t);  // TO DO
+		vehicle->update_target_state(t);
 
-		b = pow((s_time - target_s), 2);
-		c = pow((d_time - target_d), 2);
+		b = pow((s_time - vehicle->s_target), 2);
+		c = pow((d_time - vehicle->d_target), 2);
 		e = sqrt(b + c);
 
 		if (e < a) { a = e; }
@@ -109,7 +152,7 @@ double nearest_approach(vector< vector<double> > trajectory, p) {
 }
 
 
-double coefficients_to_time_function(vector<double> coefficients, double t) {
+double path::coefficients_to_time_function(vector<double> coefficients, double t) {
 	// Returns a function of time given coefficients
 	double total = 0.0;
 	for (size_t i = 0; i < coefficients.size(); ++i) {
@@ -117,7 +160,6 @@ double coefficients_to_time_function(vector<double> coefficients, double t) {
 	}
 	return total;
 }
-
 
 
 vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <double> end, double T)
