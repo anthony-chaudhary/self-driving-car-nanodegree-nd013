@@ -31,7 +31,7 @@ public:
 	vector<string> load_label(string file_name);
 
 	void train(vector<vector<double> > data, vector<string>  labels);
-	string predict(vector<double> obseravation);
+	string predict(double obseravation);
 
 };
 

@@ -5,6 +5,7 @@
 #include <fstream>
 #include <cmath>
 #include <vector>
+#include <random>
 
 path::path() {}
 path::~path() {}
@@ -12,6 +13,7 @@ path::~path() {}
 
 Vehicle *r_daneel_olivaw = new Vehicle;  // our self driving car
 GNB *gnb = new GNB;
+default_random_engine generator;
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -26,6 +28,12 @@ void path::init() {
 	vector< string > Y_train = gnb->load_label("./train_labels.txt");
 	gnb->train(X_train, Y_train);
 	
+	this->timestep = .5;
+	this->T = 5.0;
+	this->trajectory_samples = 10;
+	this->SIGMA_S = { 10.0, 4.0, 2.0 };
+	this->SIGMA_D = { 1.0, 1.0, 1.0 };
+
 	
 
 }
@@ -40,10 +48,9 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 	for (size_t i = 0; i < sensor_fusion.size(); ++i) {
 		
 		int id = sensor_fusion[i][0];
-		if (other_vehicles.find(id) == other_vehicles.end()) {
+		if (this->other_vehicles.find(id) == this->other_vehicles.end()) {
 			
-			other_vehicles.insert(make_pair(id, new Vehicle));
-
+			this->other_vehicles.insert(make_pair(id, new Vehicle));
 		}
 
 		// is there better way to do this?
@@ -80,6 +87,9 @@ void path::update_state() {
 /****************************************
 * Behavior planning usine finite state machine
 ****************************************/
+
+	this->target = this->other_vehicles[0];
+
 }
 
 
@@ -94,12 +104,71 @@ void path::trajectory_generation() {
 
 	// 1. Generate random nearby goals
 
+	vector< vector<double>> goals;
+	// First goal
+	goals.insert(end(goals), begin(this->target->S_TARGETS), end(this->target->S_TARGETS));
+	goals.insert(end(goals), begin(this->target->D_TARGETS), end(this->target->D_TARGETS));
+
+	double t = this->T - 4 * this->timestep;
+	double b = t;
+	goals[0][6] = t;
+
+	while (t <= b) {
+
+		// other goals
+		this->target->update_target_state(t);
+		vector< vector<double>> target_goals;
+		vector<double> new_goal;
+		target_goals.resize(this->trajectory_samples);
+		
+		for (size_t i = 0; i < target_goals.size(); ++i) {
+			target_goals[i] = wiggle_goal(t);
+		}
+		
+		goals.insert(end(goals), begin(target_goals), end(target_goals));	
+		t += this->timestep;
+	}
+
 	// 2. Store jerk minimal trajectories for all goals
+	vector<double> trajectories, s_goal, d_goal, s_coeffecients, d_coeffecients,
+		start_s, start_d;
+	double t_2;
+	start_s = { r_daneel_olivaw->s, r_daneel_olivaw->s_dot, r_daneel_olivaw->s_dot_dot };
+	start_d = { r_daneel_olivaw->d, r_daneel_olivaw->d_dot, r_daneel_olivaw->d_dot_dot };
+
+	for (auto g : goals) {
+		
+		s_goal = { g[0], g[1], g[2] };
+		d_goal = { g[3], g[4], g[5] };
+		t_2 = g[6];
+
+		s_coeffecients = jerk_minimal_trajectory(start_s, s_goal, t_2);
+		d_coeffecients = jerk_minimal_trajectory(start_d, d_goal, t_2);
+
+	}
 
 	// 3. Find best using weighted cost function
 
+
 }
 
+vector<double> path::wiggle_goal(double t) {
+	
+	vector<double> new_goal(7);
+	for (size_t i = 0; i < 3; ++i) {
+	
+		normal_distribution<double> distribution(this->target->D_TARGETS[i], this->SIGMA_D[i]);
+		new_goal[i] = distribution(generator);
+	}
+	for (size_t i = 0; i < 3; ++i) {
+
+		normal_distribution<double> distribution(this->target->S_TARGETS[i], this->SIGMA_S[i]);
+		new_goal[i] = distribution(generator);
+	}
+	new_goal[6] = t;
+	return new_goal;
+
+}
 
 /****************************************
 * Cost functions
