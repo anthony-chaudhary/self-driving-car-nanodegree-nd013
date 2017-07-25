@@ -250,11 +250,12 @@ int main() {
 			// 2. Update vehicles with sensor fusion readings
 			path.sensor_fusion_predict(sensor_fusion);
 
-			// 3. 	
+			// 3. Update our car's state
+			path.update_our_car_state(car_x, car_y, car_s, car_d, car_yaw, car_speed);
 		
+			// 4. Generate trajectory
 			auto trajectory = path.trajectory_generation();
-
-
+			
 
 
 

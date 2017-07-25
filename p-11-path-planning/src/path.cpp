@@ -10,13 +10,14 @@
 path::path() {}
 path::~path() {}
 
-
 Vehicle *r_daneel_olivaw = new Vehicle;  // our self driving car
 default_random_engine generator;
+GNB *classifier = new GNB;
 
 map<int, Vehicle> other_vehicles;
 map<double, string > weighted_costs;
-Vehicle *target;  // store target?
+Vehicle *target;  // vehicle target
+path *our_path = new path;
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -27,16 +28,20 @@ void path::init() {
 	/****************************************
 	* 1. Prediction - classifier
 	****************************************/
-	GNB gnb;
-	vector< vector<double> > X_train = gnb.load_state("./train_states.txt");
-	vector< string > Y_train = gnb.load_label("./train_labels.txt");
-	gnb.train(X_train, Y_train);
+	vector< vector<double> > X_train = classifier->load_state("./train_states.txt");
+	vector< string > Y_train = classifier->load_label("./train_labels.txt");
+	classifier->train(X_train, Y_train);
+
+	r_daneel_olivaw->S_p = { 0, 0, 0 }; 
+	r_daneel_olivaw->D_p = { 0, 0, 0 };
+	r_daneel_olivaw->S = { 0, 0, 0 };
+	r_daneel_olivaw->D = { 0, 0, 0 };
 	
-	this->timestep = .5;
-	this->T = 5.0;
-	this->trajectory_samples = 10;
-	this->SIGMA_S = { 10.0, 4.0, 2.0 };
-	this->SIGMA_D = { 1.0, 1.0, 1.0 };
+	our_path->timestep = .5;
+	our_path->T = 5.0;
+	our_path->trajectory_samples = 10;
+	our_path->SIGMA_S = { 10.0, 4.0, 2.0 };
+	our_path->SIGMA_D = { 1.0, 1.0, 1.0 };
 	weighted_costs.insert(make_pair(1, "collision_cost"));	
 
 }
@@ -53,51 +58,65 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 		int id = sensor_fusion[i][0];
 		if (other_vehicles.find(id) == other_vehicles.end()) {
 			
+			// if vehicle doesn't exist create a new one
 			Vehicle *vehicle = new Vehicle;
+			vehicle->sf_x, vehicle->sf_y, vehicle->sf_vx, 
+				vehicle->sf_vy, vehicle->sf_s, vehicle->sf_d = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
 			other_vehicles.insert(make_pair(id, *vehicle));
 		}
 
-		// is there better way to do this?
-		Vehicle vehicle = other_vehicles.find(id)->second;
+		// get vehicle pointer
+		Vehicle *vehicle = &other_vehicles.find(id)->second;
 
 		// 2. Update sensor readings
 
 		// previous
-		vehicle.sf_x_p = vehicle.sf_x;
-		vehicle.sf_y_p = vehicle.sf_y;
-		vehicle.sf_vx_p = vehicle.sf_vx;
-		vehicle.sf_vy_p = vehicle.sf_vy_p;
-		vehicle.sf_s_p = vehicle.sf_d;
-		vehicle.sf_d_p = vehicle.sf_d;
+		vehicle->sf_x_p = vehicle->sf_x;
+		vehicle->sf_y_p = vehicle->sf_y;
+		vehicle->sf_vx_p = vehicle->sf_vx;
+		vehicle->sf_vy_p = vehicle->sf_vy;
+		vehicle->sf_s_p = vehicle->sf_s;
+		vehicle->sf_d_p = vehicle->sf_d;
 
 		// new
-		vehicle.sf_x	= sensor_fusion[i][1];
-		vehicle.sf_y	= sensor_fusion[i][2];
-		vehicle.sf_vx	= sensor_fusion[i][3];
-		vehicle.sf_vy	= sensor_fusion[i][4];
-		vehicle.sf_s	= sensor_fusion[i][5];
-		vehicle.sf_d	= sensor_fusion[i][6];
+		vehicle->sf_x	= sensor_fusion[i][1];
+		vehicle->sf_y	= sensor_fusion[i][2];
+		vehicle->sf_vx	= sensor_fusion[i][3];
+		vehicle->sf_vy	= sensor_fusion[i][4];
+		vehicle->sf_s	= sensor_fusion[i][5];
+		vehicle->sf_d	= sensor_fusion[i][6];
 
-		double d_dot = vehicle.sf_d_p - vehicle.sf_d;   // is this right?
+		double d_dot = vehicle->sf_d_p - vehicle->sf_d;   // is this right?
 		
-		// run  classifier.predict() to see if changing lanes?
+		// run  classifier->predict() to see if changing lanes?
 
-		GNB gnb; // NOT RIGHT YET
-		vehicle.predicted_state = gnb.predict(d_dot);	
+		string prediction = classifier->predict(d_dot);
+		vehicle->predicted_state = prediction;
 	
 	}
 }
 
 
-void path::update_state() {
+void path::update_our_car_state(double car_x, double car_y, double car_s, double car_d, 
+	double car_yaw, double car_speed) {
 /****************************************
 * Behavior planning usine finite state machine
 ****************************************/
 
-	*target = other_vehicles[0];
+	r_daneel_olivaw->S[0] = car_s;
+	r_daneel_olivaw->D[0] = car_d;
+
+	r_daneel_olivaw->S[1] = r_daneel_olivaw->S_p[0] - r_daneel_olivaw->S[0];
+	r_daneel_olivaw->D[1] = r_daneel_olivaw->D_p[0] - r_daneel_olivaw->D[0];
+
+	r_daneel_olivaw->x = car_x;
+	r_daneel_olivaw->y = car_y;
+	r_daneel_olivaw->yaw = car_yaw;
+	r_daneel_olivaw->speed = car_speed;	
+
+	target = &other_vehicles[0];
 
 }
-
 
 
 vector<double> path::trajectory_generation() {
@@ -105,8 +124,6 @@ vector<double> path::trajectory_generation() {
 * find best trajectory according to weighted cost function
 ****************************************/
 
-	r_daneel_olivaw->S = { 0, 0, 0 }; // TODO dynamic get this
-	r_daneel_olivaw->D = { 0, 0, 0 };
 
 	// 1. Generate random nearby goals
 
@@ -115,7 +132,7 @@ vector<double> path::trajectory_generation() {
 	goals.insert(end(goals), begin(target->S_TARGETS), end(target->S_TARGETS));
 	goals.insert(end(goals), begin(target->D_TARGETS), end(target->D_TARGETS));
 
-	double t = this->T - 4 * this->timestep;
+	double t = our_path->T - 4 * our_path->timestep;
 	double b = t;
 	goals[0][6] = t;
 
@@ -125,14 +142,14 @@ vector<double> path::trajectory_generation() {
 		target->update_target_state(t);
 		vector< vector<double>> target_goals;
 		vector<double> new_goal;
-		target_goals.resize(this->trajectory_samples);
+		target_goals.resize(our_path->trajectory_samples);
 		
 		for (size_t i = 0; i < target_goals.size(); ++i) {
 			target_goals[i] = wiggle_goal(t);
 		}
 		
 		goals.insert(end(goals), begin(target_goals), end(target_goals));	
-		t += this->timestep;
+		t += our_path->timestep;
 	}
 
 	// 2. Store jerk minimal trajectories for all goals
@@ -142,8 +159,8 @@ vector<double> path::trajectory_generation() {
 	vector<double> s_goal, d_goal, s_coeffecients, d_coeffecients,
 		start_s, start_d;
 	double t_2;
-	start_s = { r_daneel_olivaw->s, r_daneel_olivaw->s_dot, r_daneel_olivaw->s_dot_dot };
-	start_d = { r_daneel_olivaw->d, r_daneel_olivaw->d_dot, r_daneel_olivaw->d_dot_dot };
+	start_s = { r_daneel_olivaw->S[0], r_daneel_olivaw->S[1], r_daneel_olivaw->S[2] };
+	start_d = { r_daneel_olivaw->D[0], r_daneel_olivaw->D[0], r_daneel_olivaw->D[2] };
 
 	for (size_t i = 0; i < goals.size(); ++i) {
 		

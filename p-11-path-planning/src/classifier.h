@@ -11,15 +11,13 @@
 using namespace std;
 
 class GNB {
-private:
-
-	vector<string> possible_labels = { "left","keep","right" };
-	vector <vector <double> >results_;
-
 public:
 	
 	GNB();
 	virtual ~GNB();
+
+	vector<string> possible_labels = { "left","keep","right" };
+	vector <vector <double> >results_;
 
 	vector<vector<double> > load_state(string file_name);
 	vector<string> load_label(string file_name);

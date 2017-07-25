@@ -29,7 +29,8 @@ public:
 	double collision_cost(vector<double> trajectory);
 	double coefficients_to_time_function(vector<double> coefficients, double t);
 
-	void update_state();
+	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
+		double car_yaw, double car_speed);
 
 	vector<double> trajectory_generation();
 
@@ -47,13 +48,17 @@ class Vehicle : public path {
 
 		double radius = 1.5; // model vehicle as circle to simplify collision detection
 
-		double s, s_dot, s_dot_dot, d, d_dot, d_dot_dot;
+		// double s, s_dot, s_dot_dot, d, d_dot, d_dot_dot;   // Using vector instead?
+		double x, y, yaw, speed;
+
 		double sf_x, sf_y, sf_vx, sf_vy, sf_s, sf_d;  // sensor fusion
-		double sf_x_p, sf_y_p, sf_vx_p, sf_vy_p, sf_s_p, sf_d_p;  // previous sensor fusion readings
+		double sf_x_p, sf_y_p, sf_vx_p, sf_vy_p, sf_s_p, sf_d_p ;  // previous sensor fusion readings
 		string predicted_state;
 
 		vector<double> S; // longitudinal 
 		vector<double> D; // lateral
+		vector<double> S_p; // previous longitudinal 
+		vector<double> D_p; // previous lateral
 
 		double s_target, s_dot_target, d_target, d_dot_target;
 		vector<double> S_TARGETS, D_TARGETS;

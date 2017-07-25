@@ -187,6 +187,9 @@ string GNB::predict(double observation)
 	if (posteriors[2] > posteriors[1] && posteriors[2] > posteriors[0]) {
 		winner = 2;
 	}
+	else {
+		winner = 1;  // not enough info?
+	}
 
 	return this->possible_labels[winner];
 
