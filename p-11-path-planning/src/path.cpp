@@ -62,6 +62,10 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 			Vehicle *vehicle = new Vehicle;
 			vehicle->sf_x, vehicle->sf_y, vehicle->sf_vx, 
 				vehicle->sf_vy, vehicle->sf_s, vehicle->sf_d = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
+			vehicle->S_p = { 0, 0, 0 };
+			vehicle->D_p = { 0, 0, 0 };
+			vehicle->S = { 0, 0, 0 };
+			vehicle->D = { 0, 0, 0 };
 			other_vehicles.insert(make_pair(id, *vehicle));
 		}
 
@@ -69,7 +73,6 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 		Vehicle *vehicle = &other_vehicles.find(id)->second;
 
 		// 2. Update sensor readings
-
 		// previous
 		vehicle->sf_x_p = vehicle->sf_x;
 		vehicle->sf_y_p = vehicle->sf_y;
@@ -86,10 +89,18 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 		vehicle->sf_s	= sensor_fusion[i][5];
 		vehicle->sf_d	= sensor_fusion[i][6];
 
-		double d_dot = vehicle->sf_d_p - vehicle->sf_d;   // is this right?
+		vehicle->S[0] = vehicle->sf_s;
+		vehicle->D[0] = vehicle->sf_d;
+
+		vehicle->S[1] = vehicle->S_p[0] - vehicle->S[0];
+		vehicle->D[1] = vehicle->D_p[0] - vehicle->D[0];
+
+		vehicle->S[2] = vehicle->S_p[1] - vehicle->S[1];
+		vehicle->D[2] = vehicle->D_p[1] - vehicle->D[1];
+
+		double d_dot = vehicle->D[1];   // is this right?
 		
 		// run  classifier->predict() to see if changing lanes?
-
 		string prediction = classifier->predict(d_dot);
 		vehicle->predicted_state = prediction;
 	
@@ -115,6 +126,7 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->speed = car_speed;	
 
 	target = &other_vehicles[0];
+	target->update_target_state(100);
 
 }
 
@@ -129,12 +141,13 @@ vector<double> path::trajectory_generation() {
 
 	vector< vector<double>> goals;
 	// First goal
-	goals.insert(end(goals), begin(target->S_TARGETS), end(target->S_TARGETS));
-	goals.insert(end(goals), begin(target->D_TARGETS), end(target->D_TARGETS));
+	goals.resize(1);
+	goals[0].insert(end(goals[0]), begin(target->S_TARGETS), end(target->S_TARGETS));
+	goals[0].insert(end(goals[0]), begin(target->D_TARGETS), end(target->D_TARGETS));
 
 	double t = our_path->T - 4 * our_path->timestep;
 	double b = t;
-	goals[0][6] = t;
+	goals[0].push_back(t);
 
 	while (t <= b) {
 
@@ -148,7 +161,7 @@ vector<double> path::trajectory_generation() {
 			target_goals[i] = wiggle_goal(t);
 		}
 		
-		goals.insert(end(goals), begin(target_goals), end(target_goals));	
+		goals.insert(end(goals), begin(target_goals), end(target_goals));
 		t += our_path->timestep;
 	}
 
@@ -198,13 +211,13 @@ vector<double> path::wiggle_goal(double t) {
 	vector<double> new_goal(7);
 	for (size_t i = 0; i < 3; ++i) {
 	
-		normal_distribution<double> distribution(target->D_TARGETS[i], this->SIGMA_D[i]);
+		normal_distribution<double> distribution(target->D_TARGETS[i], our_path->SIGMA_D[i]);
 		new_goal[i] = distribution(generator);
 	}
 	for (size_t i = 0; i < 3; ++i) {
 
-		normal_distribution<double> distribution(target->S_TARGETS[i], this->SIGMA_S[i]);
-		new_goal[i] = distribution(generator);
+		normal_distribution<double> distribution(target->S_TARGETS[i], our_path->SIGMA_S[i]);
+		new_goal[i+3] = distribution(generator);
 	}
 	new_goal[6] = t;
 	return new_goal;
@@ -248,7 +261,7 @@ double path::nearest_approach_to_any_vehicle(vector<double> trajectory) {
 
 double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 	
-	double T, s_time, d_time, target_s, target_d, a, b, c, e, t;
+	double T, s_time, d_time, a, b, c, e, t;
 	a = 1e9;
 	T = trajectory[6];
 

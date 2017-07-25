@@ -14,7 +14,7 @@ public:
 	
 	double timestep;
 	double T;
-	double trajectory_samples;
+	int trajectory_samples;
 	vector<double> SIGMA_S, SIGMA_D;
 
 	
