@@ -15,6 +15,12 @@ public:
 	double timestep;
 	double T;
 	int trajectory_samples;
+
+	struct Weighted_costs {
+		double weight;
+		// function?
+	};
+
 	vector<double> SIGMA_S, SIGMA_D;
 
 	

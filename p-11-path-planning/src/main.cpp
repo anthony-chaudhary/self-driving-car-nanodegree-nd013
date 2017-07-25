@@ -11,6 +11,7 @@
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "path.h"
+#include "spline.h"
 
 using namespace std;
 using json = nlohmann::json;
@@ -173,7 +174,7 @@ int main() {
   vector<double> map_waypoints_dy;
 
   // Waypoint map to read from
-  string map_file_ = "../data/highway_map.csv";
+  string map_file_ = "data/highway_map.csv";  // CHANGE BACK to ../ after debugging
   // The max s value before wrapping around the track back to 0
   double max_s = 6945.554;
 
@@ -256,20 +257,34 @@ int main() {
 			// 4. Generate trajectory
 			auto trajectory = path.trajectory_generation();
 			
+			// 5. Spline
+
+			vector<double> X, Y, X_Y;
 
 
-
+			for (size_t i = 0; i < 6; ++i) {
+				
+				X_Y = getXY(trajectory[i], trajectory[6 + i], map_waypoints_s, 
+					map_waypoints_x, map_waypoints_y);
+				X.push_back(X_Y[0]);
+				Y.push_back(X_Y[1]);
+			}
+			
           	json msgJson;
-
           	vector<double> next_x_vals;
           	vector<double> next_y_vals;
 
-
 			double dist_inc = 0.5;
+
+			tk::spline super_spline;
+			super_spline.set_points( X, Y);
+
 			for (int i = 0; i < 50; i++)
 			{
-				next_x_vals.push_back(car_x + (dist_inc*i)*cos(deg2rad(car_yaw)));
-				next_y_vals.push_back(car_y + (dist_inc*i)*sin(deg2rad(car_yaw)));
+				// next_x_vals.push_back(car_x + (dist_inc*i)*cos(deg2rad(car_yaw)));
+				// next_y_vals.push_back(car_y + (dist_inc*i)*sin(deg2rad(car_yaw)));
+				next_x_vals.push_back(car_x + (dist_inc*i) * X[0]);
+				next_y_vals.push_back(car_y + (dist_inc*i) * super_spline(X[0]));
 			}
 
 

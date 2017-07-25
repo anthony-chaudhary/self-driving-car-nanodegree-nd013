@@ -15,9 +15,9 @@ default_random_engine generator;
 GNB *classifier = new GNB;
 
 map<int, Vehicle> other_vehicles;
-map<double, string > weighted_costs;
 Vehicle *target;  // vehicle target
 path *our_path = new path;
+vector < path::Weighted_costs > weighted_costs;
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -32,6 +32,9 @@ void path::init() {
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	classifier->train(X_train, Y_train);
 
+	weighted_costs.resize(1);
+	weighted_costs[0].weight = 1.0;
+
 	r_daneel_olivaw->S_p = { 0, 0, 0 }; 
 	r_daneel_olivaw->D_p = { 0, 0, 0 };
 	r_daneel_olivaw->S = { 0, 0, 0 };
@@ -42,7 +45,6 @@ void path::init() {
 	our_path->trajectory_samples = 10;
 	our_path->SIGMA_S = { 10.0, 4.0, 2.0 };
 	our_path->SIGMA_D = { 1.0, 1.0, 1.0 };
-	weighted_costs.insert(make_pair(1, "collision_cost"));	
 
 }
 
@@ -190,7 +192,7 @@ vector<double> path::trajectory_generation() {
 	}
 
 	// 3. Find best using weighted cost function
-	double min_cost = 0;
+	double min_cost = 1e10;
 	double cost;
 	vector<double> best_trajectory;
 	for (size_t i = 0; i < trajectories.size(); ++i) {
@@ -227,7 +229,7 @@ vector<double> path::wiggle_goal(double t) {
 double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 	for (size_t i = 0; i < 1; ++i) {
-		double new_cost = weighted_costs[0][0] * collision_cost(trajectory);
+		double new_cost = weighted_costs[0].weight * collision_cost(trajectory);
 		cost += new_cost;
 	}
 	return cost;
@@ -239,7 +241,6 @@ double path::calculate_cost(vector<double> trajectory) {
 
 double path::collision_cost(vector<double> trajectory) {
 
-	
 	double a = nearest_approach_to_any_vehicle(trajectory);
 	double b = 2 * r_daneel_olivaw->radius;
 	if (a < b) { return 1.0;	 }
@@ -249,11 +250,10 @@ double path::collision_cost(vector<double> trajectory) {
 double path::nearest_approach_to_any_vehicle(vector<double> trajectory) {
 // returns closest distance to any vehicle
 
-	Vehicle vehicle = Vehicle();
 	double a = 1e9;
 	for (size_t i = 0; i < other_vehicles.size(); ++i) {
-		double b = vehicle.nearest_approach(trajectory, other_vehicles[i]);
-		if (a < b) { a = b; }
+		double b = r_daneel_olivaw->nearest_approach(trajectory, other_vehicles[i]);
+		if (b < a) { a = b; }
 	}
 	return a;
 
@@ -263,11 +263,11 @@ double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 	
 	double T, s_time, d_time, a, b, c, e, t;
 	a = 1e9;
-	T = trajectory[6];
+	T = trajectory[12];
 
 	vector<double> S, D;
 	S = { trajectory[0], trajectory[1], trajectory[2] };
-	D = { trajectory[3], trajectory[4], trajectory[5] };
+	D = { trajectory[6], trajectory[7], trajectory[8] };
 
 	for (size_t i = 0; i < 100; ++i) {
 		t = double(i) / 100 * T;
@@ -357,7 +357,7 @@ vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <doub
 	vector<double> results;
 	results = { s_i, s_i_dot, s_i_dot_dot, a_3, a_4, a_5 };
 
-	cout << output << endl;
+	// cout << output << endl;
 
 	return results;
 
