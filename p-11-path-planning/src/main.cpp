@@ -258,10 +258,7 @@ int main() {
 			auto trajectory = path.trajectory_generation();
 			
 			// 5. Spline
-
 			vector<double> X, Y, X_Y;
-
-
 			for (size_t i = 0; i < 6; ++i) {
 				
 				X_Y = getXY(trajectory[i], trajectory[6 + i], map_waypoints_s, 
@@ -270,15 +267,14 @@ int main() {
 				Y.push_back(X_Y[1]);
 			}
 			
-          	json msgJson;
-          	vector<double> next_x_vals;
-          	vector<double> next_y_vals;
-
-			double dist_inc = 0.5;
-
-			tk::spline super_spline;
+          	tk::spline super_spline;
 			super_spline.set_points( X, Y);
 
+			json msgJson;
+			vector<double> next_x_vals;
+			vector<double> next_y_vals;
+
+			double dist_inc = 0.5;
 			for (int i = 0; i < 50; i++)
 			{
 				// next_x_vals.push_back(car_x + (dist_inc*i)*cos(deg2rad(car_yaw)));

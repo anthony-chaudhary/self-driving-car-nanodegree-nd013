@@ -94,6 +94,8 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 		vehicle->S[0] = vehicle->sf_s;
 		vehicle->D[0] = vehicle->sf_d;
 
+		// TODO Convert x,y velocity to s,d frame??
+
 		vehicle->S[1] = vehicle->S_p[0] - vehicle->S[0];
 		vehicle->D[1] = vehicle->D_p[0] - vehicle->D[0];
 
@@ -119,7 +121,7 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
 
-	r_daneel_olivaw->S[1] = r_daneel_olivaw->S_p[0] - r_daneel_olivaw->S[0];
+	r_daneel_olivaw->S[1] = car_speed;
 	r_daneel_olivaw->D[1] = r_daneel_olivaw->D_p[0] - r_daneel_olivaw->D[0];
 
 	r_daneel_olivaw->x = car_x;
