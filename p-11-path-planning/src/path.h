@@ -20,6 +20,16 @@ public:
 		// function?
 	};
 
+	struct X_Y {
+		vector<double> X;
+		vector<double> Y;
+	};
+
+	struct S_D {
+		vector<double> S;
+		vector<double> D;
+	};
+
 	vector<double> SIGMA_S, SIGMA_D;
 	
 	void init();
@@ -37,6 +47,8 @@ public:
 
 	vector<double> trajectory_generation();
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
+
+	S_D build_trajectory(vector<double> trajectory);
 
 };
 

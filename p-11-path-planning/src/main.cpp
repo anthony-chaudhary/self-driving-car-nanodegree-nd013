@@ -240,36 +240,32 @@ int main() {
 			// 3. Generate trajectory
 			auto trajectory = path.trajectory_generation();
 			
-			// 5. Spline
+			// 4. Build trajectory using time
+			auto S_D_ = path.build_trajectory(trajectory);
+
+			
+			// 5. Convert to X and Y
 			vector<double> X, Y, X_Y;
-			for (size_t i = 0; i < 6; ++i) {
+			for (size_t i = 0; i < S_D_.D.size(); ++i) {
 				
-				X_Y = getXY(trajectory[i], trajectory[6 + i], map_waypoints_s, 
+				X_Y = getXY(S_D_.S[i], S_D_.D[i], map_waypoints_s,
 					map_waypoints_x, map_waypoints_y);
 				X.push_back(X_Y[0]);
 				Y.push_back(X_Y[1]);
 			}
 			
           	tk::spline super_spline;
-			super_spline.set_points( X, Y);
+			//super_spline.set_points( X, Y);
 
 			json msgJson;
-			vector<double> next_x_vals;
-			vector<double> next_y_vals;
+			//vector<double> next_x_vals;
+			//vector<double> next_y_vals;
 
-			double dist_inc = 0.5;
-			for (int i = 0; i < 50; i++)
-			{
-				// next_x_vals.push_back(car_x + (dist_inc*i)*cos(deg2rad(car_yaw)));
-				// next_y_vals.push_back(car_y + (dist_inc*i)*sin(deg2rad(car_yaw)));
-				next_x_vals.push_back(car_x + (dist_inc*i) * X[0]);
-				next_y_vals.push_back(car_y + (dist_inc*i) * super_spline(X[0]));
-			}
-
-
+			// 6. Push back to car
+			
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-          	msgJson["next_x"] = next_x_vals;
-          	msgJson["next_y"] = next_y_vals;
+          	msgJson["next_x"] = X;
+          	msgJson["next_y"] = Y;
 
           	auto msg = "42[\"control\","+ msgJson.dump()+"]";
 

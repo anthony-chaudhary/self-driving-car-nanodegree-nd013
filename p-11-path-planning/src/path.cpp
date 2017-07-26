@@ -12,7 +12,7 @@ path::~path() {}
 
 Vehicle *r_daneel_olivaw		= new Vehicle;  // our self driving car
 GNB		*classifier			= new GNB;
-Vehicle *target;
+Vehicle *target				= new Vehicle;
 path		*our_path			= new path;
 
 map<int, Vehicle>				other_vehicles;
@@ -32,11 +32,11 @@ void path::init() {
 	weighted_costs.resize(1);
 	weighted_costs[0].weight = 1.0;
 	
-	our_path->timestep = .5;
-	our_path->T = 5.0;
+	our_path->timestep = .02;
+	our_path->T = 2;
 	our_path->trajectory_samples = 10;
 	our_path->SIGMA_S = { 10.0, 4.0, 2.0 };
-	our_path->SIGMA_D = { 1.0, 1.0, 1.0 };
+	our_path->SIGMA_D = { .5, .25, .1 };
 
 }
 
@@ -64,6 +64,7 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 		// 4. Run classifier for prediction
 		vehicle->predicted_state = classifier->predict(vehicle->D[1]);
 	}
+	
 }
 
 
@@ -74,6 +75,11 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 in progress
 ****************************************/
 
+	// previous
+	r_daneel_olivaw->S_p = r_daneel_olivaw->S;
+	r_daneel_olivaw->D_p = r_daneel_olivaw->D;
+
+	// new readings
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
 
@@ -88,8 +94,16 @@ in progress
 	r_daneel_olivaw->yaw = car_yaw;
 	r_daneel_olivaw->speed = car_speed;	 // storing twice?
 
-	target = &other_vehicles[0];   // hard coded, target could also be x,y / d,s ?
-	target->update_target_state(100);
+	
+	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
+	
+	target->S[0] = car_s + 100;
+	target->S[1] = car_speed;
+
+	target->D[0] = car_d + 2;
+	target->D[1] = .1;
+	target->D[2] = 0;
+	target->update_target_state(.02);
 
 }
 
@@ -108,7 +122,7 @@ vector<double> path::trajectory_generation() {
 	goals[0].insert(end(goals[0]), begin(target->D_TARGETS), end(target->D_TARGETS));
 
 	double t = our_path->T - 4 * our_path->timestep;
-	double b = t;
+	double b = our_path->T + 4 * our_path->timestep;;
 	goals[0].push_back(t);
 
 	// other goals
@@ -135,7 +149,7 @@ vector<double> path::trajectory_generation() {
 		start_s, start_d;
 	double t_2;
 	start_s = { r_daneel_olivaw->S[0], r_daneel_olivaw->S[1], r_daneel_olivaw->S[2] };
-	start_d = { r_daneel_olivaw->D[0], r_daneel_olivaw->D[0], r_daneel_olivaw->D[2] };
+	start_d = { r_daneel_olivaw->D[0], r_daneel_olivaw->D[1], r_daneel_olivaw->D[2] };
 
 	for (size_t i = 0; i < goals.size(); ++i) {
 		
@@ -173,12 +187,12 @@ vector<double> path::wiggle_goal(double t) {
 	vector<double> new_goal(7);
 	for (size_t i = 0; i < 3; ++i) {
 	
-		normal_distribution<double> distribution(target->D_TARGETS[i], our_path->SIGMA_D[i]);
+		normal_distribution<double> distribution(target->S_TARGETS[i], our_path->SIGMA_S[i]);
 		new_goal[i] = distribution(generator);
 	}
 	for (size_t i = 0; i < 3; ++i) {
 
-		normal_distribution<double> distribution(target->S_TARGETS[i], our_path->SIGMA_S[i]);
+		normal_distribution<double> distribution(target->D_TARGETS[i], our_path->SIGMA_D[i]);
 		new_goal[i+3] = distribution(generator);
 	}
 	new_goal[6] = t;
@@ -243,6 +257,24 @@ double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 		if (e < a) { a = e; }
 	}
 	return a;
+}
+
+path::S_D path::build_trajectory(vector<double> trajectory) {
+	
+	vector<double> S, D, X, Y; // TODO better way to do this
+	// refactor using S_D struct
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+	D = { trajectory[6], trajectory[7], trajectory[8], trajectory[9], trajectory[10], trajectory[11] };
+
+	S_D S_D_;
+	double t = 0;
+	while (t <= our_path->T + .01 ){
+		S_D_.S.push_back(coefficients_to_time_function(S, t));
+		S_D_.D.push_back(coefficients_to_time_function(D, t));
+		t += .1;
+	}
+	return S_D_;
+
 }
 
 
