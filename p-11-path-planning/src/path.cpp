@@ -10,14 +10,14 @@
 path::path() {}
 path::~path() {}
 
-Vehicle *r_daneel_olivaw = new Vehicle;  // our self driving car
-default_random_engine generator;
-GNB *classifier = new GNB;
+Vehicle *r_daneel_olivaw		= new Vehicle;  // our self driving car
+GNB		*classifier			= new GNB;
+Vehicle *target;
+path		*our_path			= new path;
 
-map<int, Vehicle> other_vehicles;
-Vehicle *target;  // vehicle target
-path *our_path = new path;
+map<int, Vehicle>				other_vehicles;
 vector < path::Weighted_costs > weighted_costs;
+default_random_engine			generator;
 
 using namespace std;
 using Eigen::MatrixXd;
@@ -25,20 +25,12 @@ using Eigen::VectorXd;
 
 void path::init() {
 	
-	/****************************************
-	* 1. Prediction - classifier
-	****************************************/
 	vector< vector<double> > X_train = classifier->load_state("./train_states.txt");
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	classifier->train(X_train, Y_train);
 
 	weighted_costs.resize(1);
 	weighted_costs[0].weight = 1.0;
-
-	r_daneel_olivaw->S_p = { 0, 0, 0 }; 
-	r_daneel_olivaw->D_p = { 0, 0, 0 };
-	r_daneel_olivaw->S = { 0, 0, 0 };
-	r_daneel_olivaw->D = { 0, 0, 0 };
 	
 	our_path->timestep = .5;
 	our_path->T = 5.0;
@@ -49,65 +41,28 @@ void path::init() {
 }
 
 void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
-/****************************************
-*  Turn raw sensor_fusion observations
- into predictions for use by update_state() and trajectory_generation() 
-****************************************/
+	// Store raw sensor_fusion observations and make a prediction 
 
-	// 1. Update vehicles list  (create new objects?)
+	// 1. Update vehicles list
 	for (size_t i = 0; i < sensor_fusion.size(); ++i) {
 		
 		int id = sensor_fusion[i][0];
 		if (other_vehicles.find(id) == other_vehicles.end()) {
-			
-			// if vehicle doesn't exist create a new one
+			// if vehicle doesn't exist create a new one & init
 			Vehicle *vehicle = new Vehicle;
-			vehicle->sf_x, vehicle->sf_y, vehicle->sf_vx, 
-				vehicle->sf_vy, vehicle->sf_s, vehicle->sf_d = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0;
-			vehicle->S_p = { 0, 0, 0 };
-			vehicle->D_p = { 0, 0, 0 };
-			vehicle->S = { 0, 0, 0 };
-			vehicle->D = { 0, 0, 0 };
+			vehicle->update_sensor_fusion(sensor_fusion, i);
 			other_vehicles.insert(make_pair(id, *vehicle));
 		}
 
-		// get vehicle pointer
+		// 2. Update previous sensor readings
 		Vehicle *vehicle = &other_vehicles.find(id)->second;
+		vehicle->update_sensor_fusion_previous();
 
-		// 2. Update sensor readings
-		// previous
-		vehicle->sf_x_p = vehicle->sf_x;
-		vehicle->sf_y_p = vehicle->sf_y;
-		vehicle->sf_vx_p = vehicle->sf_vx;
-		vehicle->sf_vy_p = vehicle->sf_vy;
-		vehicle->sf_s_p = vehicle->sf_s;
-		vehicle->sf_d_p = vehicle->sf_d;
-
-		// new
-		vehicle->sf_x	= sensor_fusion[i][1];
-		vehicle->sf_y	= sensor_fusion[i][2];
-		vehicle->sf_vx	= sensor_fusion[i][3];
-		vehicle->sf_vy	= sensor_fusion[i][4];
-		vehicle->sf_s	= sensor_fusion[i][5];
-		vehicle->sf_d	= sensor_fusion[i][6];
-
-		vehicle->S[0] = vehicle->sf_s;
-		vehicle->D[0] = vehicle->sf_d;
-
-		// TODO Convert x,y velocity to s,d frame??
-
-		vehicle->S[1] = vehicle->S_p[0] - vehicle->S[0];
-		vehicle->D[1] = vehicle->D_p[0] - vehicle->D[0];
-
-		vehicle->S[2] = vehicle->S_p[1] - vehicle->S[1];
-		vehicle->D[2] = vehicle->D_p[1] - vehicle->D[1];
-
-		double d_dot = vehicle->D[1];   // is this right?
+		// 3. Update new sensor readings
+		vehicle->update_sensor_fusion(sensor_fusion, i);
 		
-		// run  classifier->predict() to see if changing lanes?
-		string prediction = classifier->predict(d_dot);
-		vehicle->predicted_state = prediction;
-	
+		// 4. Run classifier for prediction
+		vehicle->predicted_state = classifier->predict(vehicle->D[1]);
 	}
 }
 
@@ -116,20 +71,24 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	double car_yaw, double car_speed) {
 /****************************************
 * Behavior planning usine finite state machine
+in progress
 ****************************************/
 
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
 
 	r_daneel_olivaw->S[1] = car_speed;
-	r_daneel_olivaw->D[1] = r_daneel_olivaw->D_p[0] - r_daneel_olivaw->D[0];
+	r_daneel_olivaw->D[1] = r_daneel_olivaw->D[0] - r_daneel_olivaw->D_p[0];
+
+	r_daneel_olivaw->S[2] = r_daneel_olivaw->S[1] - r_daneel_olivaw->S_p[1];  // ie 100 - 90 = change of 10
+	r_daneel_olivaw->D[2] = r_daneel_olivaw->D[1] - r_daneel_olivaw->D_p[1];
 
 	r_daneel_olivaw->x = car_x;
 	r_daneel_olivaw->y = car_y;
 	r_daneel_olivaw->yaw = car_yaw;
-	r_daneel_olivaw->speed = car_speed;	
+	r_daneel_olivaw->speed = car_speed;	 // storing twice?
 
-	target = &other_vehicles[0];
+	target = &other_vehicles[0];   // hard coded, target could also be x,y / d,s ?
 	target->update_target_state(100);
 
 }
@@ -140,11 +99,10 @@ vector<double> path::trajectory_generation() {
 * find best trajectory according to weighted cost function
 ****************************************/
 
-
 	// 1. Generate random nearby goals
-
 	vector< vector<double>> goals;
-	// First goal
+
+	// first goal
 	goals.resize(1);
 	goals[0].insert(end(goals[0]), begin(target->S_TARGETS), end(target->S_TARGETS));
 	goals[0].insert(end(goals[0]), begin(target->D_TARGETS), end(target->D_TARGETS));
@@ -153,9 +111,9 @@ vector<double> path::trajectory_generation() {
 	double b = t;
 	goals[0].push_back(t);
 
+	// other goals
 	while (t <= b) {
 
-		// other goals
 		target->update_target_state(t);
 		vector< vector<double>> target_goals;
 		vector<double> new_goal;
@@ -267,9 +225,9 @@ double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 	a = 1e9;
 	T = trajectory[12];
 
-	vector<double> S, D;
-	S = { trajectory[0], trajectory[1], trajectory[2] };
-	D = { trajectory[6], trajectory[7], trajectory[8] };
+	vector<double> S, D; // TODO better way to do this
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+	D = { trajectory[6], trajectory[7], trajectory[8], trajectory[9], trajectory[10], trajectory[11] };
 
 	for (size_t i = 0; i < 100; ++i) {
 		t = double(i) / 100 * T;

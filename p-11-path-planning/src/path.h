@@ -10,7 +10,6 @@ public:
 
 	path();
 	virtual ~path();
-
 	
 	double timestep;
 	double T;
@@ -22,7 +21,6 @@ public:
 	};
 
 	vector<double> SIGMA_S, SIGMA_D;
-
 	
 	void init();
 
@@ -34,15 +32,11 @@ public:
 	
 	double collision_cost(vector<double> trajectory);
 	double coefficients_to_time_function(vector<double> coefficients, double t);
-
 	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
 		double car_yaw, double car_speed);
 
 	vector<double> trajectory_generation();
-
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
-
-
 
 };
 
@@ -54,20 +48,50 @@ class Vehicle : public path {
 
 		double radius = 1.5; // model vehicle as circle to simplify collision detection
 
-		// double s, s_dot, s_dot_dot, d, d_dot, d_dot_dot;   // Using vector instead?
 		double x, y, yaw, speed;
-
 		double sf_x, sf_y, sf_vx, sf_vy, sf_s, sf_d;  // sensor fusion
 		double sf_x_p, sf_y_p, sf_vx_p, sf_vy_p, sf_s_p, sf_d_p ;  // previous sensor fusion readings
 		string predicted_state;
 
-		vector<double> S; // longitudinal 
-		vector<double> D; // lateral
-		vector<double> S_p; // previous longitudinal 
-		vector<double> D_p; // previous lateral
+		vector<double> S = { 0, 0, 0 }; // longitudinal    S, S_dot, S_dot_dot  s_position, velocity, acceleration
+		vector<double> D = { 0, 0, 0 }; // lateral		D, D_dot, D_dot_dot
+		vector<double> S_p = { 0, 0, 0 }; // previous longitudinal 
+		vector<double> D_p = { 0, 0, 0 }; // previous lateral
 
 		double s_target, s_dot_target, d_target, d_dot_target;
 		vector<double> S_TARGETS, D_TARGETS;
+
+		void update_sensor_fusion(vector< vector<double>> sensor_fusion, int index) {
+			this->sf_x	= sensor_fusion[index][1];
+			this->sf_y	= sensor_fusion[index][2];
+			this->sf_vx = sensor_fusion[index][3];
+			this->sf_vy = sensor_fusion[index][4];
+			this->sf_s	= sensor_fusion[index][5];
+			this->sf_d	= sensor_fusion[index][6];
+
+			this->S[0] = this->sf_s;
+			this->D[0] = this->sf_d;
+
+			// TODO Convert x,y velocity to s,d frame??
+			this->S[1] = this->S[0] - this->S_p[0];
+			this->D[1] = this->D[0] - this->D_p[0];
+			this->S[2] = this->S[1] - this->S_p[1];  // ie 100 - 90 = change of 10
+			this->D[2] = this->D[1] - this->D_p[1];
+
+		}
+
+		void update_sensor_fusion_previous() {
+			this->sf_x_p		= this->sf_x;
+			this->sf_y_p		= this->sf_y;
+			this->sf_vx_p	= this->sf_vx;
+			this->sf_vy_p	= this->sf_vy;
+			this->sf_s_p		= this->sf_s;
+			this->sf_d_p		= this->sf_d;
+
+			this->S_p = this->S;
+			this->D_p = this->D;
+
+		}
 
 		void update_target_state(double t) {	
 			this->s_target		= S[0] + (S[1] * t) + S[2] * pow(t, 2) / 2.0;

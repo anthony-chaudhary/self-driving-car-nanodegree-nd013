@@ -1,6 +1,5 @@
 #include <fstream>
 #define _USE_MATH_DEFINES
-
 #include <math.h>
 #include "uWS/uWS.h"
 #include <chrono>
@@ -16,14 +15,10 @@
 using namespace std;
 using json = nlohmann::json;
 
-// For converting back and forth between radians and degrees.
 constexpr double pi() { return M_PI; }
 double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
-// Checks if the SocketIO event has JSON data.
-// If there is data the JSON object in string format will be returned,
-// else the empty string "" will be returned.
 stringstream hasData(string s) {
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
@@ -183,11 +178,8 @@ int main() {
   string line;
   while (getline(in_map_, line)) {
   	istringstream iss(line);
-  	double x;
-  	double y;
-  	float s;
-  	float d_x;
-  	float d_y;
+  	double x, y;
+  	float s, d_x, d_y;
   	iss >> x;
   	iss >> y;
   	iss >> s;
@@ -201,33 +193,24 @@ int main() {
   }
 
   /****************************************
-  * 1. Initialize mpc class
+  * 0. Initialize
   ****************************************/
   path path;
-
   path.init();
 
 
   h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode){
  
     // "42" at the start of the message means there's a websocket message event.
-    // The 4 signifies a websocket message
-    // The 2 signifies a websocket event
-    //auto sdata = string(data).substr(0, length);
-    //cout << sdata << endl;
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
       auto s = hasData(string(data));
-
       if (s.str() != "") {
         auto j = json::parse(s);
-        
         string event = j[0].get<string>();
-        
-        if (event == "telemetry") {
-          // j[1] is the data JSON object
+        if (event == "telemetry") { // j[1] is the data JSON object
           
-		  // Main car's localization Data
+			// Main car's localization Data
 			double car_x = j[1]["x"];
 			double car_y = j[1]["y"];
 			double car_s = j[1]["s"];
@@ -248,13 +231,13 @@ int main() {
 
 			
 
-			// 2. Update vehicles with sensor fusion readings
+			// 1. Update vehicles with sensor fusion readings
 			path.sensor_fusion_predict(sensor_fusion);
 
-			// 3. Update our car's state
+			// 2. Update our car's state
 			path.update_our_car_state(car_x, car_y, car_s, car_d, car_yaw, car_speed);
 		
-			// 4. Generate trajectory
+			// 3. Generate trajectory
 			auto trajectory = path.trajectory_generation();
 			
 			// 5. Spline
@@ -302,16 +285,13 @@ int main() {
     }
   });
 
-  // We don't need this since we're not using HTTP but if it's removed the
-  // program
-  // doesn't compile :-(
+  // needed to compile
   h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data,
                      size_t, size_t) {
     const std::string s = "<h1>Hello world!</h1>";
     if (req.getUrl().valueLength == 1) {
       res->end(s.data(), s.length());
     } else {
-      // i guess this should be done more gracefully?
       res->end(nullptr, 0);
     }
   });

@@ -1,16 +1,11 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-
-
 #include <math.h>
 #include <vector>
 #include "classifier.h"
 #include <algorithm>
 
-/**
-* Initializes GNB
-*/
 GNB::GNB() {}
 GNB::~GNB() {}
 
