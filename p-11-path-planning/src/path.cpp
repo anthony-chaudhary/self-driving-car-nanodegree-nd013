@@ -33,10 +33,10 @@ void path::init() {
 	weighted_costs[0].weight = 1.0;
 	
 	our_path->timestep = .02;
-	our_path->T = 2;
+	our_path->T = 5;
 	our_path->trajectory_samples = 10;
-	our_path->SIGMA_S = { 10.0, 4.0, 2.0 };
-	our_path->SIGMA_D = { .5, .25, .1 };
+	our_path->SIGMA_S = { 10.0, 2.0, .50 };
+	our_path->SIGMA_D = { .1, .01, .001 };
 
 }
 
@@ -97,13 +97,13 @@ in progress
 	
 	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
 	
-	target->S[0] = car_s + 100;
+	target->S[0] = car_s + 30;
 	target->S[1] = car_speed;
 
-	target->D[0] = car_d + 2;
-	target->D[1] = .1;
+	target->D[0] = car_d ;
+	target->D[1] = 0;
 	target->D[2] = 0;
-	target->update_target_state(.02);
+	target->update_target_state(our_path->timestep);
 
 }
 
@@ -268,10 +268,10 @@ path::S_D path::build_trajectory(vector<double> trajectory) {
 
 	S_D S_D_;
 	double t = 0;
-	while (t <= our_path->T + .01 ){
+	while (t <= our_path->T ){
 		S_D_.S.push_back(coefficients_to_time_function(S, t));
 		S_D_.D.push_back(coefficients_to_time_function(D, t));
-		t += .1;
+		t += our_path->timestep;
 	}
 	return S_D_;
 

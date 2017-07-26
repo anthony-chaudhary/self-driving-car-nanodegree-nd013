@@ -198,6 +198,20 @@ int main() {
   path path;
   path.init();
 
+  tk::spline spline_x, spline_y;
+  vector<double> map_waypoints_x_upsampled, map_waypoints_s_upsampled, map_waypoints_y_upsampled;
+  spline_x.set_points(map_waypoints_s, map_waypoints_x);
+  spline_y.set_points(map_waypoints_s, map_waypoints_y);
+
+  int spline_samples = 1000;
+
+  for (size_t i = 0; i < spline_samples; ++i) {
+	  map_waypoints_x_upsampled.push_back(spline_x(i));
+	  map_waypoints_y_upsampled.push_back(spline_y(i));
+	  map_waypoints_s_upsampled.push_back(i);
+  }
+
+
 
   h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode){
  
@@ -243,25 +257,25 @@ int main() {
 			// 4. Build trajectory using time
 			auto S_D_ = path.build_trajectory(trajectory);
 
-			
-			// 5. Convert to X and Y
+			// 5. Refine path with splint
+			// see above init()
+
+			// 6. Convert to X and Y
 			vector<double> X, Y, X_Y;
 			for (size_t i = 0; i < S_D_.D.size(); ++i) {
 				
-				X_Y = getXY(S_D_.S[i], S_D_.D[i], map_waypoints_s,
-					map_waypoints_x, map_waypoints_y);
+				X_Y = getXY(S_D_.S[i], S_D_.D[i], map_waypoints_s_upsampled,
+					map_waypoints_x_upsampled, map_waypoints_y_upsampled);
 				X.push_back(X_Y[0]);
 				Y.push_back(X_Y[1]);
 			}
-			
-          	tk::spline super_spline;
-			//super_spline.set_points( X, Y);
+			          	
 
 			json msgJson;
 			//vector<double> next_x_vals;
 			//vector<double> next_y_vals;
 
-			// 6. Push back to car
+			// 7. Push back to car
 			
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
           	msgJson["next_x"] = X;
