@@ -31,6 +31,19 @@ public:
 		vector<double> D;
 	};
 
+	struct Previous_path {
+		vector<double> X;
+		vector<double> Y;
+		double s;
+		double d;
+	};
+
+	struct MAP {
+		vector<double> waypoints_s_upsampled = {};
+		vector<double> waypoints_x_upsampled = {};
+		vector<double> waypoints_y_upsampled = {};
+	};
+
 	vector<double> SIGMA_S, SIGMA_D;
 	
 	void init();
@@ -54,9 +67,19 @@ public:
 	vector<double> trajectory_generation();
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
 
-	void merge_previous_path(vector< double> previous_path_x, vector< double> previous_path_y);
+	Previous_path merge_previous_path(MAP *MAP, vector< double> previous_path_x, 
+		vector< double> previous_path_y, double car_yaw, double car_s, double car_d);
+	X_Y convert_new_path_X_Y_to_S_D(MAP *MAP, S_D S_D_, Previous_path Previous_path);
 
 	S_D build_trajectory(vector<double> trajectory);
+
+	vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y);
+	vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y);
+
+	double distance(double x1, double y1, double x2, double y2);
+	int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> maps_y);
+	int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y);
+	
 
 };
 

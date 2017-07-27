@@ -6,6 +6,9 @@
 #include <cmath>
 #include <vector>
 #include <random>
+#define _USE_MATH_DEFINES
+#include <math.h>
+constexpr double pi() { return M_PI; }
 
 path::path() {}
 path::~path() {}
@@ -22,6 +25,9 @@ default_random_engine			generator;
 using namespace std;
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
+
+double deg2rad(double x) { return x * pi() / 180; }
+double rad2deg(double x) { return x * 180 / pi(); }
 
 void path::init() {
 	
@@ -214,10 +220,60 @@ double path::calculate_cost(vector<double> trajectory) {
 }
 
 
-void path::merge_previous_path(vector< double> previous_path_x, vector< double> previous_path_y) {
-	previous_path_x;
-	previous_path_y;
+path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> previous_path_x,
+	vector< double> previous_path_y, double car_yaw, double car_s, double car_d) {
+	
+	path::Previous_path Previous_path;
+	int p_x_size, i_p_x;
+	p_x_size		= previous_path_x.size();
+	i_p_x		= p_x_size - 1;
+	i_p_x		= min(i_p_x, 80);
+
+	car_yaw = 0;
+
+	if (p_x_size != 0) {
+
+		cout << "i_p_x " << i_p_x << endl;
+		cout << previous_path_x[i_p_x] << "\t" << previous_path_y[i_p_x] << endl;
+		
+		vector<double> new_s_d = getFrenet(previous_path_x[i_p_x-1], previous_path_y[i_p_x-1], car_yaw,
+			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+		
+		Previous_path.s = new_s_d[0];
+		Previous_path.d = new_s_d[1];
+
+		cout << "calucated car_s" << car_s << " car_d " << car_d << endl;
+
+		for (size_t i = 0; i < i_p_x; i++) {
+			Previous_path.X.push_back(previous_path_x[i]);
+			Previous_path.Y.push_back(previous_path_y[i]);
+		}
+	}
+	else {  // Init case
+		Previous_path.s = car_s;
+		Previous_path.d = car_d;
+	}
+	return Previous_path;
+
 }
+
+path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path){
+	
+	path::X_Y X_Y;
+	X_Y.X = Previous_path.X;
+	X_Y.Y = Previous_path.Y;
+	for (size_t i = 0; i < S_D_.D.size(); ++i) {
+
+		vector<double> a = getXY(S_D_.S[i], S_D_.D[i], MAP->waypoints_s_upsampled,
+			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+
+		X_Y.X.push_back(a[0]);
+		X_Y.Y.push_back(a[1]);
+		//cout << X_Y[0] << " " << X_Y[1] << endl;
+	}
+	return X_Y;
+}
+
 
 /****************************************
 * Cost functions
@@ -379,5 +435,128 @@ vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <doub
 	// cout << output << endl;
 
 	return results;
+
+}
+
+
+// Transform from Cartesian x,y coordinates to Frenet s,d coordinates
+vector<double> path::getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+{
+	int next_wp = NextWaypoint(x, y, theta, maps_x, maps_y);
+
+	int prev_wp;
+	prev_wp = next_wp - 1;
+	if (next_wp == 0)
+	{
+		prev_wp = maps_x.size() - 1;
+	}
+
+	double n_x = maps_x[next_wp] - maps_x[prev_wp];
+	double n_y = maps_y[next_wp] - maps_y[prev_wp];
+	double x_x = x - maps_x[prev_wp];
+	double x_y = y - maps_y[prev_wp];
+
+	// find the projection of x onto n
+	double proj_norm = (x_x*n_x + x_y*n_y) / (n_x*n_x + n_y*n_y);
+	double proj_x = proj_norm*n_x;
+	double proj_y = proj_norm*n_y;
+
+	double frenet_d = distance(x_x, x_y, proj_x, proj_y);
+
+	//see if d value is positive or negative by comparing it to a center point
+
+	double center_x = 1000 - maps_x[prev_wp];
+	double center_y = 2000 - maps_y[prev_wp];
+	double centerToPos = distance(center_x, center_y, x_x, x_y);
+	double centerToRef = distance(center_x, center_y, proj_x, proj_y);
+
+	if (centerToPos <= centerToRef)
+	{
+		frenet_d *= -1;
+	}
+
+	// calculate s value
+	double frenet_s = 0;
+	for (int i = 0; i < prev_wp; i++)
+	{
+		frenet_s += distance(maps_x[i], maps_y[i], maps_x[i + 1], maps_y[i + 1]);
+	}
+
+	frenet_s += distance(0, 0, proj_x, proj_y);
+
+	return { frenet_s,frenet_d };
+
+}
+
+// Transform from Frenet s,d coordinates to Cartesian x,y
+vector<double> path::getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y)
+{
+	int prev_wp = -1;
+
+	while (s > maps_s[prev_wp + 1] && (prev_wp < (int)(maps_s.size() - 1)))
+	{
+		prev_wp++;
+	}
+
+	int wp2 = (prev_wp + 1) % maps_x.size();
+
+	double heading = atan2((maps_y[wp2] - maps_y[prev_wp]), (maps_x[wp2] - maps_x[prev_wp]));
+	// the x,y,s along the segment
+	double seg_s = (s - maps_s[prev_wp]);
+
+	double seg_x = maps_x[prev_wp] + seg_s*cos(heading);
+	double seg_y = maps_y[prev_wp] + seg_s*sin(heading);
+
+	double perp_heading = heading - pi() / 2;
+
+	double x = seg_x + d*cos(perp_heading);
+	double y = seg_y + d*sin(perp_heading);
+
+	return { x,y };
+
+}
+
+double path::distance(double x1, double y1, double x2, double y2)
+{
+	return sqrt((x2 - x1)*(x2 - x1) + (y2 - y1)*(y2 - y1));
+}
+int path::ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> maps_y)
+{
+
+	double closestLen = 100000; //large number
+	int closestWaypoint = 0;
+
+	for (int i = 0; i < maps_x.size(); i++)
+	{
+		double map_x = maps_x[i];
+		double map_y = maps_y[i];
+		double dist = distance(x, y, map_x, map_y);
+		if (dist < closestLen)
+		{
+			closestLen = dist;
+			closestWaypoint = i;
+		}
+	}
+
+	return closestWaypoint;
+}
+int path::NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
+{
+
+	int closestWaypoint = ClosestWaypoint(x, y, maps_x, maps_y);
+
+	double map_x = maps_x[closestWaypoint];
+	double map_y = maps_y[closestWaypoint];
+
+	double heading = atan2((map_y - y), (map_x - x));
+
+	double angle = abs(theta - heading);
+
+	if (angle > pi() / 4)
+	{
+		closestWaypoint++;
+	}
+
+	return closestWaypoint;
 
 }

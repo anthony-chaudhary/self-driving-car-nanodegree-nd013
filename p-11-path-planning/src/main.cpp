@@ -1,6 +1,4 @@
 #include <fstream>
-#define _USE_MATH_DEFINES
-#include <math.h>
 #include "uWS/uWS.h"
 #include <chrono>
 #include <iostream>
@@ -15,10 +13,6 @@
 using namespace std;
 using json = nlohmann::json;
 
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
-
 stringstream hasData(string s) {
   auto found_null = s.find("null");
   auto b1 = s.find_first_of("[");
@@ -32,130 +26,6 @@ stringstream hasData(string s) {
 	  return tmp;
   }
   return stringstream();
-}
-
-double distance(double x1, double y1, double x2, double y2)
-{
-	return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
-}
-int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> maps_y)
-{
-
-	double closestLen = 100000; //large number
-	int closestWaypoint = 0;
-
-	for(int i = 0; i < maps_x.size(); i++)
-	{
-		double map_x = maps_x[i];
-		double map_y = maps_y[i];
-		double dist = distance(x,y,map_x,map_y);
-		if(dist < closestLen)
-		{
-			closestLen = dist;
-			closestWaypoint = i;
-		}
-	}
-
-	return closestWaypoint;
-}
-
-
-int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
-{
-
-	int closestWaypoint = ClosestWaypoint(x,y,maps_x,maps_y);
-
-	double map_x = maps_x[closestWaypoint];
-	double map_y = maps_y[closestWaypoint];
-
-	double heading = atan2( (map_y-y),(map_x-x) );
-
-	double angle = abs(theta-heading);
-
-	if(angle > pi()/4)
-	{
-		closestWaypoint++;
-	}
-
-	return closestWaypoint;
-
-}
-
-// Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
-{
-	int next_wp = NextWaypoint(x,y, theta, maps_x,maps_y);
-
-	int prev_wp;
-	prev_wp = next_wp-1;
-	if(next_wp == 0)
-	{
-		prev_wp  = maps_x.size()-1;
-	}
-
-	double n_x = maps_x[next_wp]-maps_x[prev_wp];
-	double n_y = maps_y[next_wp]-maps_y[prev_wp];
-	double x_x = x - maps_x[prev_wp];
-	double x_y = y - maps_y[prev_wp];
-
-	// find the projection of x onto n
-	double proj_norm = (x_x*n_x+x_y*n_y)/(n_x*n_x+n_y*n_y);
-	double proj_x = proj_norm*n_x;
-	double proj_y = proj_norm*n_y;
-
-	double frenet_d = distance(x_x,x_y,proj_x,proj_y);
-
-	//see if d value is positive or negative by comparing it to a center point
-
-	double center_x = 1000-maps_x[prev_wp];
-	double center_y = 2000-maps_y[prev_wp];
-	double centerToPos = distance(center_x,center_y,x_x,x_y);
-	double centerToRef = distance(center_x,center_y,proj_x,proj_y);
-
-	if(centerToPos <= centerToRef)
-	{
-		frenet_d *= -1;
-	}
-
-	// calculate s value
-	double frenet_s = 0;
-	for(int i = 0; i < prev_wp; i++)
-	{
-		frenet_s += distance(maps_x[i],maps_y[i],maps_x[i+1],maps_y[i+1]);
-	}
-
-	frenet_s += distance(0,0,proj_x,proj_y);
-
-	return {frenet_s,frenet_d};
-
-}
-
-// Transform from Frenet s,d coordinates to Cartesian x,y
-vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y)
-{
-	int prev_wp = -1;
-
-	while(s > maps_s[prev_wp+1] && (prev_wp < (int)(maps_s.size()-1) ))
-	{
-		prev_wp++;
-	}
-
-	int wp2 = (prev_wp+1)%maps_x.size();
-
-	double heading = atan2((maps_y[wp2]-maps_y[prev_wp]),(maps_x[wp2]-maps_x[prev_wp]));
-	// the x,y,s along the segment
-	double seg_s = (s-maps_s[prev_wp]);
-
-	double seg_x = maps_x[prev_wp]+seg_s*cos(heading);
-	double seg_y = maps_y[prev_wp]+seg_s*sin(heading);
-
-	double perp_heading = heading-pi()/2;
-
-	double x = seg_x + d*cos(perp_heading);
-	double y = seg_y + d*sin(perp_heading);
-
-	return {x,y};
-
 }
 
 int main() {
@@ -199,139 +69,74 @@ int main() {
   path.init();
 
   tk::spline spline_x, spline_y;
-  vector<double> map_waypoints_x_upsampled, map_waypoints_s_upsampled, map_waypoints_y_upsampled;
   spline_x.set_points(map_waypoints_s, map_waypoints_x);
   spline_y.set_points(map_waypoints_s, map_waypoints_y);
 
+  path::MAP *MAP = new path::MAP;
+
+  // refine path with spline.
   int spline_samples = int(map_waypoints_s[map_waypoints_s.size()-1]);
-
   for (size_t i = 0; i < spline_samples; ++i) {
-	  map_waypoints_x_upsampled.push_back(spline_x(i));
-	  map_waypoints_y_upsampled.push_back(spline_y(i));
-	  map_waypoints_s_upsampled.push_back(i);
+	  MAP->waypoints_x_upsampled.push_back(spline_x(i));
+	  MAP->waypoints_y_upsampled.push_back(spline_y(i));
+	  MAP->waypoints_s_upsampled.push_back(i);
   }
-
-
+  
 
   h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode){
  
-    // "42" at the start of the message means there's a websocket message event.
-    if (length && length > 2 && data[0] == '4' && data[1] == '2') {
+  // "42" at the start of the message means there's a websocket message event.
+  if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
-      auto s = hasData(string(data));
-      if (s.str() != "") {
-        auto j = json::parse(s);
-        string event = j[0].get<string>();
-        if (event == "telemetry") { // j[1] is the data JSON object
+   auto s = hasData(string(data));
+   if (s.str() != "") {
+    auto j = json::parse(s);
+    string event = j[0].get<string>();
+    if (event == "telemetry") { // j[1] is the data JSON object
           
-			// Main car's localization Data
-			double car_x = j[1]["x"];
-			double car_y = j[1]["y"];
-			double car_s = j[1]["s"];
-			double car_d = j[1]["d"];
-			double car_yaw = j[1]["yaw"];
-			double car_speed = j[1]["speed"];
-
-			// Previous path data given to the Planner
-			auto previous_path_x = j[1]["previous_path_x"];
-			auto previous_path_y = j[1]["previous_path_y"];
-
-			vector<double> previous_path_x_vector = previous_path_x;
-			vector<double> previous_path_y_vector = previous_path_y;
-
-			// Previous path's end s and d values 
-			double end_path_s = j[1]["end_path_s"];
-			double end_path_d = j[1]["end_path_d"];
-
-			// Sensor Fusion Data, a list of all other cars on the same side of the road.
-			auto sensor_fusion = j[1]["sensor_fusion"];
+		double car_x = j[1]["x"];
+		double car_y = j[1]["y"];
+		double car_s = j[1]["s"];
+		double car_d = j[1]["d"];
+		double car_yaw = j[1]["yaw"];
+		double car_speed = j[1]["speed"];
+		auto previous_path_x = j[1]["previous_path_x"];
+		auto previous_path_y = j[1]["previous_path_y"];
+		double end_path_s = j[1]["end_path_s"];
+		double end_path_d = j[1]["end_path_d"];
+		auto sensor_fusion = j[1]["sensor_fusion"];
 			
-			// WIP
-			//path.merge_previous_path(previous_path_x, previous_path_y);
+		// 1. Merge previous path and update car state
+		auto Previous_path = path.merge_previous_path(MAP, previous_path_x, 
+			previous_path_y, car_yaw, car_s, car_d);
 
-			cout << "car_speed " << car_speed << endl;
-			cout << "car_s" << car_s << " car_d " << car_d << endl;
+		// 2. Update vehicles with sensor fusion readings
+		path.sensor_fusion_predict(sensor_fusion);
 
-			int p_x_size = previous_path_x_vector.size();
-			int i_p_x = p_x_size - 5;
-			i_p_x = min(i_p_x, 80);
-
-			// previous path merge
-			vector<double> X, Y, X_Y;
-
-			if (previous_path_x_vector.size() != 0) {
-				vector<double> new_s_d;
-				cout << "previous_path_x_vector.size() " << i_p_x << endl;
-
-				//cout << car_x << "\t"<< car_y << endl;  // this is useless... 
-				cout << previous_path_x_vector[i_p_x] << "\t" << previous_path_y_vector[i_p_x] << endl;
-				new_s_d = getFrenet(previous_path_x_vector[i_p_x], previous_path_y_vector[i_p_x], car_yaw, map_waypoints_x_upsampled, map_waypoints_y_upsampled);
-				car_s = new_s_d[0];
-				car_d = new_s_d[1];
-				
-				cout << "car_s" << car_s << " car_d " << car_d << endl;
-						
-				for (size_t i = 0; i < i_p_x; i++) {
-					X.push_back(previous_path_x_vector[i]);
-					Y.push_back(previous_path_y_vector[i]);
-					// cout << previous_path_x_vector[i] << " " << previous_path_y_vector[i] << endl;
-				}
-			}
-
-			// 1. Update vehicles with sensor fusion readings
-			path.sensor_fusion_predict(sensor_fusion);
-
-			// 2. Update our car's state
-			path.update_our_car_state(car_x, car_y, car_s, car_d, car_yaw, car_speed);
+		// 3. Update our car's state (pending removal of arguments here as doing update at 1. now.0
+		path.update_our_car_state(car_x, car_y, Previous_path.s, 
+			Previous_path.d, car_yaw, car_speed);
 		
-			// 3. Generate trajectory
-			auto trajectory = path.trajectory_generation();
+		// 4. Generate trajectory
+		auto trajectory = path.trajectory_generation();
 			
-			// 4. Build trajectory using time
-			auto S_D_ = path.build_trajectory(trajectory);
+		// 5. Build trajectory using time
+		auto S_D_ = path.build_trajectory(trajectory);
 
-			// 5. Refine path with splint
-			// see above init()
-	
-
-			// 6. Convert to X and Y
-			for (size_t i = 0; i < S_D_.D.size(); ++i) {
-				
-				X_Y = getXY(S_D_.S[i], S_D_.D[i], map_waypoints_s_upsampled,
-					map_waypoints_x_upsampled, map_waypoints_y_upsampled);
-
-				// merge check
-				/*
-				if (previous_path_x.size() != 0) {
-					if (i == 0) {
-						if (X_Y[0] < X[2]) { X_Y[0] = X[2]; }
-						if (X_Y[1] < Y[2]) { X_Y[1] = Y[2]; }
-					}
-				}
-				*/
-
-				X.push_back(X_Y[0]);
-				Y.push_back(X_Y[1]);
-
-				//cout << X_Y[0] << " " << X_Y[1] << endl;
-			}
+		// 6. Convert to X and Y and append previous path
+		auto X_Y_ = path.convert_new_path_X_Y_to_S_D(MAP, S_D_, Previous_path);
 			          
-			cout << "End\n\n" << endl;
+		cout << "End\n\n" << endl;
 
-			json msgJson;
-			//vector<double> next_x_vals;
-			//vector<double> next_y_vals;
+		json msgJson;
+						
+        // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+        msgJson["next_x"] = X_Y_.X;
+        msgJson["next_y"] = X_Y_.Y;
 
-			// 7. Push back to car
-			
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-          	msgJson["next_x"] = X;
-          	msgJson["next_y"] = Y;
+        auto msg = "42[\"control\","+ msgJson.dump()+"]";
 
-          	auto msg = "42[\"control\","+ msgJson.dump()+"]";
-
-          	//this_thread::sleep_for(chrono::milliseconds(1000));
-          	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+        ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           
         }
       } else {
