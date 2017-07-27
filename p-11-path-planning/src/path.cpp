@@ -109,7 +109,7 @@ in progress
 	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
 	
 	target->S[0] = car_s + 10;
-	target->S[1] = .005;  /// this would have relationship to S....
+	target->S[1] = .001;  /// this would have relationship to S....
 
 	target->D[0] = car_d ;
 	target->D[1] = 0;
@@ -230,7 +230,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	int p_x_size, i_p_x;
 	p_x_size		= previous_path_x.size();
 	i_p_x		= p_x_size - 1;
-	i_p_x		= min(i_p_x, 80);
+	i_p_x		= min(i_p_x, 100);
 
 	car_yaw = 0;
 
@@ -239,7 +239,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		cout << "i_p_x " << i_p_x << endl;
 		cout << previous_path_x[i_p_x] << "\t" << previous_path_y[i_p_x] << endl;
 		
-		vector<double> new_s_d = getFrenet(previous_path_x[i_p_x-3], previous_path_y[i_p_x-3], car_yaw,
+		vector<double> new_s_d = getFrenet(previous_path_x[i_p_x], previous_path_y[i_p_x], car_yaw,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 		
 		Previous_path.s = new_s_d[0];
@@ -262,7 +262,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 
 path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path){
 	
-	path::X_Y X_Y, X_Y_spline;
+	path::X_Y X_Y, X_Y_spline, X_Y_generated;
 	X_Y.X = Previous_path.X;
 	X_Y.Y = Previous_path.Y;
 	int x_size = Previous_path.X.size();
@@ -277,18 +277,37 @@ path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path
 		if (x_size != 0) {
 			if (i == 0) {
 
-				normal_distribution<double> distribution_merge_x((X_Y.X[x_size - 2] + a[0]) / 2, .1);
-				normal_distribution<double> distribution_merge_y((X_Y.Y[x_size - 2] + a[1]) / 2, .1);
-
-				for (size_t j = 0; j < 5; ++j) {  // could be a difference calculation?
-					X_Y.X.push_back(distribution_merge_x(generator));
-					X_Y.Y.push_back(distribution_merge_y(generator));
+				vector<double> x, y;
+				for (size_t i = 0; i < 5; ++i) {
+					x.push_back(a[0] - (.02 * i));
+					y.push_back(a[1] - (.02 * i));
+					x.push_back(X_Y.X[x_size - 1] + (.02 * i));
+					y.push_back(X_Y.Y[x_size - 1] + (.02 * i));
 				}
+
+				sort(x.begin(), x.end());
+				sort(y.begin(), y.end());
+
+				//double x_gap = a[0] - X_Y.X[x_size - 1];
+				//double y_gap = a[1] - X_Y.Y[x_size - 1];
+
+				//cout << x_gap << endl;;
+
+				spline_x.set_points(x, y);
+				spline_y.set_points(y, x);
+
+				for (size_t i = 0; i < x.size(); ++i) {
+					X_Y.X.push_back(spline_y(y[i] ));
+					X_Y.Y.push_back(spline_x(x[i] ));
+				}
+
+				
 			}
 		}
-		
+
 		X_Y.X.push_back(a[0]);
 		X_Y.Y.push_back(a[1]);
+
 		
 		
 	}
@@ -297,6 +316,9 @@ path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path
 	// first new path and previous path is not blank
 	// resample points
 
+	return X_Y;
+
+	/*
 	if (x_size != 0) {
 
 	
@@ -310,7 +332,6 @@ path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path
 
 		}
 
-		
 		sort(X_Y.X.begin(), X_Y.X.end());
 		sort(X_Y.Y.begin(), X_Y.Y.end());
 
@@ -333,6 +354,7 @@ path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path
 	else {
 		return X_Y;
 	}
+	*/
 
 }
 
