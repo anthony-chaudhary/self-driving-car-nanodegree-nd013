@@ -35,7 +35,7 @@ void path::init() {
 	weighted_costs[2].weight = 1.0;
 	
 	our_path->timestep = .02;
-	our_path->T = 1;
+	our_path->T = 1.0;
 	our_path->trajectory_samples = 10;
 	our_path->SIGMA_S = { 10.0, 2.0, .50 };
 	our_path->SIGMA_D = { 0.01, .001, .0001 };
@@ -85,7 +85,7 @@ in progress
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
 
-	r_daneel_olivaw->S[1] = car_speed;
+	r_daneel_olivaw->S[1] = r_daneel_olivaw->S[0] - r_daneel_olivaw->S_p[0];
 	r_daneel_olivaw->D[1] = r_daneel_olivaw->D[0] - r_daneel_olivaw->D_p[0];
 
 	r_daneel_olivaw->S[2] = r_daneel_olivaw->S[1] - r_daneel_olivaw->S_p[1];  // ie 100 - 90 = change of 10
@@ -99,8 +99,8 @@ in progress
 	
 	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
 	
-	target->S[0] = car_s + 20;
-	target->S[1] = car_speed;
+	target->S[0] = car_s + 10;
+	target->S[1] = .005;  /// this would have relationship to S....
 
 	target->D[0] = car_d ;
 	target->D[1] = 0;

@@ -250,11 +250,32 @@ int main() {
 			//path.merge_previous_path(previous_path_x, previous_path_y);
 
 			cout << "car_speed " << car_speed << endl;
+			cout << "car_s" << car_s << " car_d " << car_d << endl;
 
-			if (end_path_s != 0) {
-				car_s = end_path_s;
-				car_d = end_path_d;
+			int p_x_size = previous_path_x_vector.size();
+			int i_p_x = p_x_size - 5;
+			i_p_x = min(i_p_x, 80);
+
+			// previous path merge
+			vector<double> X, Y, X_Y;
+
+			if (previous_path_x_vector.size() != 0) {
+				vector<double> new_s_d;
+				cout << "previous_path_x_vector.size() " << i_p_x << endl;
+
+				//cout << car_x << "\t"<< car_y << endl;  // this is useless... 
+				cout << previous_path_x_vector[i_p_x] << "\t" << previous_path_y_vector[i_p_x] << endl;
+				new_s_d = getFrenet(previous_path_x_vector[i_p_x], previous_path_y_vector[i_p_x], car_yaw, map_waypoints_x_upsampled, map_waypoints_y_upsampled);
+				car_s = new_s_d[0];
+				car_d = new_s_d[1];
+				
 				cout << "car_s" << car_s << " car_d " << car_d << endl;
+						
+				for (size_t i = 0; i < i_p_x; i++) {
+					X.push_back(previous_path_x_vector[i]);
+					Y.push_back(previous_path_y_vector[i]);
+					// cout << previous_path_x_vector[i] << " " << previous_path_y_vector[i] << endl;
+				}
 			}
 
 			// 1. Update vehicles with sensor fusion readings
@@ -271,16 +292,7 @@ int main() {
 
 			// 5. Refine path with splint
 			// see above init()
-
-			// previous path merge
-			vector<double> X, Y, X_Y;
-
-			if (previous_path_x_vector.size() != 0) {
-				for (size_t i = 0; i < 3; i++) {
-					X.push_back(previous_path_x_vector[i]);
-					Y.push_back(previous_path_y_vector[i]);
-				}
-			}
+	
 
 			// 6. Convert to X and Y
 			for (size_t i = 0; i < S_D_.D.size(); ++i) {
@@ -289,17 +301,19 @@ int main() {
 					map_waypoints_x_upsampled, map_waypoints_y_upsampled);
 
 				// merge check
+				/*
 				if (previous_path_x.size() != 0) {
 					if (i == 0) {
 						if (X_Y[0] < X[2]) { X_Y[0] = X[2]; }
 						if (X_Y[1] < Y[2]) { X_Y[1] = Y[2]; }
 					}
 				}
+				*/
 
 				X.push_back(X_Y[0]);
 				Y.push_back(X_Y[1]);
 
-				cout << X_Y[0] << " " << X_Y[1] << endl;
+				//cout << X_Y[0] << " " << X_Y[1] << endl;
 			}
 			          
 			cout << "End\n\n" << endl;
