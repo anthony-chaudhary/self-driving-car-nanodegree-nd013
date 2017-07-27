@@ -8,6 +8,7 @@
 #include <random>
 #define _USE_MATH_DEFINES
 #include <math.h>
+#include "spline.h"
 constexpr double pi() { return M_PI; }
 
 path::path() {}
@@ -91,11 +92,13 @@ in progress
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
 
-	r_daneel_olivaw->S[1] = r_daneel_olivaw->S[0] - r_daneel_olivaw->S_p[0];
-	r_daneel_olivaw->D[1] = r_daneel_olivaw->D[0] - r_daneel_olivaw->D_p[0];
+	if (car_speed != 0) {
+		r_daneel_olivaw->S[1] = r_daneel_olivaw->S[0] - r_daneel_olivaw->S_p[0];
+		r_daneel_olivaw->D[1] = r_daneel_olivaw->D[0] - r_daneel_olivaw->D_p[0];
 
-	r_daneel_olivaw->S[2] = r_daneel_olivaw->S[1] - r_daneel_olivaw->S_p[1];  // ie 100 - 90 = change of 10
-	r_daneel_olivaw->D[2] = r_daneel_olivaw->D[1] - r_daneel_olivaw->D_p[1];
+		r_daneel_olivaw->S[2] = r_daneel_olivaw->S[1] - r_daneel_olivaw->S_p[1];  // ie 100 - 90 = change of 10
+		r_daneel_olivaw->D[2] = r_daneel_olivaw->D[1] - r_daneel_olivaw->D_p[1];
+	}
 
 	r_daneel_olivaw->x = car_x;
 	r_daneel_olivaw->y = car_y;
@@ -236,7 +239,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		cout << "i_p_x " << i_p_x << endl;
 		cout << previous_path_x[i_p_x] << "\t" << previous_path_y[i_p_x] << endl;
 		
-		vector<double> new_s_d = getFrenet(previous_path_x[i_p_x-1], previous_path_y[i_p_x-1], car_yaw,
+		vector<double> new_s_d = getFrenet(previous_path_x[i_p_x-3], previous_path_y[i_p_x-3], car_yaw,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 		
 		Previous_path.s = new_s_d[0];
@@ -259,20 +262,103 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 
 path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path){
 	
-	path::X_Y X_Y;
+	path::X_Y X_Y, X_Y_spline;
 	X_Y.X = Previous_path.X;
 	X_Y.Y = Previous_path.Y;
+	int x_size = Previous_path.X.size();
+
+	tk::spline spline_x, spline_y;
+
 	for (size_t i = 0; i < S_D_.D.size(); ++i) {
 
 		vector<double> a = getXY(S_D_.S[i], S_D_.D[i], MAP->waypoints_s_upsampled,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 
+		if (x_size != 0) {
+			if (i == 0) {
+
+				normal_distribution<double> distribution_merge_x((X_Y.X[x_size - 2] + a[0]) / 2, .1);
+				normal_distribution<double> distribution_merge_y((X_Y.Y[x_size - 2] + a[1]) / 2, .1);
+
+				for (size_t j = 0; j < 5; ++j) {  // could be a difference calculation?
+					X_Y.X.push_back(distribution_merge_x(generator));
+					X_Y.Y.push_back(distribution_merge_y(generator));
+				}
+			}
+		}
+		
 		X_Y.X.push_back(a[0]);
 		X_Y.Y.push_back(a[1]);
-		//cout << X_Y[0] << " " << X_Y[1] << endl;
+		
+		
 	}
-	return X_Y;
+		//cout << X_Y[0] << " " << X_Y[1] << endl;
+	
+	// first new path and previous path is not blank
+	// resample points
+
+	if (x_size != 0) {
+
+	
+		for (size_t i = 0; i < x_size; ++i) {
+
+			normal_distribution<double> distribution_x(X_Y.X[i], .000000001);
+			X_Y.X[i] = distribution_x(generator);
+			
+			normal_distribution<double> distribution_y(X_Y.Y[i], .000000001);
+			X_Y.Y[i] = distribution_y(generator);
+
+		}
+
+		
+		sort(X_Y.X.begin(), X_Y.X.end());
+		sort(X_Y.Y.begin(), X_Y.Y.end());
+
+		spline_x.set_points(X_Y.X, X_Y.Y);
+		spline_y.set_points(X_Y.Y, X_Y.X);
+		
+		double x_p, y_p;
+		double merge_points;
+
+		int merged_x_size = X_Y.X.size();
+
+		for (size_t i = 0; i < merged_x_size; ++i) {
+
+			X_Y_spline.X.push_back(spline_y(X_Y.Y[i]));
+			X_Y_spline.Y.push_back(spline_x(X_Y.X[i]));
+
+		}
+		return X_Y_spline;
+	}
+	else {
+		return X_Y;
+	}
+
 }
+
+	// merge
+
+	/*// Method one
+	double x_mean, y_mean;
+	x_mean = 0;
+	y_mean = 0;
+	int x_size = Previous_path.X.size();
+	int merge_size = 3;
+
+	for (size_t i = x_size - merge_size;  i < x_size + merge_size; ++i){
+		x_mean += X_Y.X[i];
+		y_mean += X_Y.Y[i];
+	}
+
+	x_mean = x_mean / (merge_size * 2);
+	y_mean = y_mean / (merge_size * 2);
+
+	for (size_t i = x_size; i < x_size + merge_size; ++i) {
+		X_Y.X[i] = X_Y.X[i] * .70 + x_mean * .30 ;
+		X_Y.Y[i] = X_Y.Y[i] * .70 + y_mean * .30 ;
+	}
+	*/
+
 
 
 /****************************************
