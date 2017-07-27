@@ -29,14 +29,16 @@ void path::init() {
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	classifier->train(X_train, Y_train);
 
-	weighted_costs.resize(1);
+	weighted_costs.resize(3);
 	weighted_costs[0].weight = 1.0;
+	weighted_costs[1].weight = 1.0;
+	weighted_costs[2].weight = 1.0;
 	
 	our_path->timestep = .02;
-	our_path->T = 5;
+	our_path->T = 1;
 	our_path->trajectory_samples = 10;
 	our_path->SIGMA_S = { 10.0, 2.0, .50 };
-	our_path->SIGMA_D = { .1, .01, .001 };
+	our_path->SIGMA_D = { 0.01, .001, .0001 };
 
 }
 
@@ -97,7 +99,7 @@ in progress
 	
 	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
 	
-	target->S[0] = car_s + 30;
+	target->S[0] = car_s + 20;
 	target->S[1] = car_speed;
 
 	target->D[0] = car_d ;
@@ -121,8 +123,8 @@ vector<double> path::trajectory_generation() {
 	goals[0].insert(end(goals[0]), begin(target->S_TARGETS), end(target->S_TARGETS));
 	goals[0].insert(end(goals[0]), begin(target->D_TARGETS), end(target->D_TARGETS));
 
-	double t = our_path->T - 4 * our_path->timestep;
-	double b = our_path->T + 4 * our_path->timestep;;
+	double t = our_path->T - 2 * our_path->timestep;
+	double b = our_path->T + 2 * our_path->timestep;;
 	goals[0].push_back(t);
 
 	// other goals
@@ -203,15 +205,40 @@ vector<double> path::wiggle_goal(double t) {
 double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 	for (size_t i = 0; i < 1; ++i) {
-		double new_cost = weighted_costs[0].weight * collision_cost(trajectory);
-		cost += new_cost;
+		cost += weighted_costs[0].weight * collision_cost(trajectory);
+		//cost += weighted_costs[1].weight * s_diff_cost(trajectory);
+		//cost += weighted_costs[2].weight * d_diff_cost(trajectory);
+		//cost += new_cost;
 	}
 	return cost;
+}
+
+
+void path::merge_previous_path(vector< double> previous_path_x, vector< double> previous_path_y) {
+	previous_path_x;
+	previous_path_y;
 }
 
 /****************************************
 * Cost functions
 ****************************************/
+
+double path::s_diff_cost(vector<double> trajectory) {
+	vector<double> S; // TODO better way to do this
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+	double T = trajectory[12];
+
+
+	return 0;
+	// WIP
+}
+
+double path::d_diff_cost(vector<double> trajectory) {
+
+	// WIP
+	return 0;
+}
+
 
 double path::collision_cost(vector<double> trajectory) {
 
@@ -259,7 +286,7 @@ double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 	return a;
 }
 
-path::S_D path::build_trajectory(vector<double> trajectory) {
+path::S_D  path::build_trajectory(vector<double> trajectory) {
 	
 	vector<double> S, D, X, Y; // TODO better way to do this
 	// refactor using S_D struct

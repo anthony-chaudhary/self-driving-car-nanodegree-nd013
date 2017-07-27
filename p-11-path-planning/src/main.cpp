@@ -203,7 +203,7 @@ int main() {
   spline_x.set_points(map_waypoints_s, map_waypoints_x);
   spline_y.set_points(map_waypoints_s, map_waypoints_y);
 
-  int spline_samples = 1000;
+  int spline_samples = int(map_waypoints_s[map_waypoints_s.size()-1]);
 
   for (size_t i = 0; i < spline_samples; ++i) {
 	  map_waypoints_x_upsampled.push_back(spline_x(i));
@@ -236,14 +236,26 @@ int main() {
 			auto previous_path_x = j[1]["previous_path_x"];
 			auto previous_path_y = j[1]["previous_path_y"];
 
+			vector<double> previous_path_x_vector = previous_path_x;
+			vector<double> previous_path_y_vector = previous_path_y;
+
 			// Previous path's end s and d values 
 			double end_path_s = j[1]["end_path_s"];
 			double end_path_d = j[1]["end_path_d"];
 
 			// Sensor Fusion Data, a list of all other cars on the same side of the road.
 			auto sensor_fusion = j[1]["sensor_fusion"];
-
 			
+			// WIP
+			//path.merge_previous_path(previous_path_x, previous_path_y);
+
+			cout << "car_speed " << car_speed << endl;
+
+			if (end_path_s != 0) {
+				car_s = end_path_s;
+				car_d = end_path_d;
+				cout << "car_s" << car_s << " car_d " << car_d << endl;
+			}
 
 			// 1. Update vehicles with sensor fusion readings
 			path.sensor_fusion_predict(sensor_fusion);
@@ -260,16 +272,37 @@ int main() {
 			// 5. Refine path with splint
 			// see above init()
 
-			// 6. Convert to X and Y
+			// previous path merge
 			vector<double> X, Y, X_Y;
+
+			if (previous_path_x_vector.size() != 0) {
+				for (size_t i = 0; i < 3; i++) {
+					X.push_back(previous_path_x_vector[i]);
+					Y.push_back(previous_path_y_vector[i]);
+				}
+			}
+
+			// 6. Convert to X and Y
 			for (size_t i = 0; i < S_D_.D.size(); ++i) {
 				
 				X_Y = getXY(S_D_.S[i], S_D_.D[i], map_waypoints_s_upsampled,
 					map_waypoints_x_upsampled, map_waypoints_y_upsampled);
+
+				// merge check
+				if (previous_path_x.size() != 0) {
+					if (i == 0) {
+						if (X_Y[0] < X[2]) { X_Y[0] = X[2]; }
+						if (X_Y[1] < Y[2]) { X_Y[1] = Y[2]; }
+					}
+				}
+
 				X.push_back(X_Y[0]);
 				Y.push_back(X_Y[1]);
+
+				cout << X_Y[0] << " " << X_Y[1] << endl;
 			}
-			          	
+			          
+			cout << "End\n\n" << endl;
 
 			json msgJson;
 			//vector<double> next_x_vals;

@@ -17,6 +17,7 @@ public:
 
 	struct Weighted_costs {
 		double weight;
+		
 		// function?
 	};
 
@@ -40,13 +41,20 @@ public:
 	void sensor_fusion_predict(vector< vector<double>> sensor_fusion);
 	double nearest_approach_to_any_vehicle(vector<double> trajectory);
 	
+
+	// Cost functions
 	double collision_cost(vector<double> trajectory);
+	double s_diff_cost(vector<double> trajectory);
+	double d_diff_cost(vector<double> trajectory);
+
 	double coefficients_to_time_function(vector<double> coefficients, double t);
 	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
 		double car_yaw, double car_speed);
 
 	vector<double> trajectory_generation();
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
+
+	void merge_previous_path(vector< double> previous_path_x, vector< double> previous_path_y);
 
 	S_D build_trajectory(vector<double> trajectory);
 
