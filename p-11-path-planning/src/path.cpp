@@ -109,9 +109,11 @@ in progress
 	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
 	
 	target->S[0] = car_s + 10;
-	target->S[1] = .001;  /// this would have relationship to S....
+	target->S[1] = .02;  /// this would have relationship to S....
 
-	target->D[0] = car_d ;
+	target->D[0] = 6;
+	
+
 	target->D[1] = 0;
 	target->D[2] = 0;
 	target->update_target_state(our_path->timestep);
@@ -232,8 +234,6 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	i_p_x		= p_x_size - 1;
 	i_p_x		= min(i_p_x, 100);
 
-	car_yaw = 0;
-
 	if (p_x_size != 0) {
 
 		cout << "i_p_x " << i_p_x << endl;
@@ -257,11 +257,11 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		Previous_path.d = car_d;
 	}
 	return Previous_path;
-
+	
 }
 
-path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path){
-	
+path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path) {
+
 	path::X_Y X_Y, X_Y_spline, X_Y_generated;
 	X_Y.X = Previous_path.X;
 	X_Y.Y = Previous_path.Y;
@@ -278,46 +278,33 @@ path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path
 			if (i == 0) {
 
 				vector<double> x, y;
-				for (size_t i = 0; i < 5; ++i) {
-					x.push_back(a[0] - (.02 * i));
-					y.push_back(a[1] - (.02 * i));
-					x.push_back(X_Y.X[x_size - 1] + (.02 * i));
-					y.push_back(X_Y.Y[x_size - 1] + (.02 * i));
+				x.push_back(a[0]);
+				y.push_back(a[1]);
+				for (size_t i = 0; i < 3; ++i) {
+					x.push_back(X_Y.X[x_size - 1] + (.001 * i));
+					y.push_back(X_Y.Y[x_size - 1] + (.001 * i));
 				}
 
 				sort(x.begin(), x.end());
 				sort(y.begin(), y.end());
 
-				//double x_gap = a[0] - X_Y.X[x_size - 1];
-				//double y_gap = a[1] - X_Y.Y[x_size - 1];
-
-				//cout << x_gap << endl;;
-
 				spline_x.set_points(x, y);
 				spline_y.set_points(y, x);
 
-				for (size_t i = 0; i < x.size(); ++i) {
-					X_Y.X.push_back(spline_y(y[i] ));
-					X_Y.Y.push_back(spline_x(x[i] ));
+				for (size_t i = 2; i < x.size() - 1; ++i) {
+					X_Y.X.push_back(spline_y(y[i]));
+					X_Y.Y.push_back(spline_x(x[i]));
 				}
-
-				
 			}
 		}
 
 		X_Y.X.push_back(a[0]);
 		X_Y.Y.push_back(a[1]);
 
-		
-		
 	}
-		//cout << X_Y[0] << " " << X_Y[1] << endl;
-	
-	// first new path and previous path is not blank
-	// resample points
 
 	return X_Y;
-
+}
 	/*
 	if (x_size != 0) {
 
@@ -356,7 +343,7 @@ path::X_Y path::convert_new_path_X_Y_to_S_D(path::MAP* MAP, path::S_D S_D_, path
 	}
 	*/
 
-}
+
 
 	// merge
 

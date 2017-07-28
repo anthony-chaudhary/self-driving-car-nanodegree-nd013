@@ -75,7 +75,7 @@ int main() {
   path::MAP *MAP = new path::MAP;
 
   // refine path with spline.
-  int spline_samples = int(map_waypoints_s[map_waypoints_s.size()-1]);
+  int spline_samples = 24000;
   for (size_t i = 0; i < spline_samples; ++i) {
 	  MAP->waypoints_x_upsampled.push_back(spline_x(i));
 	  MAP->waypoints_y_upsampled.push_back(spline_y(i));
@@ -124,7 +124,7 @@ int main() {
 		auto S_D_ = path.build_trajectory(trajectory);
 
 		// 6. Convert to X and Y and append previous path
-		auto X_Y_ = path.convert_new_path_X_Y_to_S_D(MAP, S_D_, Previous_path);
+		auto X_Y_ = path.convert_new_path_to_X_Y_and_merge(MAP, S_D_, Previous_path);
 			          
 		cout << "End\n\n" << endl;
 
