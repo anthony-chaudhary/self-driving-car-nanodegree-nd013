@@ -113,8 +113,9 @@ int main() {
 		// 2. Update vehicles with sensor fusion readings
 		path.sensor_fusion_predict(sensor_fusion);
 
-		// 3. Update our car's state (pending removal of arguments here as doing update at 1. now.0
-		path.update_our_car_state(car_x, car_y, Previous_path.s, 	Previous_path.d, car_yaw, car_speed);
+		// 3. Update our car's state
+		path.update_our_car_state(car_x, car_y, Previous_path.s, 
+			Previous_path.d, car_yaw, car_speed);
 		
 		// 4. Generate trajectory
 		auto trajectory = path.trajectory_generation();
@@ -127,9 +128,7 @@ int main() {
 			          
 		cout << "End\n\n" << endl;
 
-		json msgJson;
-						
-        // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+		json msgJson;	
         msgJson["next_x"] = X_Y_.X;
         msgJson["next_y"] = X_Y_.Y;
 
