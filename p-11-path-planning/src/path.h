@@ -68,7 +68,7 @@ public:
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
 
 	Previous_path merge_previous_path(MAP *MAP, vector< double> previous_path_x, 
-		vector< double> previous_path_y, double car_yaw, double car_s, double car_d);
+		vector< double> previous_path_y, double car_yaw, double car_s, double car_d, double end_path_s, double end_path_d);
 	X_Y convert_new_path_to_X_Y_and_merge(MAP *MAP, S_D S_D_, Previous_path Previous_path);
 
 	S_D build_trajectory(vector<double> trajectory);

@@ -108,14 +108,13 @@ int main() {
 			
 		// 1. Merge previous path and update car state
 		auto Previous_path = path.merge_previous_path(MAP, previous_path_x, 
-			previous_path_y, car_yaw, car_s, car_d);
+			previous_path_y, car_yaw, car_s, car_d, end_path_s, end_path_d);
 
 		// 2. Update vehicles with sensor fusion readings
 		path.sensor_fusion_predict(sensor_fusion);
 
 		// 3. Update our car's state (pending removal of arguments here as doing update at 1. now.0
-		path.update_our_car_state(car_x, car_y, Previous_path.s, 
-			Previous_path.d, car_yaw, car_speed);
+		path.update_our_car_state(car_x, car_y, Previous_path.s, 	Previous_path.d, car_yaw, car_speed);
 		
 		// 4. Generate trajectory
 		auto trajectory = path.trajectory_generation();
