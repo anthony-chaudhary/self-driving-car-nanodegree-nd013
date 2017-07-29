@@ -42,7 +42,7 @@ void path::init() {
 	weighted_costs[2].weight = 1.0;
 	
 	our_path->timestep = .02;
-	our_path->T = 1.5;
+	our_path->T = 1.0;
 	our_path->trajectory_samples = 10;
 	our_path->SIGMA_S = { 10.0, 2.0, .50 };
 	our_path->SIGMA_D = { 0.01, .001, .0001 };
@@ -231,15 +231,17 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	path::Previous_path Previous_path;
 	int p_x_size, i_p_x;
 	p_x_size		= previous_path_x.size();
-	//i_p_x		= p_x_size - 40;
+	//i_p_x		= p_x_size;
 	//i_p_x		= min(i_p_x, 100);
 
 	if (p_x_size != 0) {
 
-		cout << "i_p_x " << i_p_x << endl;
-		cout << previous_path_x[i_p_x] << "\t" << previous_path_y[i_p_x] << endl;
-		
-		vector<double> new_s_d = getFrenet(previous_path_x[i_p_x -1], previous_path_y[i_p_x -1], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+		//cout << "i_p_x " << i_p_x << endl;
+		//cout << previous_path_x[i_p_x] << "\t" << previous_path_y[i_p_x] << endl;
+
+		vector<double> new_s_d = getFrenet(previous_path_x[10], previous_path_y[10], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+
+		//vector<double> new_s_d = getFrenet(previous_path_x[i_p_x -1], previous_path_y[i_p_x -1], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 		
 		Previous_path.s = new_s_d[0];
 		Previous_path.d = new_s_d[1];
@@ -247,12 +249,15 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		//Previous_path.s = end_path_s;
 		//Previous_path.d = end_path_d;
 
-		cout << "calucated car_s" << car_s << " car_d " << car_d << endl;
+		//cout << "calucated car_s" << car_s << " car_d " << car_d << endl;
 
-		for (size_t i = 0; i < i_p_x; i++) {
+		for (size_t i = 0; i < 11; i++) {
 			Previous_path.X.push_back(previous_path_x[i]);
 			Previous_path.Y.push_back(previous_path_y[i]);
 		}
+
+		int x_size = Previous_path.X.size();
+		// cout << "Previous" << Previous_path.X[x_size - 1] << " " << Previous_path.Y[x_size - 1] << endl;
 	}
 	else {  // Init case
 		Previous_path.s = car_s;
@@ -268,6 +273,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	X_Y.X = Previous_path.X;
 	X_Y.Y = Previous_path.Y;
 	int x_size = Previous_path.X.size();
+		
 
 	tk::spline spline_x, spline_y;
 
@@ -304,7 +310,29 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		X_Y.X.push_back(a[0]);
 		X_Y.Y.push_back(a[1]);
 
+		/*
+		if (x_size != 0) {
+			if (i == 1) {
+				X_Y.X[x_size - 1] += X_Y.X[x_size + 1] - X_Y.X[x_size];
+				X_Y.Y[x_size - 1] += X_Y.Y[x_size + 1] - X_Y.Y[x_size];
+			}
+		}
+		*/
+
+		if (i == 0) {
+			//cout << "new " << a[0] << " " << a[1] << endl;
+		}
+
 	}
+
+	/*
+	if (x_size != 0) {
+		for (size_t i= x_size ; i < X_Y.X.size() - x_size; ++i){
+			X_Y.X[i ] -= X_Y.X[i + 2] - X_Y.X[ i + 1];
+			X_Y.Y[i ] -= X_Y.Y[i + 2] - X_Y.Y[ i + 1];
+		}
+	}
+	*/
 
 	return X_Y;
 }
