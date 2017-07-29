@@ -111,7 +111,7 @@ in progress
 	target->S[0] = car_s + 10;
 	target->S[1] = .02;  /// this would have relationship to S....
 
-	target->D[0] = car_d;
+	target->D[0] = car_d + 1/ car_d;
 	
 
 	target->D[1] = 0;
@@ -239,7 +239,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		//cout << "i_p_x " << i_p_x << endl;
 		//cout << previous_path_x[i_p_x] << "\t" << previous_path_y[i_p_x] << endl;
 
-		vector<double> new_s_d = getFrenet(previous_path_x[10], previous_path_y[10], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+		vector<double> new_s_d = getFrenet(previous_path_x[0], previous_path_y[0], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 
 		//vector<double> new_s_d = getFrenet(previous_path_x[i_p_x -1], previous_path_y[i_p_x -1], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 		
@@ -251,7 +251,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 
 		//cout << "calucated car_s" << car_s << " car_d " << car_d << endl;
 
-		for (size_t i = 0; i < 11; i++) {
+		for (size_t i = 0; i < 1; i++) {
 			Previous_path.X.push_back(previous_path_x[i]);
 			Previous_path.Y.push_back(previous_path_y[i]);
 		}
@@ -325,14 +325,14 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 	}
 
-	/*
+	
 	if (x_size != 0) {
-		for (size_t i= x_size ; i < X_Y.X.size() - x_size; ++i){
-			X_Y.X[i ] -= X_Y.X[i + 2] - X_Y.X[ i + 1];
-			X_Y.Y[i ] -= X_Y.Y[i + 2] - X_Y.Y[ i + 1];
+		for (size_t i= 1 ; i < X_Y.X.size() - x_size; ++i){
+			X_Y.X[i ] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[ i ]);
+			X_Y.Y[i ] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i ]);
 		}
 	}
-	*/
+	
 
 	return X_Y;
 }
