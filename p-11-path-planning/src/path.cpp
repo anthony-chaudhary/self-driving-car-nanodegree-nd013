@@ -41,9 +41,9 @@ void path::init() {
 	weighted_costs[1].weight = 1.0;
 	weighted_costs[2].weight = 1.0;
 	
-	our_path->timestep = .02;
-	our_path->T = 1.0;
-	our_path->trajectory_samples = 10;
+	our_path->timestep = .01;
+	our_path->T = 1;
+	our_path->trajectory_samples = 20;
 	our_path->SIGMA_S = { 10.0, 2.0, .50 };
 	our_path->SIGMA_D = { 0.01, .001, .0001 };
 
@@ -108,10 +108,17 @@ in progress
 	
 	// &other_vehicles[4];   // hard coded, target could also be x,y / d,s ?
 	
-	target->S[0] = car_s + 10;
-	target->S[1] = .02;  /// this would have relationship to S....
+	target->S[0] = car_s + 30;
+	if (car_speed == 0) {
+		target->S[1] = .01;
+	}
+	/// this would have relationship to S....
+	else {
+		target->S[1] = .01;
+		//target->S[0] - target->S_p[0];
+	}
 
-	target->D[0] = car_d + 1/ car_d;
+	target->D[0] = car_d; // + 1/ car_d;
 	
 
 	target->D[1] = 0;
