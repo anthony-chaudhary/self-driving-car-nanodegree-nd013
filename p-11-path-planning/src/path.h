@@ -31,6 +31,12 @@ public:
 		vector<double> D;
 	};
 
+	struct trajectory {
+		vector<double> S;
+		vector<double> D;
+		double t;
+	};
+
 	struct Previous_path {
 		vector<double> X;
 		vector<double> Y;
@@ -57,12 +63,22 @@ public:
 
 	// Cost functions
 	double collision_cost(vector<double> trajectory);
-	double s_diff_cost(vector<double> trajectory);
+
+	
 	double d_diff_cost(vector<double> trajectory);
+	vector<double> differentiate_polynomial(vector<double> coefficients);
+	vector<double> get_ceoef_and_rates_of_change(vector<double> coefficients);
+	double logistic(double x);
 
 	double coefficients_to_time_function(vector<double> coefficients, double t);
 	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
 		double car_yaw, double car_speed);
+
+	double buffer_cost(vector<double> trajectory);
+
+	double max_acceleration_cost(vector<double> trajectory);
+	double total_jerk_cost(vector<double> trajectory);
+	double total_acceleration_cost(vector<double> trajectory);
 
 	vector<double> trajectory_generation();
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
@@ -87,6 +103,7 @@ class Vehicle : public path {
 
 	public: 
 
+		double s_diff_cost(vector<double> trajectory, Vehicle* vehicle);
 		double nearest_approach(vector<double> trajectory, Vehicle vehicle);
 
 		double radius = 1.5; // model vehicle as circle to simplify collision detection
