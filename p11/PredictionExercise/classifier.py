@@ -8,10 +8,10 @@ class GNB(object):
 
 	def __init__(self):
 		self.possible_labels = ['left', 'keep', 'right']
-		#self.clf = GaussianNB()
+		self.clf = GaussianNB()
 		#self.clf = ExtraTreesClassifier(n_estimators=20, max_depth=45, min_samples_split=4, random_state=0)
-		self.clf = MLPClassifier(hidden_layer_sizes=(4000), 
-			alpha=1e-8, momentum=.7, verbose=True, tol=1e-7, max_iter=400)
+		#self.clf = MLPClassifier(hidden_layer_sizes=(4000), 
+			#alpha=1e-8, momentum=.7, verbose=True, tol=1e-7, max_iter=400)
 		self.scaler = StandardScaler()
 
 
@@ -34,13 +34,14 @@ class GNB(object):
 		"""
 		#print(data)
 		#print(labels)
-		#x = [[i[1], i[2], i[3], i[1]%4] for i in data]
+		#x = [[i[0], i[2], i[3], i[1]%4] for i in data]
+		x = [[i[3]] for i in data]
 		#print(len(x))
 		#self.clf.fit(x, labels)
 		
-		self.scaler.fit(data)
-		data = self.scaler.transform(data)
-		self.clf.fit(data, labels)
+		#self.scaler.fit(data[0])
+		#data = self.scaler.transform(data)
+		self.clf.fit(x, labels)
 
 
 	def predict(self, observation):
@@ -60,8 +61,8 @@ class GNB(object):
 		"""
 		# TODO - complete this
 	
-		i = self.scaler.transform([observation])
-		#i = observation
+		#i = self.scaler.transform([observation])
+		i = [observation[3]]
 		#prediction = self.clf.predict([[i[1], i[2], i[3], i[1]%4]])
 		prediction = self.clf.predict(i)
 		#print(prediction)
