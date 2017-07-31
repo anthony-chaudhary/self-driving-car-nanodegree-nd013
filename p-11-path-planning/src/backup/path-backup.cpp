@@ -14,16 +14,20 @@ constexpr double pi() { return M_PI; }
 path::path() {}
 path::~path() {}
 
-Vehicle *r_daneel_olivaw = new Vehicle;  // our self driving car
-GNB		*classifier = new GNB;
-Vehicle *target = new Vehicle;
-path		*our_path = new path;
+using namespace std;
+
+Vehicle *r_daneel_olivaw		= new Vehicle;  // our self driving car
+GNB		*classifier			= new GNB;
+Vehicle *target				= new Vehicle;
+path		*our_path			= new path;
 
 map<int, Vehicle>				other_vehicles;
 vector < path::Weighted_costs > weighted_costs;
 default_random_engine			generator;
 
-using namespace std;
+vector < double > last_trajectory;
+
+
 using Eigen::MatrixXd;
 using Eigen::VectorXd;
 
@@ -31,22 +35,24 @@ double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
 void path::init() {
-
+	
 	vector< vector<double> > X_train = classifier->load_state("./train_states.txt");
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	classifier->train(X_train, Y_train);
 
 	weighted_costs.resize(3);
 	weighted_costs[0].weight = 1.0;
-	weighted_costs[1].weight = 1.0;
+	weighted_costs[1].weight = .5;
 	weighted_costs[2].weight = 1.0;
 
-	our_path->previous_path_keeps = 0;
-	our_path->timestep = .02;
-	our_path->T = 3;
-	our_path->trajectory_samples = 40;
-	our_path->SIGMA_S = { 10.0, 1.0, .1 };
-	our_path->SIGMA_D = { 1.0,  .1, .1 };
+	last_trajectory.resize(13);
+	
+	our_path->s_goal_hyper = 35;
+	our_path->timestep = .01;
+	our_path->T = 1;
+	our_path->trajectory_samples = 20;
+	our_path->SIGMA_S = { 10.0, 2.0, .50 };
+	our_path->SIGMA_D = { .010, .001, .0001 };
 
 }
 
@@ -55,7 +61,7 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 
 	// 1. Update vehicles list
 	for (size_t i = 0; i < sensor_fusion.size(); ++i) {
-
+		
 		int id = sensor_fusion[i][0];
 		if (other_vehicles.find(id) == other_vehicles.end()) {
 			// if vehicle doesn't exist create a new one & init
@@ -70,25 +76,23 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 
 		// 3. Update new sensor readings
 		vehicle->update_sensor_fusion(sensor_fusion, i);
-
+		
 		// 4. Run classifier for prediction
 		vehicle->predicted_state = classifier->predict(vehicle->D[1]);
 	}
-
+	
 }
 
-
-void path::update_our_car_state(double car_x, double car_y, double car_s, double car_d,
+void path::update_our_car_state(double car_x, double car_y, double car_s, double car_d, 
 	double car_yaw, double car_speed) {
-	/****************************************
-	* Behavior planning usine finite state machine
-	in progress
-	****************************************/
+/****************************************
+* Behavior planning usine finite state machine
+in progress
+****************************************/
 
 	// previous
 	r_daneel_olivaw->S_p = r_daneel_olivaw->S;
 	r_daneel_olivaw->D_p = r_daneel_olivaw->D;
-
 	// new readings
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
@@ -97,7 +101,12 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 		r_daneel_olivaw->S[1] = r_daneel_olivaw->S[0] - r_daneel_olivaw->S_p[0];
 		r_daneel_olivaw->D[1] = r_daneel_olivaw->D[0] - r_daneel_olivaw->D_p[0];
 	}
-	if ( r_daneel_olivaw->S_p[1] != 0) {
+	else {
+		r_daneel_olivaw->S[1] = r_daneel_olivaw->S[0] - r_daneel_olivaw->S_p[0];
+		r_daneel_olivaw->D[1] = r_daneel_olivaw->D[0] - r_daneel_olivaw->D_p[0];
+	}
+
+	if (r_daneel_olivaw->S[1] != 0) {
 		r_daneel_olivaw->S[2] = r_daneel_olivaw->S[1] - r_daneel_olivaw->S_p[1];  // ie 100 - 90 = change of 10
 		r_daneel_olivaw->D[2] = r_daneel_olivaw->D[1] - r_daneel_olivaw->D_p[1];
 	}
@@ -107,21 +116,40 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->yaw = car_yaw;
 	r_daneel_olivaw->speed = car_speed;	 // storing twice?
 
-	target->S[0] = car_s + 40;
-	target->S[1] = 1 / target->S[0];
+	target->S[0] = car_s + our_path->s_goal_hyper;
+
+	// playing with lane change...
+
+	if (car_speed != 0) {
+		
+		//cout << buffer_cost(last_trajectory) << endl;
+		//buffer_cost(last_trajectory) > .002
+
+		if (car_d < 9) {
+			target->D[0] = car_d;
+			target->S[0] = car_s;
+		}
+		else {
+			target->D[0] = car_d;
+		}
+	}
+	else {
+		target->D[0] = car_d;
+	}
 	
-	target->D[0] = car_d + 1/ car_d;
+	//target->D[0] = car_d; // +5 / car_d;
 	target->D[1] = 0;
 	target->D[2] = 0;
+	target->S[1] = 10 / our_path->s_goal_hyper;
+	target->S[2] = 1 / our_path->s_goal_hyper;
 	target->update_target_state(our_path->timestep);
 
 }
 
-
 vector<double> path::trajectory_generation() {
-	/****************************************
-	* find best trajectory according to weighted cost function
-	****************************************/
+/****************************************
+* find best trajectory according to weighted cost function
+****************************************/
 
 	// 1. Generate random nearby goals
 	vector< vector<double>> goals;
@@ -131,8 +159,8 @@ vector<double> path::trajectory_generation() {
 	goals[0].insert(end(goals[0]), begin(target->S_TARGETS), end(target->S_TARGETS));
 	goals[0].insert(end(goals[0]), begin(target->D_TARGETS), end(target->D_TARGETS));
 
-	double t = our_path->T - our_path->timestep;
-	double b = our_path->T + our_path->timestep;;
+	double t = our_path->T - 2 * our_path->timestep;
+	double b = our_path->T + 2 * our_path->timestep;;
 	goals[0].push_back(t);
 
 	// other goals
@@ -142,11 +170,11 @@ vector<double> path::trajectory_generation() {
 		vector< vector<double>> target_goals;
 		vector<double> new_goal;
 		target_goals.resize(our_path->trajectory_samples);
-
+		
 		for (size_t i = 0; i < target_goals.size(); ++i) {
 			target_goals[i] = wiggle_goal(t);
 		}
-
+		
 		goals.insert(end(goals), begin(target_goals), end(target_goals));
 		t += our_path->timestep;
 	}
@@ -162,16 +190,16 @@ vector<double> path::trajectory_generation() {
 	start_d = { r_daneel_olivaw->D[0], r_daneel_olivaw->D[1], r_daneel_olivaw->D[2] };
 
 	for (size_t i = 0; i < goals.size(); ++i) {
-
+		
 		s_goal = { goals[i][0], goals[i][1], goals[i][2] };
 		d_goal = { goals[i][3], goals[i][4], goals[i][5] };
 		t_2 = goals[i][6];
 
 		s_coeffecients = jerk_minimal_trajectory(start_s, s_goal, t_2);
 		d_coeffecients = jerk_minimal_trajectory(start_d, d_goal, t_2);
-
-		trajectories[i].insert(end(trajectories[i]), begin(s_coeffecients), end(s_coeffecients));
-		trajectories[i].insert(end(trajectories[i]), begin(d_coeffecients), end(d_coeffecients));
+		
+		trajectories[i].insert(end(trajectories[i]), begin(s_coeffecients), end(s_coeffecients) );
+		trajectories[i].insert(end(trajectories[i]), begin(d_coeffecients), end(d_coeffecients) );
 		trajectories[i].push_back(t);
 	}
 
@@ -186,50 +214,47 @@ vector<double> path::trajectory_generation() {
 			min_cost = cost;
 			best_trajectory = trajectories[i];
 		}
-		
 	}
 
-	cout << "Best trajectory cost: " << cost << endl;
+
+	// last_trajectory = best_trajectory;
+
 	return best_trajectory;
 
 }
 
 vector<double> path::wiggle_goal(double t) {
-
+	
 	vector<double> new_goal(7);
 	for (size_t i = 0; i < 3; ++i) {
-
+	
 		normal_distribution<double> distribution(target->S_TARGETS[i], our_path->SIGMA_S[i]);
 		new_goal[i] = distribution(generator);
 	}
 	for (size_t i = 0; i < 3; ++i) {
 
 		normal_distribution<double> distribution(target->D_TARGETS[i], our_path->SIGMA_D[i]);
-		new_goal[i + 3] = distribution(generator);
+		new_goal[i+3] = distribution(generator);
 	}
 	new_goal[6] = t;
 	return new_goal;
 
 }
 
-
-
 path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> previous_path_x,
 	vector< double> previous_path_y, double car_yaw, double car_s, double car_d, double end_path_s, double end_path_d) {
-
-	path::Previous_path Previous_path;
-	int p_x_size, i_p_x;
-	p_x_size = previous_path_x.size();
 	
+	path::Previous_path Previous_path;
+	int p_x_size;
+	p_x_size		= previous_path_x.size();
 	if (p_x_size != 0) {
 
-		vector<double> new_s_d = getFrenet(previous_path_x[our_path->previous_path_keeps], 
-			previous_path_y[our_path->previous_path_keeps], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
-
+		vector<double> new_s_d = getFrenet(previous_path_x[0], previous_path_y[0], 
+			car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 		Previous_path.s = new_s_d[0];
 		Previous_path.d = new_s_d[1];
 
-		for (size_t i = 0; i < 1 + our_path->previous_path_keeps; i++) {
+		for (size_t i = 0; i < 1; i++) {
 			Previous_path.X.push_back(previous_path_x[i]);
 			Previous_path.Y.push_back(previous_path_y[i]);
 		}
@@ -241,110 +266,153 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		Previous_path.d = car_d;
 	}
 	return Previous_path;
-
+	
 }
 
-path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path) {
+path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, 
+	path::Previous_path Previous_path) {
 
 	path::X_Y X_Y, X_Y_spline, X_Y_generated;
 	X_Y.X = Previous_path.X;
 	X_Y.Y = Previous_path.Y;
 	int x_size = Previous_path.X.size();
-
-	tk::spline spline_x, spline_y;
-
+		
 	for (size_t i = 0; i < S_D_.D.size(); ++i) {
 
 		vector<double> a = getXY(S_D_.S[i], S_D_.D[i], MAP->waypoints_s_upsampled,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
-	
 		X_Y.X.push_back(a[0]);
 		X_Y.Y.push_back(a[1]);
-
 	}
-
 	
+	// for latency
 	if (x_size != 0) {
-		for (size_t i = 1; i < 2; ++i) {
-			X_Y.X[i] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[i]);
-			X_Y.Y[i] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i]);
+		for (size_t i= 1 ; i < X_Y.X.size() - x_size; ++i){
+			X_Y.X[i ] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[ i ]);
+			X_Y.Y[i ] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i ]);
 		}
 	}
-	
 
 	return X_Y;
 }
-
 
 /****************************************
 * Cost functions
 ****************************************/
 
 double path::calculate_cost(vector<double> trajectory) {
+
 	double cost = 0;
+	double collision_cost_			= .5 * collision_cost(trajectory);
+	//double s_diff_cost_				= .5 * r_daneel_olivaw->s_diff_cost(trajectory, target);
+	//double buffer_cost_				= .5 * buffer_cost(trajectory);
+	//double max_acceleration_cost_	= max_acceleration_cost(trajectory);
+	//double total_jerk_cost_			= total_jerk_cost(trajectory);
+	//double total_acceleration_cost_ = total_acceleration_cost(trajectory);
 
-	cost += 1 * collision_cost(trajectory);
-	cost += .2 * total_acceleration_cost(trajectory);
-	cost += .5 * max_acceleration_cost(trajectory);
-	cost += .2 * efficiency_cost(trajectory);
-	cost += .5 * total_jerk_cost(trajectory);
-	cost += .5 * buffer_cost(trajectory);
-	cost += .2 * s_diff_cost(trajectory);
+	//cout << "collision_cost_ " << collision_cost_ << endl;
+	//cout << "max_acceleration_cost_ " << max_acceleration_cost_ << endl;
 
+	cost += collision_cost_;
+
+	//cost += weighted_costs[2].weight * d_diff_cost(trajectory);
+	
 	return cost;
 }
 
-double path::buffer_cost(vector<double> trajectory) {
-
-	double nearest = nearest_approach_to_any_vehicle(trajectory);
-	double cost = logistic(2 * r_daneel_olivaw->radius / nearest);
-	return cost;
-
-}
-
-double path::s_diff_cost(vector<double> trajectory) {
-
+double Vehicle::s_diff_cost(vector<double> trajectory, Vehicle* vehicle){
+	
 	vector<double> S, S_coefficients; // TODO better way to do this
 	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
-	double T = trajectory[12];
+	double T		= trajectory[12];
 	double cost = 0;
 	double difference;
 
-	target->update_target_state(T);
+	vehicle->update_target_state(T);
 	S_coefficients = get_ceoef_and_rates_of_change(S);
 
 	// -1  right here?
 	for (size_t i = 0; i < S_coefficients.size() - 1; ++i) {
 
 		// actual - expected
-		difference = fabs(S_coefficients[i] - target->S_TARGETS[i]);
-		cost += logistic(difference / our_path->SIGMA_S[i]);
+		difference = fabs(S_coefficients[i] - vehicle->S_TARGETS[i]);
+		cost += logistic(difference / our_path->SIGMA_S[i]);	
 	}
 
 	return cost;
 
 }
 
-vector<double> path::get_ceoef_and_rates_of_change(vector<double> coefficients) {
+double path::buffer_cost(vector<double> trajectory) {
 
-	vector<double> coefficients_d, out;
-	double a;
+	double nearest = nearest_approach_to_any_vehicle(trajectory);
+	double cost		= logistic(2 * r_daneel_olivaw->radius / nearest);
+	return cost;
 
-	out.push_back(coefficients_to_time_function(coefficients, 2));
-	coefficients_d = differentiate_polynomial(coefficients);
-
-	for (size_t i = 0; i < 3; ++i) {
-
-		a = coefficients_to_time_function(coefficients_d, 2);
-		out.push_back(a);
-	}
-	return out;
 }
 
-double path::d_diff_cost(vector<double> trajectory) {
 
-	// WIP
-	return 0;
+double path::total_acceleration_cost(vector<double> trajectory) {
+
+	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients;
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+
+	double T = trajectory[12];
+	double cost = 0;
+	double total_acceleration = 0;
+	double expected_acceleration_1_second = .5;
+
+	S_dot_coefficients = differentiate_polynomial(S);
+	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
+	double delta_time = T / 100;
+
+	for (size_t i = 0; i < 100; ++i) {
+
+		auto time = delta_time * i;
+		auto acceleration = coefficients_to_time_function(S_dot_dot_coeffecients, time);
+		total_acceleration += fabs(acceleration * delta_time);
+	}
+
+	auto accerlation_per_second = total_acceleration / T;
+	cost = logistic(accerlation_per_second / expected_acceleration_1_second);
+
+	return cost;
+
+}
+
+double path::max_acceleration_cost(vector<double> trajectory) {
+
+	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients, all_accelerations;
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+	
+	double T = trajectory[12];
+	double cost = 0;
+	double total_acceleration = 0;
+	double max_acceleration = 20;
+
+	S_dot_coefficients = differentiate_polynomial(S);
+	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
+	double delta_time = T / 100;
+
+	for (size_t i = 0; i < 100; ++i) {
+		
+		auto time = delta_time * i;
+		all_accelerations.push_back(coefficients_to_time_function(S_dot_dot_coeffecients, time));
+	}
+
+	bool flag = false;
+	for (size_t i = 0; i < 100; ++i) {
+
+		if (all_accelerations[i] > max_acceleration) { flag = true; }
+	}
+
+	if (flag == true) {
+		return 1;
+	}
+	else {
+		return 0;
+	}
+
 }
 
 
@@ -356,7 +424,7 @@ double path::total_jerk_cost(vector<double> trajectory) {
 	double T = trajectory[12];
 	double cost = 0;
 	double total_jerk = 0;
-	double expected_jerk_1_second = .1;
+	double expected_jerk_1_second = 1;
 
 	S_dot_coefficients = differentiate_polynomial(S);
 	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
@@ -375,54 +443,63 @@ double path::total_jerk_cost(vector<double> trajectory) {
 	cost = logistic(accerlation_per_second / expected_jerk_1_second);
 
 	return cost;
-}
-
-double path::max_acceleration_cost(vector<double> trajectory) {
-
-	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients, all_accelerations;
-	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
-
-	double T = trajectory[12];
-	double cost = 0;
-	double total_acceleration = 0;
-	double max_acceleration = 20;
-
-	S_dot_coefficients = differentiate_polynomial(S);
-	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
-	double delta_time = T / 100;
-
-	for (size_t i = 0; i < 100; ++i) {
-
-		auto time = delta_time * i;
-		all_accelerations.push_back(coefficients_to_time_function(S_dot_dot_coeffecients, time));
-		// 	cout << all_accelerations[i] << endl;
-	}
-
-	bool flag = false;
-	for (size_t i = 0; i < 100; ++i) {
-
-		if (all_accelerations[i] > max_acceleration) { flag = true; }
-	}
-
-	if (flag == true) {
-		return 1;
-	}
-	else {
-		return 0;
-	}
 
 }
+
+
+double path::d_diff_cost(vector<double> trajectory) {
+
+	// WIP
+	return 0;
+}
+
+double path::logistic(double x) {
+	return 2.0 / (1 + exp(-x)) - 1.0;
+}
+
+
+vector<double> path::get_ceoef_and_rates_of_change(vector<double> coefficients) {
+
+	vector<double> coefficients_d, out;
+	double a;
+
+	out.push_back(coefficients_to_time_function(coefficients, 2));
+	coefficients_d = differentiate_polynomial(coefficients);
+
+	for (size_t i = 0; i < 3; ++i) {
+		
+		a = coefficients_to_time_function(coefficients_d, 2);
+		out.push_back(a);
+	}
+	return out;
+}
+
+vector<double> path::differentiate_polynomial(vector<double> coefficients) {
+	// given a vector of coefficients, returns 
+	vector<double> out;
+	int next_degree;
+	double result;
+
+	for (size_t i = 1; i < coefficients.size(); ++i) {
+		next_degree = i + 1;
+		result = next_degree * coefficients[i];
+		out.push_back(result);
+	}
+	return out;
+
+}
+
 
 double path::collision_cost(vector<double> trajectory) {
 
 	double a = nearest_approach_to_any_vehicle(trajectory);
 	double b = 2 * r_daneel_olivaw->radius;
-	if (a < b) { return 1.0; }
+	if (a < b) { return 1.0;	 }
 	else { return 0.0; }
 }
 
 double path::nearest_approach_to_any_vehicle(vector<double> trajectory) {
-	// returns closest distance to any vehicle
+// returns closest distance to any vehicle
 
 	double a = 1e9;
 	for (size_t i = 0; i < other_vehicles.size(); ++i) {
@@ -434,7 +511,7 @@ double path::nearest_approach_to_any_vehicle(vector<double> trajectory) {
 }
 
 double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
-
+	
 	double T, s_time, d_time, a, b, c, e, t;
 	a = 1e9;
 	T = trajectory[12];
@@ -460,83 +537,21 @@ double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 }
 
 path::S_D  path::build_trajectory(vector<double> trajectory) {
-
+	
 	vector<double> S, D, X, Y; // TODO better way to do this
-							   // refactor using S_D struct
+	// refactor using S_D struct
 	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
 	D = { trajectory[6], trajectory[7], trajectory[8], trajectory[9], trajectory[10], trajectory[11] };
 
 	S_D S_D_;
 	double t = 0;
-	while (t <= our_path->T) {
+	while (t <= our_path->T ){
 		S_D_.S.push_back(coefficients_to_time_function(S, t));
 		S_D_.D.push_back(coefficients_to_time_function(D, t));
 		t += our_path->timestep;
 	}
 	return S_D_;
 
-}
-
-double path::total_acceleration_cost(vector<double> trajectory) {
-
-	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients;
-	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
-
-	const double T_ = trajectory[12];
-	double cost = 0;
-	double total_acceleration = 0;
-	const double expected_acceleration_1_second = 100;  // wouldn't this be 3 seconds if T_ = 3
-
-	S_dot_coefficients = differentiate_polynomial(S);
-	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
-	double delta_time = T_ / 100;
-
-	for (size_t i = 0; i < 100; ++i) {
-
-		auto time = delta_time * i;
-		auto acceleration = coefficients_to_time_function(S_dot_dot_coeffecients, time);
-		total_acceleration += fabs(acceleration * delta_time);
-	}
-
-	auto accerlation_per_second = total_acceleration / T_;
-	// cout << accerlation_per_second << endl;
-	cost = logistic(accerlation_per_second / expected_acceleration_1_second);
-
-	return cost;
-
-}
-
-double path::efficiency_cost(vector<double> trajectory) {
-	
-	vector<double> S;
-	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
-	double T_ = trajectory[12];
-
-	auto average_velocity = coefficients_to_time_function(S, T_) / T_;
-	target->update_target_state(T_);
-	auto target_s = target->S_TARGETS[0];
-	auto target_velocity = target_s / T_;
-
-	return logistic(2 * (target_velocity - average_velocity) / average_velocity);
-
-}
-
-vector<double> path::differentiate_polynomial(vector<double> coefficients) {
-	// given a vector of coefficients, returns 
-	vector<double> out;
-	int next_degree;
-	double result;
-
-	for (size_t i = 1; i < coefficients.size(); ++i) {
-		next_degree = i + 1;
-		result = next_degree * coefficients[i];
-		out.push_back(result);
-	}
-	return out;
-}
-
-double path::logistic(double x) {
-	return 2.0 / (1 + exp(-x)) - 1.0;
 }
 
 double path::coefficients_to_time_function(vector<double> coefficients, double t) {
@@ -547,7 +562,6 @@ double path::coefficients_to_time_function(vector<double> coefficients, double t
 	}
 	return total;
 }
-
 
 vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <double> end, double T)
 {
@@ -615,7 +629,6 @@ vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <doub
 	return results;
 
 }
-
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
 vector<double> path::getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
