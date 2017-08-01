@@ -10,9 +10,12 @@
 #include <math.h>
 #include "spline.h"
 constexpr double pi() { return M_PI; }
+#include "behavior_planner.h"
 
 path::path() {}
 path::~path() {}
+
+Behavior *behavior = new Behavior;
 
 Vehicle *r_daneel_olivaw = new Vehicle;  // our self driving car
 GNB		*classifier = new GNB;
@@ -31,6 +34,8 @@ double deg2rad(double x) { return x * pi() / 180; }
 double rad2deg(double x) { return x * 180 / pi(); }
 
 void path::init() {
+
+	behavior->init();
 
 	vector< vector<double> > X_train = classifier->load_state("./train_states.txt");
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
