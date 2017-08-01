@@ -36,12 +36,12 @@ void path::init() {
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	classifier->train(X_train, Y_train);
 
-	our_path->previous_path_keeps = 0;
+	our_path->previous_path_keeps = 3;
 	our_path->timestep = .02;
 	our_path->T = 5;
-	our_path->trajectory_samples = 40;
-	our_path->SIGMA_S = { 10, .01, .001 };
-	our_path->SIGMA_D = { .1,  .01, .001 };
+	our_path->trajectory_samples = 50;
+	our_path->SIGMA_S = { 5, 2, .1 };
+	our_path->SIGMA_D = { .1, .01, .001 };
 
 }
 
@@ -101,9 +101,9 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->yaw = car_yaw;
 	r_daneel_olivaw->speed = car_speed;	 
 
-	target->S[0] = car_s + 70;
-	target->S[1] = .001;
-	target->S[2] = .0001;
+	target->S[0] = car_s + 40;
+	target->S[1] = 4;  // this would change depending on car speed 
+	target->S[2] = .1;
 	
 	target->D[0] = car_d;
 	target->D[1] = .01;
@@ -255,7 +255,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	}
 
 	if (x_size != 0) {
-		for (size_t i = 1; i < 2; ++i) {
+		for (size_t i = 1; i < 6; ++i) {
 			X_Y.X[i] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[i]);
 			X_Y.Y[i] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i]);
 		}
@@ -273,12 +273,12 @@ double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
 	cost += 1 * collision_cost(trajectory);
-	cost += .9 * total_acceleration_cost(trajectory);
-	cost += .8 * max_acceleration_cost(trajectory);
-	cost += .2 * efficiency_cost(trajectory);
+	cost += .5 * total_acceleration_cost(trajectory);
+	cost += 1 * max_acceleration_cost(trajectory);
+	cost += .1 * efficiency_cost(trajectory);
 	cost += .3 * total_jerk_cost(trajectory);
-	cost += .3 * buffer_cost(trajectory);
-	cost += .5 * s_diff_cost(trajectory);
+	cost += .2 * buffer_cost(trajectory);
+	cost += .3 * s_diff_cost(trajectory);
 
 	return cost;
 }
@@ -286,7 +286,7 @@ double path::calculate_cost(vector<double> trajectory) {
 double path::buffer_cost(vector<double> trajectory) {
 
 	double nearest = nearest_approach_to_any_vehicle(trajectory);
-	double cost = logistic(2 * r_daneel_olivaw->radius / nearest);
+	double cost = logistic(100 * r_daneel_olivaw->radius / nearest);
 	return cost;
 
 }
@@ -357,6 +357,7 @@ double path::total_jerk_cost(vector<double> trajectory) {
 		total_jerk += fabs(acceleration * delta_time);
 	}
 
+
 	auto accerlation_per_second = total_jerk / T;
 	cost = logistic(accerlation_per_second / expected_jerk_1_second);
 
@@ -368,26 +369,29 @@ double path::max_acceleration_cost(vector<double> trajectory) {
 	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients, all_accelerations;
 	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
 
-	double T = trajectory[12];
+	double t_ = trajectory[12];
 	double cost = 0;
 	double total_acceleration = 0;
-	double max_acceleration = 20;
+	double max_acceleration = 9;
 
 	S_dot_coefficients = differentiate_polynomial(S);
 	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
-	double delta_time = T / 100;
+	double delta_time = t_ / 250;  // out path T / increment
 
-	for (size_t i = 0; i < 100; ++i) {
+	for (size_t i = 0; i < 250; ++i) {
 
 		auto time = delta_time * i;
 		all_accelerations.push_back(coefficients_to_time_function(S_dot_dot_coeffecients, time));
-		// 	cout << all_accelerations[i] << endl;
 	}
 
 	bool flag = false;
-	for (size_t i = 0; i < 100; ++i) {
+	for (size_t i = 0; i < 250; ++i) {
 
-		if (all_accelerations[i] > max_acceleration) { flag = true; }
+		if (fabs(all_accelerations[i]) > max_acceleration) { flag = true; }
+	}
+
+	if (rand() % 100 == 0) {
+	// 	cout << "all_acceleration " << all_accelerations[0] << endl;
 	}
 
 	if (flag == true) {
@@ -398,6 +402,40 @@ double path::max_acceleration_cost(vector<double> trajectory) {
 	}
 
 }
+
+double path::total_acceleration_cost(vector<double> trajectory) {
+
+	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients;
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+
+	const double T_ = trajectory[12];
+	double cost = 0;
+	double total_acceleration = 0;
+	const double expected_acceleration_1_second = 4;  // wouldn't this be 3 seconds if T_ = 3
+
+	S_dot_coefficients = differentiate_polynomial(S);
+	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
+	double delta_time = T_ / 250;
+
+	for (size_t i = 0; i < 250; ++i) {
+
+		auto time = delta_time * i;
+		auto acceleration = coefficients_to_time_function(S_dot_dot_coeffecients, time);
+		total_acceleration += fabs(acceleration * delta_time);
+	}
+
+	auto accerlation_per_second = total_acceleration / T_;
+	
+	if (rand() % 100 == 0) {
+		cout << "accerlation_per_second " << accerlation_per_second << endl;
+	}
+	
+	cost = logistic(accerlation_per_second / expected_acceleration_1_second);
+
+	return cost;
+
+}
+
 
 double path::collision_cost(vector<double> trajectory) {
 
@@ -462,35 +500,6 @@ path::S_D  path::build_trajectory(vector<double> trajectory) {
 		t += our_path->timestep;
 	}
 	return S_D_;
-
-}
-
-double path::total_acceleration_cost(vector<double> trajectory) {
-
-	vector<double> S, S_dot_coefficients, S_dot_dot_coeffecients;
-	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
-
-	const double T_ = trajectory[12];
-	double cost = 0;
-	double total_acceleration = 0;
-	const double expected_acceleration_1_second = 100;  // wouldn't this be 3 seconds if T_ = 3
-
-	S_dot_coefficients = differentiate_polynomial(S);
-	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
-	double delta_time = T_ / 100;
-
-	for (size_t i = 0; i < 100; ++i) {
-
-		auto time = delta_time * i;
-		auto acceleration = coefficients_to_time_function(S_dot_dot_coeffecients, time);
-		total_acceleration += fabs(acceleration * delta_time);
-	}
-
-	auto accerlation_per_second = total_acceleration / T_;
-	// cout << accerlation_per_second << endl;
-	cost = logistic(accerlation_per_second / expected_acceleration_1_second);
-
-	return cost;
 
 }
 
