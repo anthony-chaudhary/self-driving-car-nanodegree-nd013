@@ -34,9 +34,9 @@ public:
 	};
 
 	void init();
-	lane update_behavior_state(map<int, Vehicle> other_vehicles);
+	lane update_behavior_state(vector<double> trajectory, path *our_path);
 	void find_best_lane();
-	void update_lane_costs(map<int, Vehicle> other_vehicles);
+	void update_lane_costs(vector<double> trajectory, path *our_path);
 
 };
 

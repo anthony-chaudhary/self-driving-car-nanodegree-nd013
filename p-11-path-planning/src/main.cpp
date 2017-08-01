@@ -115,7 +115,7 @@ int main() {
 
 					if (time_difference > 1000) {
 
-						cout <<  "time_difference " << time_difference << endl;
+						// cout <<  "time_difference " << time_difference << endl;
 
 						// 0. set clock for next round
 						path.start_time = chrono::high_resolution_clock::now();

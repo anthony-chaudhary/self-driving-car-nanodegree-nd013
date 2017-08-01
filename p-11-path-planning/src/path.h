@@ -46,6 +46,7 @@ public:
 	vector<double> last_trajectory;
 	double timestep;
 	double T;
+	double distance_goal;
 	int trajectory_samples;
 	vector<double> SIGMA_S, SIGMA_D;
 
