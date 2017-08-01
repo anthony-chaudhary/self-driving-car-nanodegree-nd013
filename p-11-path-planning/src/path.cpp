@@ -43,10 +43,10 @@ void path::init() {
 
 	our_path->previous_path_keeps = 0;
 	our_path->timestep = .02;
-	our_path->T = 3;
-	our_path->trajectory_samples = 40;
-	our_path->SIGMA_S = { 10.0, 1.0, .1 };
-	our_path->SIGMA_D = { 1.0,  .1, .1 };
+	our_path->T = 4;
+	our_path->trajectory_samples = 100;
+	our_path->SIGMA_S = { 5, .1, .01 };
+	our_path->SIGMA_D = { .5,  .01, .001 };
 
 }
 
@@ -107,14 +107,27 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->yaw = car_yaw;
 	r_daneel_olivaw->speed = car_speed;	 // storing twice?
 
-	target->S[0] = car_s + 40;
-	target->S[1] = 1 / target->S[0];
+	target->S[0] = car_s + 30;
+	target->S[1] = .1;
+	target->S[2] = .001;
 	
-	target->D[0] = car_d + 1/ car_d;
-	target->D[1] = 0;
-	target->D[2] = 0;
+	target->D[0] = 6;
+	target->D[1] = .01;
+	target->D[2] = .001;
 	target->update_target_state(our_path->timestep);
 
+	// collision_cost(our_path->last_trajectory) == 1
+	// 	target->S[0] += 20;  ie take more time with turn
+	// our_path->T += 1;  have to combo with more time!!!
+
+	/*
+	if (int(target->S[0]) % 100 > 1) {
+		target->D[0] = 3;
+	}
+	else {
+		target->D[0] = 6;
+	}
+	*/
 }
 
 
@@ -190,6 +203,9 @@ vector<double> path::trajectory_generation() {
 	}
 
 	cout << "Best trajectory cost: " << cost << endl;
+
+	our_path->last_trajectory = best_trajectory;
+
 	return best_trajectory;
 
 }
@@ -265,7 +281,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 	
 	if (x_size != 0) {
-		for (size_t i = 1; i < 2; ++i) {
+		for (size_t i = 1; i < X_Y.X.size(); ++i) {
 			X_Y.X[i] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[i]);
 			X_Y.Y[i] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i]);
 		}
@@ -284,11 +300,11 @@ double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
 	cost += 1 * collision_cost(trajectory);
-	cost += .2 * total_acceleration_cost(trajectory);
-	cost += .5 * max_acceleration_cost(trajectory);
+	cost += .6 * total_acceleration_cost(trajectory);
+	cost += .6 * max_acceleration_cost(trajectory);
 	cost += .2 * efficiency_cost(trajectory);
-	cost += .5 * total_jerk_cost(trajectory);
-	cost += .5 * buffer_cost(trajectory);
+	cost += .8 * total_jerk_cost(trajectory);
+	cost += .3 * buffer_cost(trajectory);
 	cost += .2 * s_diff_cost(trajectory);
 
 	return cost;
@@ -416,8 +432,10 @@ double path::max_acceleration_cost(vector<double> trajectory) {
 double path::collision_cost(vector<double> trajectory) {
 
 	double a = nearest_approach_to_any_vehicle(trajectory);
-	double b = 2 * r_daneel_olivaw->radius;
-	if (a < b) { return 1.0; }
+	//cout << a << endl;
+	double b = 700 * r_daneel_olivaw->radius;
+	//cout << b << endl;
+	if (a > b) { return 1.0;  }
 	else { return 0.0; }
 }
 

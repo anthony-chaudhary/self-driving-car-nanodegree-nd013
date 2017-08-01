@@ -16,6 +16,7 @@ public:
 	chrono::steady_clock::time_point start_time, current_time;
 
 	int previous_path_keeps;
+	vector<double> last_trajectory;
 	double timestep;
 	double T;
 	int trajectory_samples;
