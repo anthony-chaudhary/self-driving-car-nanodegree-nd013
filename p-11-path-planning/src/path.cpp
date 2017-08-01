@@ -40,7 +40,7 @@ void path::init() {
 	our_path->timestep = .02;
 	our_path->T = 5;
 	our_path->trajectory_samples = 50;
-	our_path->SIGMA_S = { 5, 2, .1 };
+	our_path->SIGMA_S = { 9, 3, 1.5 };
 	our_path->SIGMA_D = { .1, .01, .001 };
 
 }
@@ -102,8 +102,16 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->speed = car_speed;	 
 
 	target->S[0] = car_s + 40;
-	target->S[1] = 4;  // this would change depending on car speed 
-	target->S[2] = .1;
+
+	if (r_daneel_olivaw->S[1] > 35) {
+		target->S[1] = .01;
+		target->S[2] = .001;
+	}
+	else {
+		target->S[1] = 4;  // this would change depending on car speed
+		target->S[2] = r_daneel_olivaw->S[2];
+
+	}
 	
 	target->D[0] = car_d;
 	target->D[1] = .01;
@@ -273,12 +281,13 @@ double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
 	cost += 1 * collision_cost(trajectory);
-	cost += .5 * total_acceleration_cost(trajectory);
-	cost += 1 * max_acceleration_cost(trajectory);
+	cost += .3 * total_acceleration_cost(trajectory);
+	cost += .5 * max_acceleration_cost(trajectory);
 	cost += .1 * efficiency_cost(trajectory);
 	cost += .3 * total_jerk_cost(trajectory);
-	cost += .2 * buffer_cost(trajectory);
-	cost += .3 * s_diff_cost(trajectory);
+	cost += .4 * buffer_cost(trajectory);
+	cost += .1 * s_diff_cost(trajectory);
+	cost += 1 * speed_limit_cost(trajectory);
 
 	return cost;
 }
@@ -372,7 +381,7 @@ double path::max_acceleration_cost(vector<double> trajectory) {
 	double t_ = trajectory[12];
 	double cost = 0;
 	double total_acceleration = 0;
-	double max_acceleration = 9;
+	double max_acceleration = 8.5;
 
 	S_dot_coefficients = differentiate_polynomial(S);
 	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
@@ -388,10 +397,6 @@ double path::max_acceleration_cost(vector<double> trajectory) {
 	for (size_t i = 0; i < 250; ++i) {
 
 		if (fabs(all_accelerations[i]) > max_acceleration) { flag = true; }
-	}
-
-	if (rand() % 100 == 0) {
-	// 	cout << "all_acceleration " << all_accelerations[0] << endl;
 	}
 
 	if (flag == true) {
@@ -411,7 +416,7 @@ double path::total_acceleration_cost(vector<double> trajectory) {
 	const double T_ = trajectory[12];
 	double cost = 0;
 	double total_acceleration = 0;
-	const double expected_acceleration_1_second = 4;  // wouldn't this be 3 seconds if T_ = 3
+	const double expected_acceleration_time = 6;  // wouldn't this be 3 seconds if T_ = 3
 
 	S_dot_coefficients = differentiate_polynomial(S);
 	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
@@ -426,13 +431,36 @@ double path::total_acceleration_cost(vector<double> trajectory) {
 
 	auto accerlation_per_second = total_acceleration / T_;
 	
+	/*
 	if (rand() % 100 == 0) {
 		cout << "accerlation_per_second " << accerlation_per_second << endl;
 	}
+	*/
 	
-	cost = logistic(accerlation_per_second / expected_acceleration_1_second);
+	cost = logistic(accerlation_per_second / expected_acceleration_time);
 
 	return cost;
+
+}
+
+float path::speed_limit_cost(vector<double> trajectory) {
+	vector<double> S;
+	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
+	const float T_ = trajectory[12];
+
+	float delta_time = T_ / 100;
+	float max_speed = 40;
+
+	auto S_dot_coefficients = differentiate_polynomial(S);
+
+	for (size_t i = 0; i < 100; ++i) {
+
+		auto time = delta_time * i;
+		auto velocity = coefficients_to_time_function(S_dot_coefficients, time);
+		
+		if (velocity > max_speed) { return 1; }
+	}
+	return 0;
 
 }
 

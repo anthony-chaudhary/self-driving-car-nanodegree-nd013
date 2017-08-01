@@ -59,6 +59,8 @@ public:
 	double total_jerk_cost(vector<double> trajectory);
 	double buffer_cost(vector<double> trajectory);
 	double s_diff_cost(vector<double> trajectory);
+	float speed_limit_cost(vector<double> trajectory);
+
 
 	// Helper functions
 	void init();
