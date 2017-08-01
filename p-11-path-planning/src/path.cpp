@@ -36,17 +36,12 @@ void path::init() {
 	vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	classifier->train(X_train, Y_train);
 
-	weighted_costs.resize(3);
-	weighted_costs[0].weight = 1.0;
-	weighted_costs[1].weight = 1.0;
-	weighted_costs[2].weight = 1.0;
-
 	our_path->previous_path_keeps = 0;
 	our_path->timestep = .02;
-	our_path->T = 4;
-	our_path->trajectory_samples = 100;
-	our_path->SIGMA_S = { 5, .1, .01 };
-	our_path->SIGMA_D = { .5,  .01, .001 };
+	our_path->T = 5;
+	our_path->trajectory_samples = 40;
+	our_path->SIGMA_S = { 10, .01, .001 };
+	our_path->SIGMA_D = { .1,  .01, .001 };
 
 }
 
@@ -81,8 +76,7 @@ void path::sensor_fusion_predict(vector< vector<double>> sensor_fusion) {
 void path::update_our_car_state(double car_x, double car_y, double car_s, double car_d,
 	double car_yaw, double car_speed) {
 	/****************************************
-	* Behavior planning usine finite state machine
-	in progress
+	* TODO Behavior planning usine finite state machine
 	****************************************/
 
 	// previous
@@ -105,29 +99,16 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->x = car_x;
 	r_daneel_olivaw->y = car_y;
 	r_daneel_olivaw->yaw = car_yaw;
-	r_daneel_olivaw->speed = car_speed;	 // storing twice?
+	r_daneel_olivaw->speed = car_speed;	 
 
-	target->S[0] = car_s + 30;
-	target->S[1] = .1;
-	target->S[2] = .001;
+	target->S[0] = car_s + 70;
+	target->S[1] = .001;
+	target->S[2] = .0001;
 	
-	target->D[0] = 6;
+	target->D[0] = car_d;
 	target->D[1] = .01;
 	target->D[2] = .001;
 	target->update_target_state(our_path->timestep);
-
-	// collision_cost(our_path->last_trajectory) == 1
-	// 	target->S[0] += 20;  ie take more time with turn
-	// our_path->T += 1;  have to combo with more time!!!
-
-	/*
-	if (int(target->S[0]) % 100 > 1) {
-		target->D[0] = 3;
-	}
-	else {
-		target->D[0] = 6;
-	}
-	*/
 }
 
 
@@ -228,8 +209,6 @@ vector<double> path::wiggle_goal(double t) {
 
 }
 
-
-
 path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> previous_path_x,
 	vector< double> previous_path_y, double car_yaw, double car_s, double car_d, double end_path_s, double end_path_d) {
 
@@ -262,32 +241,26 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 
 path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path) {
 
-	path::X_Y X_Y, X_Y_spline, X_Y_generated;
+	path::X_Y X_Y;
 	X_Y.X = Previous_path.X;
 	X_Y.Y = Previous_path.Y;
 	int x_size = Previous_path.X.size();
-
-	tk::spline spline_x, spline_y;
 
 	for (size_t i = 0; i < S_D_.D.size(); ++i) {
 
 		vector<double> a = getXY(S_D_.S[i], S_D_.D[i], MAP->waypoints_s_upsampled,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
-	
 		X_Y.X.push_back(a[0]);
 		X_Y.Y.push_back(a[1]);
-
 	}
 
-	
 	if (x_size != 0) {
-		for (size_t i = 1; i < X_Y.X.size(); ++i) {
+		for (size_t i = 1; i < 2; ++i) {
 			X_Y.X[i] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[i]);
 			X_Y.Y[i] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i]);
 		}
 	}
 	
-
 	return X_Y;
 }
 
@@ -300,12 +273,12 @@ double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
 	cost += 1 * collision_cost(trajectory);
-	cost += .6 * total_acceleration_cost(trajectory);
-	cost += .6 * max_acceleration_cost(trajectory);
+	cost += .9 * total_acceleration_cost(trajectory);
+	cost += .8 * max_acceleration_cost(trajectory);
 	cost += .2 * efficiency_cost(trajectory);
-	cost += .8 * total_jerk_cost(trajectory);
+	cost += .3 * total_jerk_cost(trajectory);
 	cost += .3 * buffer_cost(trajectory);
-	cost += .2 * s_diff_cost(trajectory);
+	cost += .5 * s_diff_cost(trajectory);
 
 	return cost;
 }
@@ -328,8 +301,6 @@ double path::s_diff_cost(vector<double> trajectory) {
 
 	target->update_target_state(T);
 	S_coefficients = get_ceoef_and_rates_of_change(S);
-
-	// -1  right here?
 	for (size_t i = 0; i < S_coefficients.size() - 1; ++i) {
 
 		// actual - expected
@@ -362,7 +333,6 @@ double path::d_diff_cost(vector<double> trajectory) {
 	// WIP
 	return 0;
 }
-
 
 double path::total_jerk_cost(vector<double> trajectory) {
 
@@ -433,7 +403,7 @@ double path::collision_cost(vector<double> trajectory) {
 
 	double a = nearest_approach_to_any_vehicle(trajectory);
 	//cout << a << endl;
-	double b = 700 * r_daneel_olivaw->radius;
+	double b = 200 * r_daneel_olivaw->radius;
 	//cout << b << endl;
 	if (a > b) { return 1.0;  }
 	else { return 0.0; }
@@ -566,7 +536,6 @@ double path::coefficients_to_time_function(vector<double> coefficients, double t
 	return total;
 }
 
-
 vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <double> end, double T)
 {
 	/*
@@ -633,7 +602,6 @@ vector<double> path::jerk_minimal_trajectory(vector< double> start, vector <doub
 	return results;
 
 }
-
 
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
 vector<double> path::getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)

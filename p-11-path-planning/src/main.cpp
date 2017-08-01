@@ -113,7 +113,6 @@ int main() {
 					path.current_time = chrono::high_resolution_clock::now();
 					auto time_difference = chrono::duration_cast<std::chrono::milliseconds>(path.current_time - path.start_time).count();
 
-					if (time_difference > 1000) {
 
 						cout <<  "time_difference " << time_difference << endl;
 

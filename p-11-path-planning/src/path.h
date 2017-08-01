@@ -13,95 +13,77 @@ public:
 	virtual ~path();
 
 
-	chrono::steady_clock::time_point start_time, current_time;
-
-	int previous_path_keeps;
-	vector<double> last_trajectory;
-	double timestep;
-	double T;
-	int trajectory_samples;
-
+	
+	// Data structures
 	struct Weighted_costs {
 		double weight;
-
-		// function?
+		// function
 	};
-
 	struct X_Y {
 		vector<double> X;
 		vector<double> Y;
 	};
-
 	struct S_D {
 		vector<double> S;
 		vector<double> D;
 	};
-
 	struct Previous_path {
 		vector<double> X;
 		vector<double> Y;
 		double s;
 		double d;
 	};
-
 	struct MAP {
 		vector<double> waypoints_s_upsampled = {};
 		vector<double> waypoints_x_upsampled = {};
 		vector<double> waypoints_y_upsampled = {};
 	};
 
+
+	// Shared variables
+	chrono::steady_clock::time_point start_time, current_time;
+	int previous_path_keeps;
+	vector<double> last_trajectory;
+	double timestep;
+	double T;
+	int trajectory_samples;
 	vector<double> SIGMA_S, SIGMA_D;
 
-	void init();
-
-	vector<double> wiggle_goal(double t);
-
-	double calculate_cost(vector<double> trajectory);
-	void sensor_fusion_predict(vector< vector<double>> sensor_fusion);
-	double nearest_approach_to_any_vehicle(vector<double> trajectory);
-
-
 	// Cost functions
+	double calculate_cost(vector<double> trajectory);
 	double efficiency_cost(vector<double> trajectory);
-
 	double collision_cost(vector<double> trajectory);
-
 	double d_diff_cost(vector<double> trajectory);
-
-	double coefficients_to_time_function(vector<double> coefficients, double t);
-	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
-		double car_yaw, double car_speed);
-
-	double total_jerk_cost(vector<double> trajectory);
-	double buffer_cost(vector<double> trajectory);
-
-
 	double max_acceleration_cost(vector<double> trajectory);
 	double total_acceleration_cost(vector<double> trajectory);
+	double total_jerk_cost(vector<double> trajectory);
+	double buffer_cost(vector<double> trajectory);
+	double s_diff_cost(vector<double> trajectory);
 
+	// Helper functions
+	void init();
+	double coefficients_to_time_function(vector<double> coefficients, double t);
 	double logistic(double x);
+	vector<double> wiggle_goal(double t);
 	vector<double> differentiate_polynomial(vector<double> coefficients);
-
-
-	vector<double> trajectory_generation();
-	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
-
-	Previous_path merge_previous_path(MAP *MAP, vector< double> previous_path_x,
-		vector< double> previous_path_y, double car_yaw, double car_s, double car_d, double end_path_s, double end_path_d);
-	X_Y convert_new_path_to_X_Y_and_merge(MAP *MAP, S_D S_D_, Previous_path Previous_path);
-
-	S_D build_trajectory(vector<double> trajectory);
-
-
 	vector<double> getFrenet(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y);
 	vector<double> getXY(double s, double d, vector<double> maps_s, vector<double> maps_x, vector<double> maps_y);
-
 	double distance(double x1, double y1, double x2, double y2);
 	int ClosestWaypoint(double x, double y, vector<double> maps_x, vector<double> maps_y);
 	int NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y);
-
 	vector<double> get_ceoef_and_rates_of_change(vector<double> coefficients);
-	double s_diff_cost(vector<double> trajectory);
+	double nearest_approach_to_any_vehicle(vector<double> trajectory);
+
+	// Path functions
+	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
+		double car_yaw, double car_speed);
+	void sensor_fusion_predict(vector< vector<double>> sensor_fusion);
+	vector<double> trajectory_generation();
+	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
+	Previous_path merge_previous_path(MAP *MAP, vector< double> previous_path_x,
+		vector< double> previous_path_y, double car_yaw, double car_s, double car_d, double end_path_s, double end_path_d);
+	X_Y convert_new_path_to_X_Y_and_merge(MAP *MAP, S_D S_D_, Previous_path Previous_path);
+	S_D build_trajectory(vector<double> trajectory);
 
 };
 
