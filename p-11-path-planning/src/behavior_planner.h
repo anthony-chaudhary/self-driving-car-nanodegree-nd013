@@ -34,8 +34,9 @@ public:
 	};
 
 	void init();
-	void update_lane();
-	int update_lanes(map<int, Vehicle> other_vehicles);
+	lane update_behavior_state(map<int, Vehicle> other_vehicles);
+	void find_best_lane();
+	void update_lane_costs(map<int, Vehicle> other_vehicles);
 
 };
 

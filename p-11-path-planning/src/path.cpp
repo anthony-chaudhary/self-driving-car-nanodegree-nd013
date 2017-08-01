@@ -118,7 +118,10 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 
 	}
 	
-	target->D[0] = car_d;
+	auto L_target = behavior->update_behavior_state(other_vehicles);
+	cout << "L_target " << L_target.d << endl;
+
+	target->D[0] = L_target.d;
 	target->D[1] = .01;
 	target->D[2] = .001;
 	target->update_target_state(our_path->timestep);
@@ -286,8 +289,8 @@ double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
 	cost += 1 * collision_cost(trajectory);
-	cost += .3 * total_acceleration_cost(trajectory);
-	cost += .5 * max_acceleration_cost(trajectory);
+	cost += .5 * total_acceleration_cost(trajectory);
+	cost += .8 * max_acceleration_cost(trajectory);
 	cost += .1 * efficiency_cost(trajectory);
 	cost += .3 * total_jerk_cost(trajectory);
 	cost += .4 * buffer_cost(trajectory);
