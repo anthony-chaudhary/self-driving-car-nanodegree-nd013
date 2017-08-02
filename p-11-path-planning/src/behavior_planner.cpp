@@ -68,8 +68,8 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 	t_1 = trajectory;
 	t_2 = trajectory;
 
-	t_0[6] += 4;
-	t_1[6] -= 4;
+	t_0[6] += 3.5;
+	t_1[6] -= 3.5;
 
 	road->L[0].cost += our_path->collision_cost(t_0);
 	road->L[0].cost += our_path->buffer_cost(t_0);
@@ -95,7 +95,7 @@ void update_behavior_targets() {
 
 void Behavior::find_best_lane() {
 
-	float cost = 1e9;
+	double cost = 1e9;
 	
 	for (size_t i = 0; i < road->L.size(); ++i) {
 		if (road->L[i].cost < cost) { 

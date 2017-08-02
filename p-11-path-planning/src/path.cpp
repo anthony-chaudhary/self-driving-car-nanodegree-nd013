@@ -41,12 +41,12 @@ void path::init() {
 	//vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	//classifier->train(X_train, Y_train);
 
-	our_path->previous_path_keeps = 25;
+	our_path->previous_path_keeps = 3;
 	our_path->timestep = .02;
 	our_path->T = 5;
-	our_path->distance_goal = our_path->T * 8;
-	our_path->trajectory_samples = 25;
-	our_path->SIGMA_S = { 1, 1/100, 1/1000 };
+	our_path->distance_goal = our_path->T * 9;
+	our_path->trajectory_samples = 20;
+	our_path->SIGMA_S = { 1, double(1/100), double(1/1000) };
 	our_path->SIGMA_D = { .1, .001, .0001 };
 
 }
@@ -105,13 +105,13 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	r_daneel_olivaw->speed = car_speed;	 
 
 
-	if (car_speed > 35) {
-		target->S[1] = our_path->distance_goal / 512;  //  velocity
-		target->S[2] = target->S[1] / (512 * 512);  // accleration
+	if (car_speed > 32) {
+		target->S[1] = .01;  //  velocity
+		target->S[2] = .001;  // accleration
 	}
 	else {
-		target->S[1] = our_path->distance_goal / 8;  // this would change depending on car speed
-		target->S[2] = target->S[1] / (8 * 8);
+		target->S[1] = 4;  // this would change depending on car speed
+		target->S[2] = .1;
 	}
 
 	target->S[0] = car_s + our_path->distance_goal; //
@@ -119,14 +119,12 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 	if (our_path->last_trajectory.size() != 0) {
 		auto L_target = behavior->update_behavior_state(our_path->last_trajectory, our_path);  // path has this ...
 		cout << "L target " << L_target.id << endl;
-		target->D[0] = (L_target.d + target->D[0] ) / 2;
-		target->D[1] = target->D[0] / 8;
-		target->D[2] = target->D[1] / (8 * 8);
+		target->D[0] = L_target.d;
 	}
 	else {
 		target->D[0] = car_d;
-		target->D[1] = target->D[0] / 4;
-		target->D[2] = target->D[1] / (4*4);
+		target->D[1] = .01;
+		target->D[2] = .001;
 	}
 	
 	target->update_target_state(our_path->timestep);
@@ -276,7 +274,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	}
 
 	if (x_size != 0) {
-		for (size_t i = 1; i < 3; ++i) {
+		for (size_t i = 1; i < 6; ++i) {
 			X_Y.X[i] = X_Y.X[i - 1] + (X_Y.X[i + 1] - X_Y.X[i]);
 			X_Y.Y[i] = X_Y.Y[i - 1] + (X_Y.Y[i + 1] - X_Y.Y[i]);
 		}
@@ -294,10 +292,10 @@ double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
 	cost += 1 * collision_cost(trajectory);
-	cost += 1 * total_acceleration_cost(trajectory);
+	cost += .5 * total_acceleration_cost(trajectory);
 	cost += 1 * max_acceleration_cost(trajectory);
 	cost += .1 * efficiency_cost(trajectory);
-	cost += 1 * total_jerk_cost(trajectory);
+	cost += .5 * total_jerk_cost(trajectory);
 	cost += .4 * buffer_cost(trajectory);
 	cost += .2 * s_diff_cost(trajectory);
 	cost += .2 * d_diff_cost(trajectory);
@@ -309,7 +307,7 @@ double path::calculate_cost(vector<double> trajectory) {
 double path::buffer_cost(vector<double> trajectory) {
 
 	double nearest = nearest_approach_to_any_vehicle(trajectory);
-	double cost = logistic(2 * r_daneel_olivaw->radius / nearest);
+	double cost = logistic(4 * r_daneel_olivaw->radius / nearest);
 	return cost;
 
 }
@@ -380,7 +378,7 @@ double path::total_jerk_cost(vector<double> trajectory) {
 	double T = trajectory[12];
 	double cost = 0;
 	double total_jerk = 0;
-	double expected_jerk_1_second = .1;
+	double expected_jerk_1_second = .05;
 
 	S_dot_coefficients = differentiate_polynomial(S);
 	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
@@ -472,13 +470,13 @@ double path::total_acceleration_cost(vector<double> trajectory) {
 
 }
 
-float path::speed_limit_cost(vector<double> trajectory) {
+double path::speed_limit_cost(vector<double> trajectory) {
 	vector<double> S;
 	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
-	const float T_ = trajectory[12];
+	const double T_ = trajectory[12];
 
-	float delta_time = T_ / 100;
-	float max_speed = 40;
+	double delta_time = T_ / 100;
+	double max_speed = 40;
 
 	auto S_dot_coefficients = differentiate_polynomial(S);
 

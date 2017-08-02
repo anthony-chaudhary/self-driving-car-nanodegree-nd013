@@ -49,7 +49,7 @@ int main() {
 	while (getline(in_map_, line)) {
 		istringstream iss(line);
 		double x, y;
-		float s, d_x, d_y;
+		double s, d_x, d_y;
 		iss >> x;
 		iss >> y;
 		iss >> s;
@@ -77,7 +77,7 @@ int main() {
 	path::MAP *MAP = new path::MAP;
 
 	// refine path with spline.
-	int spline_samples = 24000;
+	int spline_samples = 64000;
 	for (size_t i = 0; i < spline_samples; ++i) {
 		MAP->waypoints_x_upsampled.push_back(spline_x(i));
 		MAP->waypoints_y_upsampled.push_back(spline_y(i));
@@ -115,7 +115,7 @@ int main() {
 
 					if (time_difference > 1000) {
 
-						// cout <<  "time_difference " << time_difference << endl;
+						cout <<  "time_difference " << time_difference << endl;
 
 						// 0. set clock for next round
 						path.start_time = chrono::high_resolution_clock::now();
