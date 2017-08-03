@@ -30,7 +30,7 @@ public:
 
 		lane L;  // current
 		lane L_target;  // target
-		chrono::high_resolution_clock::time_point lane_change_end_time;
+		chrono::system_clock::time_point lane_change_end_time;
 	};
 
 	void init();

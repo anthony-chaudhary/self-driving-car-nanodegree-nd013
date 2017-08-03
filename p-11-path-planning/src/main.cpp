@@ -74,7 +74,7 @@ int main() {
 	path path;
 	path.init();
 
-	path.start_time = chrono::high_resolution_clock::now();
+	path.start_time = chrono::system_clock::now();
 
 	tk::spline spline_x, spline_y;
 	spline_x.set_points(map_waypoints_s, map_waypoints_x);
@@ -83,7 +83,7 @@ int main() {
 	path::MAP *MAP = new path::MAP;
 
 	// refine path with spline.
-	int spline_samples = 64000;
+	int spline_samples = 24000;
 	for (size_t i = 0; i < spline_samples; ++i) {
 		MAP->waypoints_x_upsampled.push_back(spline_x(i));
 		MAP->waypoints_y_upsampled.push_back(spline_y(i));
@@ -117,15 +117,15 @@ int main() {
 
 					json msgJson;
 
-					path.current_time = chrono::high_resolution_clock::now();
+					path.current_time = chrono::system_clock::now();
 					auto time_difference = chrono::duration_cast<std::chrono::milliseconds>(path.current_time - path.start_time).count();
 
 					if (time_difference > 1000) {
 
-						cout <<  "time_difference " << time_difference << endl;
+						// cout <<  "time_difference " << time_difference << endl;
 
 						// 0. set clock for next round
-						path.start_time = chrono::high_resolution_clock::now();
+						path.start_time = chrono::system_clock::now();
 
 						// 1. Merge previous path and update car state
 						auto Previous_path = path.merge_previous_path(MAP, previous_path_x,

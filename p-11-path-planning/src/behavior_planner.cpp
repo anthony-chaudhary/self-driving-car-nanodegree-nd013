@@ -17,29 +17,31 @@ Behavior::lanes *cars = new Behavior::lanes;
 
 Behavior::state *State = new Behavior::state;
 
-
+int previous_id = 1;
 
 void Behavior::init() {
 
 	for (size_t i = 0; i < 3; ++i) {
 		lane l_;
 		l_.id = i;
-		l_.d_lower = i *  2.5;
-		l_.d		= 3.9 + i * 3;
-		l_.d_upper = 3.9 + i * 3;
+		l_.d_lower = i *  4;
+		l_.d		= 2.8 + i * 4;
+		l_.d_upper = 4 + i * 4;
 		road->L.push_back(l_);
 	}
 
-	State->lane_change_end_time = chrono::high_resolution_clock::now() - 10000ms;
-
-	State->L.id = 1;
+	State->lane_change_end_time = chrono::system_clock::now() - 10000ms;
+	
 }
 
 
 Behavior::lane Behavior::update_behavior_state(vector<double> trajectory, path *our_path) {
 
 	// check if in current maneuver
-	if (State->lane_change_end_time > chrono::high_resolution_clock::now()) 
+	// cout << chrono::system_clock::to_time_t(State->lane_change_end_time) << endl;
+	// cout << chrono::system_clock::to_time_t(chrono::system_clock::now()) << endl;
+
+	if (State->lane_change_end_time > chrono::system_clock::now()) 
 	{
 		return State->L_target;  // this could be expanded considerably but for now just locking out new moves while moving
 	}
@@ -49,10 +51,12 @@ Behavior::lane Behavior::update_behavior_state(vector<double> trajectory, path *
 		find_best_lane();
 		
 		// only update clock if state changes
-		if (State->L_target.id != State->L.id) {
-			State->lane_change_end_time = chrono::high_resolution_clock::now() + 10000ms;
-			State->L.id = State->L_target.id;
+		if (previous_id != State->L_target.id) {
+			
+			State->lane_change_end_time = chrono::system_clock::now() + 2000ms;
+			previous_id = State->L_target.id;
 			cout << "Changing lanes" << endl;
+			cout << "L target " << State->L_target.id << endl;
 		}
 
 		return State->L_target;
@@ -68,25 +72,37 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 	t_1 = trajectory;
 	t_2 = trajectory;
 
-	t_0[6] -= 4;
-	t_2[6] += 4;
+	if (previous_id == 0) {
+		t_1[6] += 4;
+		t_2[6] += 8;
+	}
+	if (previous_id == 1) {
+		t_0[6] -= 4;
+		t_2[6] += 4;
+	}
+	if (previous_id == 2) {
+		t_0[6] -= 8;
+		t_1[6] -= 4;
+	}
 
 	road->L[0].cost += our_path->collision_cost(t_0);
-	road->L[0].cost += our_path->buffer_cost(t_0);
-	//road->L[0].cost += our_path->total_acceleration_cost(t_0);
+	road->L[0].cost += 2 * our_path->buffer_cost(t_0);
+	road->L[0].cost += .5 * our_path->total_acceleration_cost(t_0);
+	road->L[0].cost += 1 * our_path->d_diff_cost(t_0);
 
 	road->L[1].cost += our_path->collision_cost(t_1);
-	road->L[1].cost += our_path->buffer_cost(t_1);
-	//road->L[1].cost += our_path->total_acceleration_cost(t_1);
+	road->L[1].cost += 4 * our_path->buffer_cost(t_1);
+	road->L[1].cost += 2 * our_path->total_acceleration_cost(t_1);
+	road->L[1].cost += .7 * our_path->d_diff_cost(t_1);
 
 	road->L[2].cost += our_path->collision_cost(t_2);
-	road->L[2].cost += our_path->buffer_cost(t_2);
-	//road->L[2].cost += our_path->total_acceleration_cost(t_2);
+	road->L[2].cost += 2 * our_path->buffer_cost(t_2);
+	road->L[2].cost += .5 * our_path->total_acceleration_cost(t_2);
+	road->L[2].cost += 1 * our_path->d_diff_cost(t_2);
 
-	cout << road->L[0].cost << " " << road->L[1].cost << " " << road->L[0].cost << endl;
+	cout << "L0 " << road->L[0].cost << "\tL1 " << road->L[1].cost << "\tL2 " << road->L[2].cost << endl;
 	
 }
-
 
 void update_behavior_targets() {
 
@@ -96,12 +112,19 @@ void update_behavior_targets() {
 void Behavior::find_best_lane() {
 
 	double cost = 1e9;
-	
+
 	for (size_t i = 0; i < road->L.size(); ++i) {
-		if (road->L[i].cost < cost) { 
+		
+		if (road->L[i].cost < cost) {
+
 			State->L_target = road->L[i];
 			cost = road->L[i].cost;
 		}
+	}
+
+	// reset cost
+	for (size_t i = 0; i < road->L.size(); ++i){
+		road->L[i].cost = 0;
 	}
 }
 

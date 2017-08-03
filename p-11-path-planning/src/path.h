@@ -43,7 +43,7 @@ public:
 
 
 	// Shared variables
-	chrono::high_resolution_clock::time_point start_time, current_time;
+	chrono::system_clock::time_point start_time, current_time;
 	int previous_path_keeps;
 	vector<double> last_trajectory;
 	double timestep;
@@ -63,6 +63,7 @@ public:
 	double buffer_cost(vector<double> trajectory);
 	double s_diff_cost(vector<double> trajectory);
 	double speed_limit_cost(vector<double> trajectory);
+	double max_jerk_cost(vector<double> trajectory);
 
 
 	// Helper functions
