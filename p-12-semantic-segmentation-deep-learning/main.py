@@ -55,23 +55,29 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     :param num_classes: Number of classes to classify
     :return: The Tensor for the last layer of output
     """
-    # kernel_initializer=tf.truncated_normal_initializer(stddev = .01))
+    
         
-    l_7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='SAME')
+    l_7 = tf.layers.conv2d(vgg_layer7_out, num_classes, 1, padding='SAME',
+                          kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
 
-    l_4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, padding='SAME')
+    l_4 = tf.layers.conv2d(vgg_layer4_out, num_classes, 1, padding='SAME', 
+                           kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
 
-    l_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='SAME')
+    l_3 = tf.layers.conv2d(vgg_layer3_out, num_classes, 1, padding='SAME',
+                           kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
                      
-    up_7 = tf.layers.conv2d_transpose(l_7, num_classes, 4, strides=(2,2), padding='SAME')
+    up_7 = tf.layers.conv2d_transpose(l_7, num_classes, 4, strides=(2,2), padding='SAME',
+                                      kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
 
     skip_0 = tf.add(l_4, up_7)      
 
-    up_4_7 = tf.layers.conv2d_transpose(skip_0, num_classes, 4, strides=(2,2), padding='SAME')
+    up_4_7 = tf.layers.conv2d_transpose(skip_0, num_classes, 4, strides=(2,2), padding='SAME',
+                                        kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
 
     skip_1 = tf.add(l_3, up_4_7)
 
-    up_3_4_7 = tf.layers.conv2d_transpose(skip_1, num_classes, 16, strides=(8, 8), padding='SAME')
+    up_3_4_7 = tf.layers.conv2d_transpose(skip_1, num_classes, 16, strides=(8, 8), padding='SAME',
+                                          kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
 
     list = [l_7, l_4, l_3, up_7, skip_0, up_4_7, skip_1, up_3_4_7]
     
@@ -136,11 +142,11 @@ def run():
 
     #tests.test_load_vgg(load_vgg, tf)
     #tests.test_layers(layers)
-    print("layers test passed")
+    #print("layers test passed")
     #tests.test_optimize(optimize)
-    print("optimize test passed")
+    #print("optimize test passed")
     #tests.test_train_nn(train_nn)
-    print("train test passed")
+    #print("train test passed")
 
     #tests.test_for_kitti_dataset(data_dir)
     #helper.maybe_download_pretrained_vgg(data_dir)
@@ -169,8 +175,8 @@ def run():
 
         sess.run(tf.global_variables_initializer())
 
-        epochs = 1
-        batch_size = 4
+        epochs = 2
+        batch_size = 8
 
         train_nn(sess, epochs, batch_size, get_batches_fn, trainer, loss, image_input,
              correct_labels, keep_prob, learning_rate)
