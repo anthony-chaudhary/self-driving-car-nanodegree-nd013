@@ -25,8 +25,8 @@ void Behavior::init() {
 		lane l_;
 		l_.id = i;
 		l_.d_lower = i *  2.5;
-		l_.d		= 3.9 + i * 2.5;
-		l_.d_upper = 3.9 + i * 2.5;
+		l_.d		= 3.9 + i * 3;
+		l_.d_upper = 3.9 + i * 3;
 		road->L.push_back(l_);
 	}
 
@@ -68,8 +68,8 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 	t_1 = trajectory;
 	t_2 = trajectory;
 
-	t_0[6] += 3.5;
-	t_1[6] -= 3.5;
+	t_0[6] -= 4;
+	t_2[6] += 4;
 
 	road->L[0].cost += our_path->collision_cost(t_0);
 	road->L[0].cost += our_path->buffer_cost(t_0);

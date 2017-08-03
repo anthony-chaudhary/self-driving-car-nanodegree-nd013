@@ -1,7 +1,8 @@
 #include <fstream>
 #include "uWS/uWS.h"
-#include <chrono>
-#include <iostream>
+// IF LINUX
+// #include <uWS/uWS.h>
+
 #include <thread>
 #include <vector>
 #include "Eigen-3.3/Eigen/Core"
@@ -9,6 +10,11 @@
 #include "json.hpp"
 #include "path.h"
 #include "spline.h"
+
+#include <iostream>
+#include <ctime>
+#include <ratio>
+#include <chrono>
 
 using namespace std;
 using json = nlohmann::json;
@@ -39,7 +45,7 @@ int main() {
 	vector<double> map_waypoints_dy;
 
 	// Waypoint map to read from
-	string map_file_ = "data/highway_map.csv";  // CHANGE BACK to ../ after debugging
+	string map_file_ = "../data/highway_map.csv";  // CHANGE BACK to ../ after debugging
 												// The max s value before wrapping around the track back to 0
 	double max_s = 6945.554;
 
@@ -84,6 +90,7 @@ int main() {
 		MAP->waypoints_s_upsampled.push_back(i);
 	}
 
+	// IF different version of uwebsockts replace all "ws" with "(*ws)"!
 
 	h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 

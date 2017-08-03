@@ -44,7 +44,7 @@ void path::init() {
 	our_path->previous_path_keeps = 3;
 	our_path->timestep = .02;
 	our_path->T = 5;
-	our_path->distance_goal = our_path->T * 9;
+	our_path->distance_goal = our_path->T * 7;
 	our_path->trajectory_samples = 20;
 	our_path->SIGMA_S = { 1, double(1/100), double(1/1000) };
 	our_path->SIGMA_D = { .1, .001, .0001 };
@@ -110,8 +110,8 @@ void path::update_our_car_state(double car_x, double car_y, double car_s, double
 		target->S[2] = .001;  // accleration
 	}
 	else {
-		target->S[1] = 4;  // this would change depending on car speed
-		target->S[2] = .1;
+		target->S[1] = 1;  // this would change depending on car speed
+		target->S[2] = .01;
 	}
 
 	target->S[0] = car_s + our_path->distance_goal; //
@@ -295,11 +295,11 @@ double path::calculate_cost(vector<double> trajectory) {
 	cost += .5 * total_acceleration_cost(trajectory);
 	cost += 1 * max_acceleration_cost(trajectory);
 	cost += .1 * efficiency_cost(trajectory);
-	cost += .5 * total_jerk_cost(trajectory);
+	cost += .7 * total_jerk_cost(trajectory);
 	cost += .4 * buffer_cost(trajectory);
 	cost += .2 * s_diff_cost(trajectory);
 	cost += .2 * d_diff_cost(trajectory);
-	cost += .5 * speed_limit_cost(trajectory);
+	cost += .3 * speed_limit_cost(trajectory);
 
 	return cost;
 }

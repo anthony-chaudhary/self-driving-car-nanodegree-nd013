@@ -4,6 +4,8 @@
 #include <chrono>
 #include <map>
 #include <vector>
+#include <ctime>
+
 using namespace std;
 
 class path {
@@ -41,7 +43,7 @@ public:
 
 
 	// Shared variables
-	chrono::steady_clock::time_point start_time, current_time;
+	chrono::high_resolution_clock::time_point start_time, current_time;
 	int previous_path_keeps;
 	vector<double> last_trajectory;
 	double timestep;
@@ -145,9 +147,9 @@ public:
 	}
 
 	void update_target_state(double t) {
-		this->s_target = S[0] + (S[1] * t) + S[2] * pow(t, 2) / 2.0;
+		this->s_target = S[0] + (S[1] * t) + S[2] * (t * t) / 2.0;
 		this->s_dot_target = S[1] + S[2] * t;
-		this->d_target = D[0] + (D[1] * t) + D[2] * pow(t, 2) / 2.0;
+		this->d_target = D[0] + (D[1] * t) + D[2] * (t * t) / 2.0;
 		this->d_dot_target = D[1] + D[2] * t;
 		S_TARGETS = { s_target, s_dot_target, S[2] };
 		D_TARGETS = { d_target, d_dot_target, D[2] };
