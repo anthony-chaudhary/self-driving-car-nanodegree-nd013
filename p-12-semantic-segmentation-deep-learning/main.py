@@ -79,8 +79,7 @@ def layers(vgg_layer3_out, vgg_layer4_out, vgg_layer7_out, num_classes):
     up_3_4_7 = tf.layers.conv2d_transpose(skip_1, num_classes, 16, strides=(8, 8), padding='SAME',
                                           kernel_initializer=tf.truncated_normal_initializer(stddev = 1e-3))
 
-    list = [l_7, l_4, l_3, up_7, skip_0, up_4_7, skip_1, up_3_4_7]
-    
+       
     return up_3_4_7
 
 
@@ -140,13 +139,13 @@ def run():
     data_dir = './data'
     runs_dir = './runs'
 
-    #tests.test_load_vgg(load_vgg, tf)
-    #tests.test_layers(layers)
-    #print("layers test passed")
-    #tests.test_optimize(optimize)
-    #print("optimize test passed")
-    #tests.test_train_nn(train_nn)
-    #print("train test passed")
+    tests.test_load_vgg(load_vgg, tf)
+    tests.test_layers(layers)
+    print("layers test passed")
+    tests.test_optimize(optimize)
+    print("optimize test passed")
+    tests.test_train_nn(train_nn)
+    print("train test passed")
 
     #tests.test_for_kitti_dataset(data_dir)
     #helper.maybe_download_pretrained_vgg(data_dir)
@@ -175,8 +174,8 @@ def run():
 
         sess.run(tf.global_variables_initializer())
 
-        epochs = 2
-        batch_size = 8
+        epochs = 15
+        batch_size = 16
 
         train_nn(sess, epochs, batch_size, get_batches_fn, trainer, loss, image_input,
              correct_labels, keep_prob, learning_rate)
