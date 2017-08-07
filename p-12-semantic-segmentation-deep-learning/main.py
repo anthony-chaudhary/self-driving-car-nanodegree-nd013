@@ -99,8 +99,11 @@ def optimize(nn_last_layer, labels, learning_rate, num_classes):
     soft = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels_re)
     loss = tf.reduce_mean(soft)
 
+    tf.summary.histogram("softmax", soft)
+    tf.summary.scalar("loss", loss)
+
     trainer = tf.train.AdamOptimizer(learning_rate).minimize(loss)
-    
+
     return logits, trainer, loss
 
 
@@ -121,11 +124,21 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     :param learning_rate: TF Placeholder for learning rate
     """
     index = 0
+
+    train_writer = tf.summary.FileWriter('./logs', sess.graph)
+
     for i in range(epochs):
         for j, j_l in get_batches_fn(batch_size):
             
-            _, loss = sess.run([train_op, cross_entropy_loss], feed_dict = {input_image: j, correct_label: j_l,
-                                                    keep_prob: .90, learning_rate: 1e-4})
+
+            merge = tf.summary.merge_all()
+
+            summary, _, loss = sess.run([merge, train_op, cross_entropy_loss], 
+                feed_dict = {input_image: j, correct_label: j_l,
+                                                    keep_prob: .70, learning_rate: 1e-4})
+            
+            train_writer.add_summary(summary, index)
+
             if index % 10 == 0:
                 print("Epoch", i)
                 print("Loss {:.5f}...".format(loss))
@@ -155,7 +168,9 @@ def run():
     #  https://www.cityscapes-dataset.com/
 
     with tf.Session() as sess:
-       
+
+
+               
         vgg_path = os.path.join(data_dir, 'vgg')
         
         get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
@@ -172,10 +187,12 @@ def run():
 
         logits, trainer, loss = optimize(up_3_4_7, correct_labels, learning_rate, num_classes)
 
+    
         sess.run(tf.global_variables_initializer())
 
+    
         epochs = 15
-        batch_size = 16
+        batch_size = 8
 
         train_nn(sess, epochs, batch_size, get_batches_fn, trainer, loss, image_input,
              correct_labels, keep_prob, learning_rate)
