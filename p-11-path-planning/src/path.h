@@ -43,7 +43,7 @@ public:
 
 
 	// Shared variables
-	chrono::system_clock::time_point start_time, current_time;
+	chrono::system_clock::time_point start_time, current_time, mpc_clock;
 	int previous_path_keeps;
 	vector<double> last_trajectory;
 	double timestep;
@@ -64,6 +64,7 @@ public:
 	double s_diff_cost(vector<double> trajectory);
 	double speed_limit_cost(vector<double> trajectory);
 	double max_jerk_cost(vector<double> trajectory);
+	double stay_in_lane(vector<double> trajectory);
 
 
 	// Helper functions
@@ -81,7 +82,7 @@ public:
 	double nearest_approach_to_any_vehicle(vector<double> trajectory);
 
 	// Path functions
-	void update_our_car_state(double car_x, double car_y, double car_s, double car_d,
+	void update_our_car_state(MAP *MAP, double car_x, double car_y, double car_s, double car_d,
 		double car_yaw, double car_speed);
 	void sensor_fusion_predict(vector< vector<double>> sensor_fusion);
 	vector<double> trajectory_generation();

@@ -1,15 +1,17 @@
 #include <fstream>
-#include "uWS/uWS.h"
+// #include "uWS/uWS.h"  // if WINDOWS
 // IF LINUX
-// #include <uWS/uWS.h>
+#include <uWS/uWS.h>
 
 #include <thread>
 #include <vector>
+#include <random>
 #include "Eigen-3.3/Eigen/Core"
 #include "Eigen-3.3/Eigen/QR"
 #include "json.hpp"
 #include "path.h"
 #include "spline.h"
+#include "MPC.h"
 
 #include <iostream>
 #include <ctime>
@@ -18,6 +20,7 @@
 
 using namespace std;
 using json = nlohmann::json;
+default_random_engine			generator2;
 
 stringstream hasData(string s) {
 	auto found_null = s.find("null");
@@ -34,8 +37,44 @@ stringstream hasData(string s) {
 	return stringstream();
 }
 
+// Evaluate a polynomial.
+double polyeval(Eigen::VectorXd coeffs, double x) {
+  double result = 0.0;
+  for (int i = 0; i < coeffs.size(); i++) {
+    result += coeffs[i] * pow(x, i);
+  }
+  return result;
+}
+
+// Fit a polynomial.
+// Adapted from
+// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
+Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
+                        int order) {
+  assert(xvals.size() == yvals.size());
+  assert(order >= 1 && order <= xvals.size() - 1);
+  Eigen::MatrixXd A(xvals.size(), order + 1);
+
+  for (int i = 0; i < xvals.size(); i++) {
+    A(i, 0) = 1.0;
+  }
+
+  for (int j = 0; j < xvals.size(); j++) {
+    for (int i = 0; i < order; i++) {
+      A(j, i + 1) = A(j, i) * xvals(j);
+    }
+  }
+
+  auto Q = A.householderQr();
+  auto result = Q.solve(yvals);
+  return result;
+}
+
 int main() {
 	uWS::Hub h;
+
+	MPC mpc;
+	//mpc.Init(hyper_parameters) ;
 
 	// Load up map values for waypoint's x,y,s and d normalized normal vectors
 	vector<double> map_waypoints_x;
@@ -74,7 +113,8 @@ int main() {
 	path path;
 	path.init();
 
-	path.start_time = chrono::system_clock::now();
+	path.start_time = chrono::system_clock::now() - 10000ms;
+	path.mpc_clock = chrono::system_clock::now() - 10000ms;
 
 	tk::spline spline_x, spline_y;
 	spline_x.set_points(map_waypoints_s, map_waypoints_x);
@@ -83,16 +123,19 @@ int main() {
 	path::MAP *MAP = new path::MAP;
 
 	// refine path with spline.
-	int spline_samples = 24000;
+	int spline_samples = 12000;
 	for (size_t i = 0; i < spline_samples; ++i) {
 		MAP->waypoints_x_upsampled.push_back(spline_x(i));
 		MAP->waypoints_y_upsampled.push_back(spline_y(i));
 		MAP->waypoints_s_upsampled.push_back(i);
 	}
 
-	// IF different version of uwebsockts replace all "ws" with "(*ws)"!
+	// IF different version of uwebsockts replace all "(*ws)" with "(*(*ws))"!
 
-	h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
+
+	path::X_Y X_Y_, X_Y_2;
+
+	h.onMessage([&](uWS::WebSocket<uWS::SERVER> (*ws), char *data, size_t length, uWS::OpCode opCode) {
 
 		// "42" at the start of the message means there's a websocket message event.
 		if (length && length > 2 && data[0] == '4' && data[1] == '2') {
@@ -103,22 +146,28 @@ int main() {
 				string event = j[0].get<string>();
 				if (event == "telemetry") { // j[1] is the data JSON object
 
-					double car_x = j[1]["x"];
-					double car_y = j[1]["y"];
-					double car_s = j[1]["s"];
-					double car_d = j[1]["d"];
-					double car_yaw = j[1]["yaw"];
-					double car_speed = j[1]["speed"];
-					auto previous_path_x = j[1]["previous_path_x"];
-					auto previous_path_y = j[1]["previous_path_y"];
-					double end_path_s = j[1]["end_path_s"];
-					double end_path_d = j[1]["end_path_d"];
-					auto sensor_fusion = j[1]["sensor_fusion"];
+					const double car_x = j[1]["x"];
+					const double car_y = j[1]["y"];
+					const double car_s = j[1]["s"];
+					const double car_d = j[1]["d"];
+					const double car_yaw = j[1]["yaw"];
+					const double car_speed = j[1]["speed"];
+					const auto previous_path_x = j[1]["previous_path_x"];
+					const auto previous_path_y = j[1]["previous_path_y"];
+					const double end_path_s = j[1]["end_path_s"];
+					const double end_path_d = j[1]["end_path_d"];
+					const auto sensor_fusion = j[1]["sensor_fusion"];
 
 					json msgJson;
 
 					path.current_time = chrono::system_clock::now();
 					auto time_difference = chrono::duration_cast<std::chrono::milliseconds>(path.current_time - path.start_time).count();
+
+
+					cout << "previous_path_size " << previous_path_x.size() << endl;
+
+					// cout << time_difference << endl;
+					// cout << chrono::system_clock::to_time_t(chrono::system_clock::now()) << endl;
 
 					if (time_difference > 1000) {
 
@@ -126,6 +175,7 @@ int main() {
 
 						// 0. set clock for next round
 						path.start_time = chrono::system_clock::now();
+
 
 						// 1. Merge previous path and update car state
 						auto Previous_path = path.merge_previous_path(MAP, previous_path_x,
@@ -135,7 +185,7 @@ int main() {
 						path.sensor_fusion_predict(sensor_fusion);
 
 						// 3. Update our car's state (pending removal of arguments here as doing update at 1. now.0
-						path.update_our_car_state(car_x, car_y, Previous_path.s, Previous_path.d, car_yaw, car_speed);
+						path.update_our_car_state(MAP, car_x, car_y, Previous_path.s, Previous_path.d, car_yaw, car_speed);
 
 						// 4. Generate trajectory
 						auto trajectory = path.trajectory_generation();
@@ -144,30 +194,119 @@ int main() {
 						auto S_D_ = path.build_trajectory(trajectory);
 
 						// 6. Convert to X and Y and append previous path
-						auto X_Y_ = path.convert_new_path_to_X_Y_and_merge(MAP, S_D_, Previous_path);
+						X_Y_ = path.convert_new_path_to_X_Y_and_merge(MAP, S_D_, Previous_path);
 
-						// cout << "End\n\n" << endl;
+						
+						/*
+						X_Y_2.X.resize(100);
+						X_Y_2.Y.resize(100);
+						X_Y_2.X.insert(end(X_Y_2.X), begin(X_Y_2.X), end(X_Y_2.X));
+						X_Y_2.Y.insert(end(X_Y_2.Y), begin(X_Y_2.Y), end(X_Y_2.Y));
+						//previous_path_x = X_Y_.X;
+						//previous_path_y = X_Y_.Y;
+						*/
+					
+					// MPC
+
+						//cout << X_Y_.X.size() << endl;
 
 						msgJson["next_x"] = X_Y_.X;
 						msgJson["next_y"] = X_Y_.Y;
 
+			
+					} 
+
+					/*
+					auto mpc_time_difference = chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - path.mpc_clock).count();
+
+					if (mpc_time_difference > 10) {
+
+						if (previous_path_x.size() != 0) {
+							car_x = previous_path_x[0];
+							car_y = previous_path_y[0];
+						}
+
+
+						
+						path.mpc_clock = chrono::system_clock::now();
+
+
+						cout << "mpc_time_difference " << mpc_time_difference << endl;
+						cout << "X_Y_.X.size() " << X_Y_.X.size() << endl;
+						
+
+						Eigen::VectorXd   x_car_Eigen = Eigen::VectorXd( X_Y_.X.size() ) ;
+						Eigen::VectorXd   y_car_Eigen = Eigen::VectorXd( X_Y_.Y.size() ) ;
+
+		  				for (int i = floor(mpc_time_difference / 2);   i < X_Y_.X.size() ;   i++) {
+				            x_car_Eigen(i) = X_Y_.X[i] ;
+				            y_car_Eigen(i) = X_Y_.Y[i] ;
+				           
+				         }
+		         
+						auto coeffs = polyfit(x_car_Eigen, y_car_Eigen, 3) ;
+						Eigen::VectorXd state(3) ;
+						double cte  = polyeval(coeffs, car_x) ;
+
+						double epsi = - atan( coeffs[1] +
+						      (2 * coeffs[2] * car_x) +
+						      (3 * coeffs[3] * (car_x * car_x) ) );
+
+						auto v = car_speed * 0.44704 ;
+						auto psi = 0;
+						state << car_x, car_y, cte ;
+
+						cout << "Solving" << endl ;
+						auto vars = mpc.Solve(state, coeffs) ;
+
+
+						//cout << vars.size() << endl;
+
+						vector<double> mpc_x_vals;
+						vector<double> mpc_y_vals;
+
+				     
+						for (int i = 6; i < vars.size(); i ++) {
+							if (i % 2 == 0 ){ 
+							  
+							  mpc_x_vals.push_back( double(vars[i]) ) ;
+
+							} else {
+							  
+							  mpc_y_vals.push_back( double(vars[i]) ) ;
+							}
+						}
+
+					    cout << "mpc_x_vals " << mpc_x_vals.size() << endl;
+
+						msgJson["next_x"] = mpc_x_vals; //X_Y_.X;
+						msgJson["next_y"] = mpc_y_vals; //X_Y_.Y;
+								
 					}
+					
+					
+
 					else {
+						cout << "Using previous path\n " << endl;
 						msgJson["next_x"] = previous_path_x;
 						msgJson["next_y"] = previous_path_y;
 					}
+				*/				
 
-					
-					auto msg = "42[\"control\"," + msgJson.dump() + "]";
+										
+				
+				auto msg = "42[\"control\"," + msgJson.dump() + "]";
+				//std::cout << msg << std::endl;
 
-					ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+				
+				(*ws).send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
 				}
 			}
 			else {
 				// Manual driving
 				std::string msg = "42[\"manual\",{}]";
-				ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+				(*ws).send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 			}
 		}
 	});
@@ -184,13 +323,13 @@ int main() {
 		}
 	});
 
-	h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+	h.onConnection([&h](uWS::WebSocket<uWS::SERVER> (*ws), uWS::HttpRequest req) {
 		std::cout << "Connected!!!" << std::endl;
 	});
 
-	h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
+	h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> (*ws), int code,
 		char *message, size_t length) {
-		ws.close();
+		(*ws).close();
 		std::cout << "Disconnected" << std::endl;
 	});
 

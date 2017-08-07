@@ -17,9 +17,9 @@ public:
 	struct lane {
 		int id;
 		double cost = 0;  
-		int d;  // d centre
-		int d_upper;  // d upper
-		int d_lower;  // d lower
+		double d;  // d centre
+		double d_upper;  // d upper
+		double d_lower;  // d lower
 	};
 
 	struct lanes {
