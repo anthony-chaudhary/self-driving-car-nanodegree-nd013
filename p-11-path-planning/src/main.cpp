@@ -1,7 +1,7 @@
 #include <fstream>
-// #include "uWS/uWS.h"  // if WINDOWS
+#include "uWS/uWS.h"  // if WINDOWS
 // IF LINUX
-#include <uWS/uWS.h>
+//#include <uWS/uWS.h>
 
 #include <thread>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "json.hpp"
 #include "path.h"
 #include "spline.h"
-#include "MPC.h"
+//#include "MPC.h"
 
 #include <iostream>
 #include <ctime>
@@ -73,7 +73,7 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 int main() {
 	uWS::Hub h;
 
-	MPC mpc;
+	//MPC mpc;
 	//mpc.Init(hyper_parameters) ;
 
 	// Load up map values for waypoint's x,y,s and d normalized normal vectors
@@ -113,8 +113,8 @@ int main() {
 	path path;
 	path.init();
 
-	path.start_time = chrono::system_clock::now() - 10000ms;
-	path.mpc_clock = chrono::system_clock::now() - 10000ms;
+	path.start_time = chrono::high_resolution_clock::now();
+	// path.mpc_clock = chrono::high_resolution_clock::now() + 10000ms;
 
 	tk::spline spline_x, spline_y;
 	spline_x.set_points(map_waypoints_s, map_waypoints_x);
@@ -130,12 +130,12 @@ int main() {
 		MAP->waypoints_s_upsampled.push_back(i);
 	}
 
-	// IF different version of uwebsockts replace all "(*ws)" with "(*(*ws))"!
+	// IF different version of uwebsockts replace all "ws" with "(*ws)"!
 
 
 	path::X_Y X_Y_, X_Y_2;
 
-	h.onMessage([&](uWS::WebSocket<uWS::SERVER> (*ws), char *data, size_t length, uWS::OpCode opCode) {
+	h.onMessage([&](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length, uWS::OpCode opCode) {
 
 		// "42" at the start of the message means there's a websocket message event.
 		if (length && length > 2 && data[0] == '4' && data[1] == '2') {
@@ -160,21 +160,21 @@ int main() {
 
 					json msgJson;
 
-					path.current_time = chrono::system_clock::now();
+					path.current_time = chrono::high_resolution_clock::now();
 					auto time_difference = chrono::duration_cast<std::chrono::milliseconds>(path.current_time - path.start_time).count();
 
 
-					cout << "previous_path_size " << previous_path_x.size() << endl;
+					// cout << "previous_path_size " << previous_path_x.size() << endl;
 
 					// cout << time_difference << endl;
-					// cout << chrono::system_clock::to_time_t(chrono::system_clock::now()) << endl;
+					// cout << chrono::high_resolution_clock::to_time_t(chrono::high_resolution_clock::now()) << endl;
 
 					if (time_difference > 1000) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 
 						// 0. set clock for next round
-						path.start_time = chrono::system_clock::now();
+						path.start_time = chrono::high_resolution_clock::now();
 
 
 						// 1. Merge previous path and update car state
@@ -197,17 +197,6 @@ int main() {
 						X_Y_ = path.convert_new_path_to_X_Y_and_merge(MAP, S_D_, Previous_path);
 
 						
-						/*
-						X_Y_2.X.resize(100);
-						X_Y_2.Y.resize(100);
-						X_Y_2.X.insert(end(X_Y_2.X), begin(X_Y_2.X), end(X_Y_2.X));
-						X_Y_2.Y.insert(end(X_Y_2.Y), begin(X_Y_2.Y), end(X_Y_2.Y));
-						//previous_path_x = X_Y_.X;
-						//previous_path_y = X_Y_.Y;
-						*/
-					
-					// MPC
-
 						//cout << X_Y_.X.size() << endl;
 
 						msgJson["next_x"] = X_Y_.X;
@@ -216,82 +205,12 @@ int main() {
 			
 					} 
 
-					/*
-					auto mpc_time_difference = chrono::duration_cast<std::chrono::milliseconds>(chrono::system_clock::now() - path.mpc_clock).count();
-
-					if (mpc_time_difference > 10) {
-
-						if (previous_path_x.size() != 0) {
-							car_x = previous_path_x[0];
-							car_y = previous_path_y[0];
-						}
-
-
-						
-						path.mpc_clock = chrono::system_clock::now();
-
-
-						cout << "mpc_time_difference " << mpc_time_difference << endl;
-						cout << "X_Y_.X.size() " << X_Y_.X.size() << endl;
-						
-
-						Eigen::VectorXd   x_car_Eigen = Eigen::VectorXd( X_Y_.X.size() ) ;
-						Eigen::VectorXd   y_car_Eigen = Eigen::VectorXd( X_Y_.Y.size() ) ;
-
-		  				for (int i = floor(mpc_time_difference / 2);   i < X_Y_.X.size() ;   i++) {
-				            x_car_Eigen(i) = X_Y_.X[i] ;
-				            y_car_Eigen(i) = X_Y_.Y[i] ;
-				           
-				         }
-		         
-						auto coeffs = polyfit(x_car_Eigen, y_car_Eigen, 3) ;
-						Eigen::VectorXd state(3) ;
-						double cte  = polyeval(coeffs, car_x) ;
-
-						double epsi = - atan( coeffs[1] +
-						      (2 * coeffs[2] * car_x) +
-						      (3 * coeffs[3] * (car_x * car_x) ) );
-
-						auto v = car_speed * 0.44704 ;
-						auto psi = 0;
-						state << car_x, car_y, cte ;
-
-						cout << "Solving" << endl ;
-						auto vars = mpc.Solve(state, coeffs) ;
-
-
-						//cout << vars.size() << endl;
-
-						vector<double> mpc_x_vals;
-						vector<double> mpc_y_vals;
-
-				     
-						for (int i = 6; i < vars.size(); i ++) {
-							if (i % 2 == 0 ){ 
-							  
-							  mpc_x_vals.push_back( double(vars[i]) ) ;
-
-							} else {
-							  
-							  mpc_y_vals.push_back( double(vars[i]) ) ;
-							}
-						}
-
-					    cout << "mpc_x_vals " << mpc_x_vals.size() << endl;
-
-						msgJson["next_x"] = mpc_x_vals; //X_Y_.X;
-						msgJson["next_y"] = mpc_y_vals; //X_Y_.Y;
+				else {
+					//cout << "Using previous path\n " << endl;
+					msgJson["next_x"] = previous_path_x;
+					msgJson["next_y"] = previous_path_y;
+				}
 								
-					}
-					
-					
-
-					else {
-						cout << "Using previous path\n " << endl;
-						msgJson["next_x"] = previous_path_x;
-						msgJson["next_y"] = previous_path_y;
-					}
-				*/				
 
 										
 				
@@ -299,14 +218,14 @@ int main() {
 				//std::cout << msg << std::endl;
 
 				
-				(*ws).send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+				ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
 				}
 			}
 			else {
 				// Manual driving
 				std::string msg = "42[\"manual\",{}]";
-				(*ws).send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+				ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 			}
 		}
 	});
@@ -323,13 +242,13 @@ int main() {
 		}
 	});
 
-	h.onConnection([&h](uWS::WebSocket<uWS::SERVER> (*ws), uWS::HttpRequest req) {
+	h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
 		std::cout << "Connected!!!" << std::endl;
 	});
 
-	h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> (*ws), int code,
+	h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,
 		char *message, size_t length) {
-		(*ws).close();
+		ws.close();
 		std::cout << "Disconnected" << std::endl;
 	});
 

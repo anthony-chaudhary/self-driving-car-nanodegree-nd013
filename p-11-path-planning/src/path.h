@@ -43,9 +43,14 @@ public:
 
 
 	// Shared variables
-	chrono::system_clock::time_point start_time, current_time, mpc_clock;
+	chrono::high_resolution_clock::time_point start_time, current_time, mpc_clock;
 	int previous_path_keeps;
+	double previous_path_size;
+
+	vector<double> last_last_trajectory;
 	vector<double> last_trajectory;
+
+	double current_lane_target;
 	double timestep;
 	double T;
 	double distance_goal;

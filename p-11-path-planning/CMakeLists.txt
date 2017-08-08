@@ -10,7 +10,7 @@ set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
     
     set_source_files_properties(${sources} PROPERTIES COMPILE_FLAGS "-D_USE_MATH_DEFINES")
-	set(sources src/main.cpp src/path.cpp src/MPC.cpp src/classifier.cpp src/behavior_planner.cpp src/uWS/Extensions.cpp src/uWS/Group.cpp src/uWS/WebSocketImpl.cpp src/uWS/Networking.cpp src/uWS/Hub.cpp src/uWS/Node.cpp src/uWS/WebSocket.cpp src/uWS/HTTPSocket.cpp src/uWS/Socket.cpp src/uWS/uUV.cpp)
+	set(sources src/main.cpp src/path.cpp src/classifier.cpp src/behavior_planner.cpp src/uWS/Extensions.cpp src/uWS/Group.cpp src/uWS/WebSocketImpl.cpp src/uWS/Networking.cpp src/uWS/Hub.cpp src/uWS/Node.cpp src/uWS/WebSocket.cpp src/uWS/HTTPSocket.cpp src/uWS/Socket.cpp src/uWS/uUV.cpp)
 
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 
@@ -25,8 +25,9 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
-
-set(sources src/main.cpp src/path.cpp src/classifier.cpp src/behavior_planner.cpp src/MPC.cpp)
-
 add_executable(path_planning ${sources})
+
+if (UNIX)
+set(sources src/main.cpp src/path.cpp src/classifier.cpp src/behavior_planner.cpp src/MPC.cpp)
 target_link_libraries(path_planning ipopt z ssl uv uWS)
+endif (UNIX)
