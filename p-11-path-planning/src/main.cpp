@@ -46,29 +46,7 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
   return result;
 }
 
-// Fit a polynomial.
-// Adapted from
-// https://github.com/JuliaMath/Polynomials.jl/blob/master/src/Polynomials.jl#L676-L716
-Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
-                        int order) {
-  assert(xvals.size() == yvals.size());
-  assert(order >= 1 && order <= xvals.size() - 1);
-  Eigen::MatrixXd A(xvals.size(), order + 1);
 
-  for (int i = 0; i < xvals.size(); i++) {
-    A(i, 0) = 1.0;
-  }
-
-  for (int j = 0; j < xvals.size(); j++) {
-    for (int i = 0; i < order; i++) {
-      A(j, i + 1) = A(j, i) * xvals(j);
-    }
-  }
-
-  auto Q = A.householderQr();
-  auto result = Q.solve(yvals);
-  return result;
-}
 
 int main() {
 	uWS::Hub h;
@@ -114,7 +92,7 @@ int main() {
 	path.init();
 
 	path.start_time = chrono::high_resolution_clock::now();
-	// path.mpc_clock = chrono::high_resolution_clock::now() + 10000ms;
+	path.behavior_time = chrono::high_resolution_clock::now();
 
 	tk::spline spline_x, spline_y;
 	spline_x.set_points(map_waypoints_s, map_waypoints_x);
@@ -162,39 +140,59 @@ int main() {
 
 					path.current_time = chrono::high_resolution_clock::now();
 					auto time_difference = chrono::duration_cast<std::chrono::milliseconds>(path.current_time - path.start_time).count();
+					auto time_difference_b = chrono::duration_cast<std::chrono::milliseconds>(path.current_time - path.behavior_time).count();
 
+					auto running_diff = path.current_time;
 
 					// cout << "previous_path_size " << previous_path_x.size() << endl;
 
 					// cout << time_difference << endl;
-					// cout << chrono::high_resolution_clock::to_time_t(chrono::high_resolution_clock::now()) << endl;
+					cout << "TIME 0 \t  Time since last loop \t"  << time_difference << endl;
 
-					if (time_difference > 1000) {
+					if (time_difference_b > 500) {
+						// 2. Update vehicles with sensor fusion readings
+						path.behavior_time = chrono::high_resolution_clock::now();
+
+						path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
+					}
+
+
+					if (time_difference > 50) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 
 						// 0. set clock for next round
 						path.start_time = chrono::high_resolution_clock::now();
 
+						cout << "TIME \t" << endl;
+						//cout << "TIME 1 \t path.start_time \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
 						// 1. Merge previous path and update car state
 						auto Previous_path = path.merge_previous_path(MAP, previous_path_x,
 							previous_path_y, car_yaw, car_s, car_d, end_path_s, end_path_d);
 
-						// 2. Update vehicles with sensor fusion readings
-						path.sensor_fusion_predict(sensor_fusion);
+						//cout << "TIME 2 \t path.merge_previous_path \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
-						// 3. Update our car's state (pending removal of arguments here as doing update at 1. now.0
-						path.update_our_car_state(MAP, car_x, car_y, Previous_path.s, Previous_path.d, car_yaw, car_speed);
+						// 3. Update our car's state
+						path.update_our_car_state(MAP, car_x, car_y, Previous_path.s, Previous_path.d, car_yaw, car_speed, time_difference);
+
+						//cout << "TIME 3 \t path.update_our_car_state \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
 						// 4. Generate trajectory
 						auto trajectory = path.trajectory_generation();
 
+						auto build_trajectory_time = chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count();
+						//cout << "TIME 4 \t path.trajectory_generation() \t" << build_trajectory_time  << endl;
+
 						// 5. Build trajectory using time
-						auto S_D_ = path.build_trajectory(trajectory);
+						auto S_D_ = path.build_trajectory(trajectory, build_trajectory_time);
+
+						//cout << "TIME 5 \t path.build_trajectory(trajectory) \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
 						// 6. Convert to X and Y and append previous path
 						X_Y_ = path.convert_new_path_to_X_Y_and_merge(MAP, S_D_, Previous_path);
+
+						cout << "TIME 6 TOTAL \t path.convert_new_path_to_X_Y_and_merge \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
 						
 						//cout << X_Y_.X.size() << endl;
@@ -204,21 +202,21 @@ int main() {
 
 			
 					} 
-
+				
 				else {
 					//cout << "Using previous path\n " << endl;
 					msgJson["next_x"] = previous_path_x;
 					msgJson["next_y"] = previous_path_y;
 				}
 								
-
-				this_thread::sleep_for(chrono::milliseconds(100));
 				
 				auto msg = "42[\"control\"," + msgJson.dump() + "]";
 				//std::cout << msg << std::endl;
 
 				
 				ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
+
+				//this_thread::sleep_for(chrono::milliseconds(50));
 				
 				}
 			}

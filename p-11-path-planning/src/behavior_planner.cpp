@@ -56,7 +56,7 @@ Behavior::lane Behavior::update_behavior_state(vector<double> trajectory, path *
 		// only update clock if state changes
 		if (previous_id != State->L_target.id) {
 			
-			State->lane_change_end_time = chrono::high_resolution_clock::now() + 8000ms;
+			State->lane_change_end_time = chrono::high_resolution_clock::now() + 20000ms;
 			previous_id = State->L_target.id;
 			cout << "Changing lanes " << State->L_target.d << endl;
 			cout << "L target " << State->L_target.id << endl;

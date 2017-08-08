@@ -5,6 +5,7 @@
 #include <map>
 #include <vector>
 #include <ctime>
+#include <queue>
 
 using namespace std;
 
@@ -43,12 +44,14 @@ public:
 
 
 	// Shared variables
-	chrono::high_resolution_clock::time_point start_time, current_time, mpc_clock;
+	chrono::high_resolution_clock::time_point start_time, current_time, behavior_time;
 	int previous_path_keeps;
 	double previous_path_size;
 
 	vector<double> last_last_trajectory;
 	vector<double> last_trajectory;
+
+	vector < vector<double> > last_n_trajectories;
 
 	double current_lane_target;
 	double timestep;
@@ -88,14 +91,14 @@ public:
 
 	// Path functions
 	void update_our_car_state(MAP *MAP, double car_x, double car_y, double car_s, double car_d,
-		double car_yaw, double car_speed);
-	void sensor_fusion_predict(vector< vector<double>> sensor_fusion);
+		double car_yaw, double car_speed, long long time_difference);
+	void sensor_fusion_predict_and_behavior(vector< vector<double>> sensor_fusion, long long time_difference_b);
 	vector<double> trajectory_generation();
 	vector<double> jerk_minimal_trajectory(vector< double> start, vector <double> end, double T);
 	Previous_path merge_previous_path(MAP *MAP, vector< double> previous_path_x,
 		vector< double> previous_path_y, double car_yaw, double car_s, double car_d, double end_path_s, double end_path_d);
 	X_Y convert_new_path_to_X_Y_and_merge(MAP *MAP, S_D S_D_, Previous_path Previous_path);
-	S_D build_trajectory(vector<double> trajectory);
+	S_D build_trajectory(vector<double> trajectory, long long build_trajectory_time);
 
 };
 
@@ -121,7 +124,7 @@ public:
 	double s_target, s_dot_target, d_target, d_dot_target;
 	vector<double> S_TARGETS, D_TARGETS;
 
-	void update_sensor_fusion(vector< vector<double>> sensor_fusion, int index) {
+	void update_sensor_fusion(vector< vector<double>> sensor_fusion, int index, long long time_difference_b) {
 		this->sf_x = sensor_fusion[index][1];
 		this->sf_y = sensor_fusion[index][2];
 		this->sf_vx = sensor_fusion[index][3];
@@ -133,10 +136,10 @@ public:
 		this->D[0] = this->sf_d;
 
 		// TODO Convert x,y velocity to s,d frame??
-		this->S[1] = this->S[0] - this->S_p[0];
-		this->D[1] = this->D[0] - this->D_p[0];
-		this->S[2] = this->S[1] - this->S_p[1];  // ie 100 - 90 = change of 10
-		this->D[2] = this->D[1] - this->D_p[1];
+		this->S[1] = (this->S[0] - this->S_p[0] ) / time_difference_b;   // velocity / time
+		this->D[1] = (this->D[0] - this->D_p[0] ) / time_difference_b;
+		this->S[2] = (this->S[1] - this->S_p[1] ) / time_difference_b;  // ie 100 - 90 = change of 10
+		this->D[2] = (this->D[1] - this->D_p[1] ) / time_difference_b;
 
 	}
 
