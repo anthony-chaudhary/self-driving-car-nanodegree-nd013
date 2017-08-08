@@ -212,14 +212,14 @@ int main() {
 				}
 								
 
-										
+				this_thread::sleep_for(chrono::milliseconds(100));
 				
 				auto msg = "42[\"control\"," + msgJson.dump() + "]";
 				//std::cout << msg << std::endl;
 
 				
 				ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-
+				
 				}
 			}
 			else {

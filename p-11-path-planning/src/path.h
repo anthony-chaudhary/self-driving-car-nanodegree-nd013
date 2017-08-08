@@ -158,6 +158,7 @@ public:
 		this->s_dot_target = S[1] + S[2] * t;
 		this->d_target = D[0] + (D[1] * t) + D[2] * (t * t) / 2.0;
 		this->d_dot_target = D[1] + D[2] * t;
+
 		S_TARGETS = { s_target, s_dot_target, S[2] };
 		D_TARGETS = { d_target, d_dot_target, D[2] };
 	}

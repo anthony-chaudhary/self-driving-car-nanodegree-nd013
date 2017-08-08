@@ -24,11 +24,14 @@ void Behavior::init() {
 	for (size_t i = 0; i < 3; ++i) {
 		lane l_;
 		l_.id = i;
-		l_.d_lower = i *  1;
-		l_.d		= 2.8 + i * 1;
-		l_.d_upper = 4 + i * 1;
+		//l_.d_lower = i *  1;
+		//l_.d_upper = 4 + i * 1;
 		road->L.push_back(l_);
 	}
+
+	road->L[0].d = 6.8 - 4;
+	road->L[1].d = 6.8;
+	road->L[2].d = 6.8 + 4;
 
 	State->lane_change_end_time = chrono::high_resolution_clock::now() - 10000ms;
 	
