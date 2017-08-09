@@ -147,7 +147,7 @@ int main() {
 					// cout << "previous_path_size " << previous_path_x.size() << endl;
 
 					// cout << time_difference << endl;
-					cout << "TIME 0 \t  Time since last loop \t"  << time_difference << endl;
+					//cout << "TIME 0 \t  Time since last loop \t"  << time_difference << endl;
 
 					if (time_difference_b > 500) {
 						// 2. Update vehicles with sensor fusion readings
@@ -157,7 +157,7 @@ int main() {
 					}
 
 
-					if (time_difference > 50) {
+					if (previous_path_x.size() < 100) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 

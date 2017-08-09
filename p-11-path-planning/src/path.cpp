@@ -42,10 +42,10 @@ void path::init() {
 	//vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	//classifier->train(X_train, Y_train);
 
-	our_path->previous_path_keeps = 5;  // starting point!
+	our_path->previous_path_keeps = 20;  // starting point!
 	our_path->timestep = .02;
-	our_path->T = 2;
-	our_path->trajectory_samples = 5;
+	our_path->T = 3;
+	our_path->trajectory_samples = 10;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 1., .01, .001 };
 	our_path->SIGMA_D = { .05, .01, .001 };
@@ -97,7 +97,7 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	//cout << chrono::high_resolution_clock::to_time_t(chrono::high_resolution_clock::now()) << endl;
 	
 
-	auto dt = time_difference;
+	auto dt = time_difference ;
 
 	r_daneel_olivaw->S[0] = car_s;
 	r_daneel_olivaw->D[0] = car_d;
@@ -296,98 +296,148 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	
 	if (p_x_size != 0) {
 
-		our_path->previous_path_keeps = max(1, 99 - p_x_size); 
-		//our_path->previous_path_keeps = 25;
-		cout << "our_path->previous_path_keeps " << our_path->previous_path_keeps << endl;
-
-		//cout << "car yaw " << car_yaw << endl;
-
-		//car_yaw = 4;
-		//cout << "car yaw " << car_yaw << endl;
+		p_x_size = min(150, p_x_size);
+		cout << "p_x_size " << p_x_size << endl;
 
 		//steps_moved = time_difference
 
-		vector<double> new_s_d = getFrenet(previous_path_x[our_path->previous_path_keeps ], previous_path_y[our_path->previous_path_keeps], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+		// Push back previous 2 points
+		// ie  49, 50
+		car_yaw = atan2(previous_path_y[p_x_size - 1] - previous_path_y[p_x_size - 2],
+			previous_path_x[p_x_size - 1] - previous_path_x[p_x_size - 2]);
+		cout << "car yaw " << car_yaw << endl;
+		Previous_path.yaw = car_yaw;
 
-		Previous_path.s = new_s_d[0];
-		Previous_path.d = new_s_d[1];
+		for (size_t i = 0; i < p_x_size; i++) {
 
-		/*
-		for (size_t i = 0; i < our_path->previous_path_keeps + 1 ; i++) {
+			// auto x_car_space = (previous_path_x[i]) * cos(car_yaw) + (previous_path_y[i]) * sin(car_yaw);
+			// auto y_car_space = (previous_path_y[i]) * cos(car_yaw) - (previous_path_x[i]) * sin(car_yaw);
+
 			Previous_path.X.push_back(previous_path_x[i]);
 			Previous_path.Y.push_back(previous_path_y[i]);
-		}
-		*/
+		}		
+
+		vector<double> new_s_d = getFrenet(previous_path_x[p_x_size-1],
+			previous_path_y[p_x_size-1], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
+
+		Previous_path.s = new_s_d[0];
+		Previous_path.d = new_s_d[1];	
 
 		int x_size = Previous_path.X.size();
 	}
 	else {  // Init case
 		Previous_path.s = car_s;
 		Previous_path.d = car_d;
+		Previous_path.yaw = deg2rad(car_yaw);
+		
 	}
+
+	//Previous_path.yaw = car_yaw;
 	return Previous_path;
 
 }
 
 path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path) {
 
-	path::X_Y X_Y;
-	//X_Y.X = Previous_path.X;
-	//X_Y.Y = Previous_path.Y;
+	path::X_Y X_Y, RETURN_points;
+	RETURN_points.X = Previous_path.X;
+	RETURN_points.Y = Previous_path.Y;
+
+	auto yaw = Previous_path.yaw;
 
 	for (size_t i = 0; i < S_D_.S.size(); ++i) {
 
 		vector<double> a = getXY(S_D_.S[i], S_D_.D[i], MAP->waypoints_s_upsampled,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
-		X_Y.X.push_back(a[0]);
-		X_Y.Y.push_back(a[1]);
+
+		auto x_car_space = (a[0]) * cos(yaw) - (a[1]) * sin(yaw);
+		auto y_car_space = (a[0]) * sin(yaw) + (a[1]) * cos(yaw);
+
+		X_Y.X.push_back(x_car_space);
+		X_Y.Y.push_back(y_car_space);
 		
 	}
 
-	cout << "\nX_Y.X 0 \t " << X_Y.X[0] << "\t X_Y.Y 0 \t" << X_Y.Y[0] << endl;
-	cout << "X_Y.X 1 \t " << X_Y.X[1] << "\t X_Y.Y 1 \t" << X_Y.Y[1] << endl;
-	//cout << "X_Y.X 2 \t " << X_Y.X[2] << "\t X_Y.Y 0 \t" << X_Y.Y[2] << endl;
-	//cout << "X_Y.X 50 \t " << X_Y.X[50] << "\t X_Y.Y 50 \t" << X_Y.Y[50] << endl;
-	//cout << "X_Y.X " << S_D_.S.size()-1 << "\t " << X_Y.X[S_D_.S.size()-1] << "\t X_Y.Y \t" << X_Y.Y[S_D_.S.size()-1] << endl;
+	//sort(X_Y.X.begin(), X_Y.X.end());
+	//sort(X_Y.Y.begin(), X_Y.Y.end());
 
-	/*	
-	double x_mean, y_mean;
-	x_mean = 0;
-	y_mean = 0;
-	int x_size = our_path->previous_path_keeps;
-	int merge_size = 9;
-	for (size_t i = x_size - merge_size; i < x_size + merge_size; ++i) {
-		x_mean += X_Y.X[i];
-		y_mean += X_Y.Y[i];
-	}
-	x_mean = x_mean / (merge_size * 2);
-	y_mean = y_mean / (merge_size * 2);
-	for (size_t i = x_size - 3; i < x_size + 3; ++i) {
-		X_Y.X[i] = X_Y.X[i] * .97 + x_mean * .03;
-		X_Y.Y[i] = X_Y.Y[i] * .97 + y_mean * .03;
-	}
-	for (size_t i = x_size - 6; i < x_size + 6; ++i) {
-		X_Y.X[i] = X_Y.X[i] * .99 + x_mean * .01;
-		X_Y.Y[i] = X_Y.Y[i] * .99 + y_mean * .01;
-	}
-	for (size_t i = x_size - 9; i < x_size + 9; ++i) {
-		X_Y.X[i] = X_Y.X[i] * .999 + x_mean * .001;
-		X_Y.Y[i] = X_Y.Y[i] * .999 + y_mean * .001;
-	}
-	for (size_t i = x_size - 12; i < x_size + 12; ++i) {
-		X_Y.X[i] = X_Y.X[i] * .9999 + x_mean * .0001;
-		X_Y.Y[i] = X_Y.Y[i] * .9999 + y_mean * .0001;
-	}
-	*/
+	tk::spline spline_xy;
+	spline_xy.set_points(X_Y.X, X_Y.Y);
 	
-	// exp(rate)
+	cout << "Spline created " << endl;
+	double target_x = 30;
+	double target_y = spline_xy(target_x);
+	double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
+	double x_add_on = 0;
+
+	for (size_t i = 1; i < X_Y.X.size(); ++i) {
+		
+		double N = (target_dist / (.02 * 50 / 2.24));
+
+		auto x_point = x_add_on + (target_x) / N;
+		x_add_on = x_point;
+		auto y_point = spline_xy(x_point);
+
+		// convert back to normal space
+		auto x = x_point;
+		auto y = y_point;
+
+		x_point = x * cos(yaw) - y * sin(yaw);
+		y_point = x * sin(yaw) + y * cos(yaw);
+
+		x_point += X_Y.X[0];  // referance x
+		//y_point += X_Y.Y[0];
+
+		cout << "x_point \t " << x_point << " y \t" << y_point << endl;
+		
+		RETURN_points.X.push_back(x_point);
+		RETURN_points.Y.push_back(y_point);
+	}
 	
 	our_path->previous_path_size = X_Y.X.size();
 	
-	return X_Y;
+	return RETURN_points;
 }
 
+path::S_D  path::build_trajectory(vector<double> trajectory, long long build_trajectory_time) {
 
+	vector<double> S, D, X, Y; // TODO better way to do this
+							   // refactor using S_D struct
+
+							   // Average previously trajectory
+
+
+							   //auto super_time = 0;
+	auto sums_time = 0;
+	auto factor = min(int(our_path->last_n_trajectories.size()), 3);
+	cout << "factor" << factor << endl;
+	vector<double> sums_S, sums_D;
+
+	sums_S.resize(6);
+	sums_D.resize(6);
+	
+	S_D S_D_;
+
+
+	for (size_t i = 0; i < 6; ++i) {
+		S.push_back(trajectory[i]);
+		D.push_back(trajectory[6 + i]);
+		cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
+	}
+	
+	double time = 0;
+	//double time = double(build_trajectory_time)*.004; // go back in time like pitbull
+	auto super_time = (trajectory[12]) - time;
+
+	cout << "time\t" << time << endl;
+	while (time <= super_time) {
+		S_D_.S.push_back(coefficients_to_time_function(S, time));
+		S_D_.D.push_back(coefficients_to_time_function(D, time));
+		time += our_path->timestep;
+	}
+	return S_D_;
+
+}
 /****************************************
 * Cost functions
 ****************************************/
@@ -395,7 +445,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
-	cost += 1 * collision_cost(trajectory);
+	//cost += 1 * collision_cost(trajectory);
 	cost += 1 * total_acceleration_cost(trajectory);
 	cost += 1 * max_acceleration_cost(trajectory);
 	cost += 1 * efficiency_cost(trajectory);
@@ -403,7 +453,7 @@ double path::calculate_cost(vector<double> trajectory) {
 	cost += 1 * buffer_cost(trajectory);
 	cost += 1 * s_diff_cost(trajectory);
 	cost += 1 * d_diff_cost(trajectory);
-	cost += 1 * speed_limit_cost(trajectory);
+	//cost += 1 * speed_limit_cost(trajectory);
 	cost += 1 * max_jerk_cost(trajectory);
 	//cost += 1 * stay_in_lane(trajectory);
 
@@ -700,60 +750,6 @@ double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 		if (e < a) { a = e; }
 	}
 	return a;
-}
-
-path::S_D  path::build_trajectory(vector<double> trajectory, long long build_trajectory_time) {
-
-	vector<double> S, D, X, Y; // TODO better way to do this
-							   // refactor using S_D struct
-	
-	// Average previously trajectory
-
-	/*
-	auto super_time = 0;
-	auto sums_time = 0;
-	auto factor = min(int(our_path->last_n_trajectories.size()),1);
-	cout << "factor" << factor << endl;
-	vector<double> sums_S, sums_D;
-
-	sums_S.resize(6);
-	sums_D.resize(6);
-
-	
-	for (size_t i = our_path->last_n_trajectories.size() - factor; i < our_path->last_n_trajectories.size(); ++i) {
-		for (size_t j = 0; j < 6; ++j) {
-			sums_S[j] += our_path->last_n_trajectories[i][j];
-			sums_D[j] += our_path->last_n_trajectories[i][j + 6];
-		}
-		sums_time += trajectory[12];
-	}
-
-
-	for (size_t i = 0; i < 6; ++i) {
-		S.push_back((trajectory[i] * 3 + sums_S[i]) / (factor + 3));
-		D.push_back((trajectory[i + 6] * 3 + sums_D[i]) / (factor + 3));
-		super_time = (trajectory[12] * 3 + sums_time) / (factor + 3);
-
-		cout << "S[i] \t" << S[i] << " \t D[i] \t" << D[i] << endl;
-	}
-	*/
-	
-	S_D S_D_;
-	for (size_t i = 0; i < 6; ++i) {
-		S.push_back(trajectory[i]);
-		D.push_back(trajectory[6+ i]);
-		//cout << "S[i] \t" << S[i] << " \t D[i] \t" << D[i] << endl;
-	}
-	auto super_time = (trajectory[12]);
-
-	double time = (build_trajectory_time ) * .002;; // go back in time like pitbull
-	while (time <= super_time) {
-		S_D_.S.push_back(coefficients_to_time_function(S, time));
-		S_D_.D.push_back(coefficients_to_time_function(D, time));
-		time += our_path->timestep;
-	}
-	return S_D_;
-
 }
 
 double path::efficiency_cost(vector<double> trajectory) {

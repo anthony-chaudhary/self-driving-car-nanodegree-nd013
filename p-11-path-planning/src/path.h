@@ -35,6 +35,7 @@ public:
 		vector<double> Y;
 		double s;
 		double d;
+		double yaw;
 	};
 	struct MAP {
 		vector<double> waypoints_s_upsampled = {};
