@@ -144,16 +144,15 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	
 	if (our_path->last_trajectory.size() != 0) {
 		target->D[0] = our_path->current_lane_target;
-		cout << "target->D[0]" << target->D[0] << endl;
-
-		target->D[1] = .001;   // SHOULD BE SMALL
-		target->D[2] = .003;
+		target->D[1] = .0001;   // SHOULD BE SMALL
+		target->D[2] = .00003;
 	}
 	else {
 		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .01;  
-		target->D[2] = 0.01;
+		target->D[1] = .001;  
+		target->D[2] = 0.0001;
 	}
+	cout << "target->D[0]" << target->D[0] << endl;
 
 	if (our_path->last_trajectory.size() != 0) {
 
@@ -296,26 +295,31 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	
 	if (p_x_size != 0) {
 
-		p_x_size = min(150, p_x_size);
+		p_x_size = min(20, p_x_size);
 		cout << "p_x_size " << p_x_size << endl;
 
 		//steps_moved = time_difference
-
 		// Push back previous 2 points
 		// ie  49, 50
+
 		car_yaw = atan2(previous_path_y[p_x_size - 1] - previous_path_y[p_x_size - 2],
 			previous_path_x[p_x_size - 1] - previous_path_x[p_x_size - 2]);
 		cout << "car yaw " << car_yaw << endl;
 		Previous_path.yaw = car_yaw;
 
-		for (size_t i = 0; i < p_x_size; i++) {
+		auto i = 0;
+		while (i < p_x_size) {
 
-			// auto x_car_space = (previous_path_x[i]) * cos(car_yaw) + (previous_path_y[i]) * sin(car_yaw);
-			// auto y_car_space = (previous_path_y[i]) * cos(car_yaw) - (previous_path_x[i]) * sin(car_yaw);
+			auto x_car_space = (previous_path_x[i] - previous_path_x[0]) * cos(0 - car_yaw) - (previous_path_y[i] - previous_path_y[0]) * sin(0 - car_yaw);
+			auto y_car_space = (previous_path_x[i] - previous_path_x[0]) * sin(0 - car_yaw) + (previous_path_y[i] - previous_path_y[0]) * cos(0 - car_yaw);
 
-			Previous_path.X.push_back(previous_path_x[i]);
-			Previous_path.Y.push_back(previous_path_y[i]);
-		}		
+			Previous_path.X.push_back(x_car_space);
+			Previous_path.Y.push_back(y_car_space);
+
+			i += 10;
+		}	
+		Previous_path.x0 = previous_path_x[0];
+		Previous_path.y0 = previous_path_y[0];
 
 		vector<double> new_s_d = getFrenet(previous_path_x[p_x_size-1],
 			previous_path_y[p_x_size-1], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
@@ -340,8 +344,8 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path) {
 
 	path::X_Y X_Y, output_points;
-	output_points.X = Previous_path.X;
-	output_points.Y = Previous_path.Y;
+	X_Y.X = Previous_path.X;
+	X_Y.Y = Previous_path.Y;
 
 	auto yaw = Previous_path.yaw;
 
@@ -353,8 +357,8 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 
 		if (Previous_path.X.size() != 0) {
-			auto x_car_space = (a[0] - output_points.X[0]) * cos(0 - yaw) - (a[1] - output_points.Y[0]) * sin(0 - yaw);
-			auto y_car_space = (a[0] - output_points.X[0]) * sin(0 - yaw) + (a[1] - output_points.Y[0]) * cos(0 - yaw);
+			auto x_car_space = (a[0] - Previous_path.x0) * cos(0 - yaw) - (a[1] - Previous_path.y0) * sin(0 - yaw);
+			auto y_car_space = (a[0] - Previous_path.x0) * sin(0 - yaw) + (a[1] - Previous_path.y0) * cos(0 - yaw);
 
 			X_Y.X.push_back(x_car_space);
 			X_Y.Y.push_back(y_car_space);
@@ -376,14 +380,14 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		spline_xy.set_points(X_Y.X, X_Y.Y);
 
 		cout << "Spline created " << endl;
-		double target_x = 10;   // why is this 30??
+		double target_x = 1;   // why is this 30??
 		double target_y = spline_xy(target_x);
 		double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
 		double x_add_on = 0;
 
-		for (size_t i = 1; i < 150 - Previous_path.X.size(); ++i) {
+		for (size_t i = 1; i < 100; ++i) {
 
-			double N = (target_dist / (.02 * 50 / 2.24));
+			double N = (target_dist / (.02 * 48 / 2.24));
 
 			auto x_point = x_add_on + (target_x) / N;
 			x_add_on = x_point;
@@ -396,8 +400,8 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 			x_point = x * cos(yaw) - y * sin(yaw);
 			y_point = x * sin(yaw) + y * cos(yaw);
 
-			x_point += output_points.X[0];  // referance x
-			y_point += output_points.Y[0];
+			x_point += Previous_path.x0;  // referance x
+			y_point += Previous_path.y0;
 
 			
 			output_points.X.push_back(x_point);
