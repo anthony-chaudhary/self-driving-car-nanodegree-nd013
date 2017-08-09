@@ -157,7 +157,7 @@ int main() {
 					}
 
 
-					if (previous_path_x.size() < 100) {
+					if (previous_path_x.size() < 50) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 

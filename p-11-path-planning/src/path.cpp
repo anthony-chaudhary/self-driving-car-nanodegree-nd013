@@ -339,64 +339,79 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 
 path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_, path::Previous_path Previous_path) {
 
-	path::X_Y X_Y, RETURN_points;
-	RETURN_points.X = Previous_path.X;
-	RETURN_points.Y = Previous_path.Y;
+	path::X_Y X_Y, output_points;
+	output_points.X = Previous_path.X;
+	output_points.Y = Previous_path.Y;
 
 	auto yaw = Previous_path.yaw;
 
-	for (size_t i = 0; i < S_D_.S.size(); ++i) {
+	int index = 0;
+	while (index < S_D_.S.size()) {
 
-		vector<double> a = getXY(S_D_.S[i], S_D_.D[i], MAP->waypoints_s_upsampled,
+		vector<double> a = getXY(S_D_.S[index], S_D_.D[index], MAP->waypoints_s_upsampled,
 			MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
 
-		auto x_car_space = (a[0]) * cos(yaw) - (a[1]) * sin(yaw);
-		auto y_car_space = (a[0]) * sin(yaw) + (a[1]) * cos(yaw);
 
-		X_Y.X.push_back(x_car_space);
-		X_Y.Y.push_back(y_car_space);
-		
+		if (Previous_path.X.size() != 0) {
+			auto x_car_space = (a[0] - output_points.X[0]) * cos(0 - yaw) - (a[1] - output_points.Y[0]) * sin(0 - yaw);
+			auto y_car_space = (a[0] - output_points.X[0]) * sin(0 - yaw) + (a[1] - output_points.Y[0]) * cos(0 - yaw);
+
+			X_Y.X.push_back(x_car_space);
+			X_Y.Y.push_back(y_car_space);
+			index += 10;
+		}
+		else {
+			output_points.X.push_back(a[0]);
+			output_points.Y.push_back(a[1]);
+			index += 1;
+			
+		}
 	}
 
 	//sort(X_Y.X.begin(), X_Y.X.end());
 	//sort(X_Y.Y.begin(), X_Y.Y.end());
 
-	tk::spline spline_xy;
-	spline_xy.set_points(X_Y.X, X_Y.Y);
-	
-	cout << "Spline created " << endl;
-	double target_x = 30;
-	double target_y = spline_xy(target_x);
-	double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
-	double x_add_on = 0;
+	if (Previous_path.X.size() != 0) {
+		tk::spline spline_xy;
+		spline_xy.set_points(X_Y.X, X_Y.Y);
 
-	for (size_t i = 1; i < X_Y.X.size(); ++i) {
-		
-		double N = (target_dist / (.02 * 50 / 2.24));
+		cout << "Spline created " << endl;
+		double target_x = 10;   // why is this 30??
+		double target_y = spline_xy(target_x);
+		double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
+		double x_add_on = 0;
 
-		auto x_point = x_add_on + (target_x) / N;
-		x_add_on = x_point;
-		auto y_point = spline_xy(x_point);
+		for (size_t i = 1; i < 150 - Previous_path.X.size(); ++i) {
 
-		// convert back to normal space
-		auto x = x_point;
-		auto y = y_point;
+			double N = (target_dist / (.02 * 50 / 2.24));
 
-		x_point = x * cos(yaw) - y * sin(yaw);
-		y_point = x * sin(yaw) + y * cos(yaw);
+			auto x_point = x_add_on + (target_x) / N;
+			x_add_on = x_point;
+			auto y_point = spline_xy(x_point);
 
-		x_point += X_Y.X[0];  // referance x
-		//y_point += X_Y.Y[0];
+			// convert back to normal space
+			auto x = x_point;
+			auto y = y_point;
 
-		cout << "x_point \t " << x_point << " y \t" << y_point << endl;
-		
-		RETURN_points.X.push_back(x_point);
-		RETURN_points.Y.push_back(y_point);
+			x_point = x * cos(yaw) - y * sin(yaw);
+			y_point = x * sin(yaw) + y * cos(yaw);
+
+			x_point += output_points.X[0];  // referance x
+			y_point += output_points.Y[0];
+
+			
+			output_points.X.push_back(x_point);
+			output_points.Y.push_back(y_point);
+		}
 	}
 	
-	our_path->previous_path_size = X_Y.X.size();
+	//our_path->previous_path_size = X_Y.X.size();
+
+	cout << "x_point 0 \t " << output_points.X[0] << " y \t" << output_points.Y[0] << endl;
+	cout << "x_point 10 \t " << output_points.X[10] << " y \t" << output_points.Y[10] << endl;
+	cout << "x_point last \t " << output_points.X[output_points.X.size()-1] << " y \t" << output_points.Y[output_points.X.size() - 1] << endl;
 	
-	return RETURN_points;
+	return output_points;
 }
 
 path::S_D  path::build_trajectory(vector<double> trajectory, long long build_trajectory_time) {
