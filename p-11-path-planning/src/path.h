@@ -58,6 +58,7 @@ public:
 
 	double current_lane_target;
 	double timestep;
+	double ref_velocity;
 	double T;
 	double distance_goal;
 	int trajectory_samples;

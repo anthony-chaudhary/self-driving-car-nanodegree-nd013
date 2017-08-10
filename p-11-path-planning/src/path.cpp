@@ -42,14 +42,15 @@ void path::init() {
 	//vector< string > Y_train = classifier->load_label("./train_labels.txt");
 	//classifier->train(X_train, Y_train);
 
-	our_path->previous_path_keeps = 20;  // starting point!
+	our_path->previous_path_keeps = 20; 
 	our_path->timestep = .02;
-	our_path->T = 3;
-	our_path->trajectory_samples = 10;
+	our_path->T = 4;
+	our_path->trajectory_samples = 5;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 1., .01, .001 };
 	our_path->SIGMA_D = { .05, .01, .001 };
-	our_path->current_lane_target = 3.8;
+	our_path->current_lane_target = 6.8;
+	our_path->ref_velocity = 30;
 
 }
 
@@ -122,47 +123,48 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	r_daneel_olivaw->speed = car_speed;	 
 
 	
+	if (our_path->last_trajectory.size() != 0) {
+		target->D[0] = our_path->current_lane_target;
+		target->D[1] = .00001;   // SHOULD BE SMALL
+		target->D[2] = .000001;
+		our_path->T = 6;
+	}
+	else {
+		target->D[0] = our_path->current_lane_target;
+		target->D[1] = .00001;
+		target->D[2] = .000001;
+	}
+
 	target->S[0] = car_s + our_path->distance_goal;
 
 	if (car_speed < 30) {
-		target->S[0] = car_s + our_path->T * 7;
-		target->S[1] = 5;
+		target->S[0] = car_s + our_path->T * 8;
+		target->S[1] = 8;
 		target->S[2] = .01;
 	}
 
 	if (car_speed < 45 && car_speed > 30) {
-		target->S[0] = car_s + our_path->T * 7;
-		target->S[1] = 5;
+		target->S[0] = car_s + our_path->T * 8;
+		target->S[1] = 8;
 		target->S[2] = 0.001;
 	}
 
 	if (car_speed > 45) {
-		target->S[0] = car_s + our_path->T * 4;
-		target->S[1] = .1; //  velocity
-		target->S[2] = 0.00000;  // 
+		target->S[0] = car_s + our_path->T * 8;
+		target->S[1] = 8; //  velocity
+		target->S[2] = 0.00001;  // 
 	}
-	
-	if (our_path->last_trajectory.size() != 0) {
-		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .0001;   // SHOULD BE SMALL
-		target->D[2] = .00003;
-	}
-	else {
-		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .001;  
-		target->D[2] = 0.0001;
-	}
-	cout << "target->D[0]" << target->D[0] << endl;
 
+	
 	if (our_path->last_trajectory.size() != 0) {
 
 		// this should be in behavior planner?
 		if (our_path->collision_cost(our_path->last_trajectory) == 1) {
 			cout << "Slowing down for car" << endl;
 
-			target->S[0] = car_s + our_path->T * 3;
-			target->S[1] = 2;
-			target->S[2] = -.0005;
+			target->S[0] = car_s + our_path->T * 5;
+			target->S[1] = 5;
+			target->S[2] = .001;
 		}
 
 		if (our_path->speed_limit_cost(our_path->last_trajectory) > .4) {
@@ -171,7 +173,18 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 			target->S[2] = 0.00000;  // 
 		}
 	}
-	
+
+
+	if (target->S[1] < 6) {
+		our_path->ref_velocity -= 2;
+	}
+	if (target->S[1] > 7) {
+		our_path->ref_velocity += 1;
+		our_path->ref_velocity = min(our_path->ref_velocity, 48.0);
+	}
+
+	cout << "our_path->ref_velocity \t"<< our_path->ref_velocity << endl;
+
 	//cout << "target->D[0]" << target->D[0] << endl;
 	target->update_target_state(0);
 	//cout << "target->D[0]" << target->D[0] << endl;
@@ -295,7 +308,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	
 	if (p_x_size != 0) {
 
-		p_x_size = min(20, p_x_size);
+		p_x_size = min(61, p_x_size);
 		cout << "p_x_size " << p_x_size << endl;
 
 		//steps_moved = time_difference
@@ -316,7 +329,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 			Previous_path.X.push_back(x_car_space);
 			Previous_path.Y.push_back(y_car_space);
 
-			i += 10;
+			i += 15;
 		}	
 		Previous_path.x0 = previous_path_x[0];
 		Previous_path.y0 = previous_path_y[0];
@@ -362,7 +375,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 			X_Y.X.push_back(x_car_space);
 			X_Y.Y.push_back(y_car_space);
-			index += 10;
+			index += 15;
 		}
 		else {
 			output_points.X.push_back(a[0]);
@@ -371,7 +384,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 			
 		}
 	}
-
+	
 	//sort(X_Y.X.begin(), X_Y.X.end());
 	//sort(X_Y.Y.begin(), X_Y.Y.end());
 
@@ -379,15 +392,15 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		tk::spline spline_xy;
 		spline_xy.set_points(X_Y.X, X_Y.Y);
 
-		cout << "Spline created " << endl;
-		double target_x = 1;   // why is this 30??
+		//cout << "Spline created " << endl;
+		double target_x = 15;   // why is this 30??
 		double target_y = spline_xy(target_x);
 		double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
 		double x_add_on = 0;
 
-		for (size_t i = 1; i < 100; ++i) {
+		for (size_t i = 1; i < our_path->T * 49; ++i) {
 
-			double N = (target_dist / (.02 * 48 / 2.24));
+			double N = (target_dist / (.02 * (our_path->ref_velocity) / 2.24));
 
 			auto x_point = x_add_on + (target_x) / N;
 			x_add_on = x_point;
@@ -411,9 +424,9 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	
 	//our_path->previous_path_size = X_Y.X.size();
 
-	cout << "x_point 0 \t " << output_points.X[0] << " y \t" << output_points.Y[0] << endl;
-	cout << "x_point 10 \t " << output_points.X[10] << " y \t" << output_points.Y[10] << endl;
-	cout << "x_point last \t " << output_points.X[output_points.X.size()-1] << " y \t" << output_points.Y[output_points.X.size() - 1] << endl;
+	//cout << "x_point 0 \t " << output_points.X[0] << " y \t" << output_points.Y[0] << endl;
+	//cout << "x_point 10 \t " << output_points.X[10] << " y \t" << output_points.Y[10] << endl;
+	//cout << "x_point last \t " << output_points.X[output_points.X.size()-1] << " y \t" << output_points.Y[output_points.X.size() - 1] << endl;
 	
 	return output_points;
 }
@@ -429,7 +442,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 							   //auto super_time = 0;
 	auto sums_time = 0;
 	auto factor = min(int(our_path->last_n_trajectories.size()), 3);
-	cout << "factor" << factor << endl;
+	//cout << "factor" << factor << endl;
 	vector<double> sums_S, sums_D;
 
 	sums_S.resize(6);
@@ -441,14 +454,14 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 	for (size_t i = 0; i < 6; ++i) {
 		S.push_back(trajectory[i]);
 		D.push_back(trajectory[6 + i]);
-		cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
+		//cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
 	}
 	
-	double time = 0;
+	double time = .1;
 	//double time = double(build_trajectory_time)*.004; // go back in time like pitbull
 	auto super_time = (trajectory[12]) - time;
 
-	cout << "time\t" << time << endl;
+	//cout << "time\t" << time << endl;
 	while (time <= super_time) {
 		S_D_.S.push_back(coefficients_to_time_function(S, time));
 		S_D_.D.push_back(coefficients_to_time_function(D, time));
@@ -464,7 +477,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
-	//cost += 1 * collision_cost(trajectory);
+	cost += 1 * collision_cost(trajectory);
 	cost += 1 * total_acceleration_cost(trajectory);
 	cost += 1 * max_acceleration_cost(trajectory);
 	cost += 1 * efficiency_cost(trajectory);
