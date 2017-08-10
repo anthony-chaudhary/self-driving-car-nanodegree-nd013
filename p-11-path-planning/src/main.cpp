@@ -101,7 +101,7 @@ int main() {
 	path::MAP *MAP = new path::MAP;
 
 	// refine path with spline.
-	int spline_samples = 36000;
+	int spline_samples = 24000;
 	for (size_t i = 0; i < spline_samples; ++i) {
 		MAP->waypoints_x_upsampled.push_back(spline_x(i));
 		MAP->waypoints_y_upsampled.push_back(spline_y(i));
@@ -149,12 +149,14 @@ int main() {
 					// cout << time_difference << endl;
 					//cout << "TIME 0 \t  Time since last loop \t"  << time_difference << endl;
 
-					if (time_difference_b > 500) {
+					/*
+					if (time_difference_b > 200) {
 						// 2. Update vehicles with sensor fusion readings
 						path.behavior_time = chrono::high_resolution_clock::now();
 
 						path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
 					}
+					*/
 
 
 					if (previous_path_x.size() < 200) {
@@ -164,7 +166,9 @@ int main() {
 						// 0. set clock for next round
 						path.start_time = chrono::high_resolution_clock::now();
 
-						cout << "TIME \t" << endl;
+						path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
+
+						
 						//cout << "TIME 1 \t path.start_time \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
 						// 1. Merge previous path and update car state
@@ -192,7 +196,7 @@ int main() {
 						// 6. Convert to X and Y and append previous path
 						X_Y_ = path.convert_new_path_to_X_Y_and_merge(MAP, S_D_, Previous_path);
 
-						cout << "TIME 6 TOTAL \t path.convert_new_path_to_X_Y_and_merge \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
+						cout << "\nCycle time \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
 
 						
 						//cout << X_Y_.X.size() << endl;
