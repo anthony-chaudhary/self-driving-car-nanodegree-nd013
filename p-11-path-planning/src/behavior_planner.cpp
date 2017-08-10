@@ -77,14 +77,14 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 
 	if (previous_id == 0) {
 		t_1[6] = road->L[1].d;
-		t_2[6] = road->L[2].d;
+		t_2[6] = road->L[1].d;
 	}
 	if (previous_id == 1) {
 		t_0[6] = road->L[0].d;
 		t_2[6] = road->L[2].d;;
 	}
 	if (previous_id == 2) {
-		t_0[6] = road->L[0].d;;
+		t_0[6] = road->L[1].d;;
 		t_1[6] = road->L[1].d;;
 	}
 

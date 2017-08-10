@@ -81,6 +81,8 @@ public:
 
 	// Helper functions
 	void init();
+	double nearest_approach_to_vehicle_in_front(vector<double> trajectory);
+	double collision_cost_front(vector<double> trajectory);
 	double coefficients_to_time_function(vector<double> coefficients, double t);
 	double logistic(double x);
 	vector<double> wiggle_goal(double t);

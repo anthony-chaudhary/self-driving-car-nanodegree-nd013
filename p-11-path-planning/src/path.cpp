@@ -45,12 +45,12 @@ void path::init() {
 	our_path->previous_path_keeps = 20; 
 	our_path->timestep = .02;
 	our_path->T = 4;
-	our_path->trajectory_samples = 5;
+	our_path->trajectory_samples = 10;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 1., .01, .001 };
 	our_path->SIGMA_D = { .05, .01, .001 };
 	our_path->current_lane_target = 6.8;
-	our_path->ref_velocity = 30;
+	our_path->ref_velocity = 35;
 
 }
 
@@ -127,7 +127,8 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 		target->D[0] = our_path->current_lane_target;
 		target->D[1] = .00001;   // SHOULD BE SMALL
 		target->D[2] = .000001;
-		our_path->T = 6;
+		our_path->T = 8;
+		our_path->ref_velocity -= 3;
 	}
 	else {
 		target->D[0] = our_path->current_lane_target;
@@ -159,7 +160,7 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	if (our_path->last_trajectory.size() != 0) {
 
 		// this should be in behavior planner?
-		if (our_path->collision_cost(our_path->last_trajectory) == 1) {
+		if (our_path->collision_cost_front(our_path->last_trajectory) == 1) {
 			cout << "Slowing down for car" << endl;
 
 			target->S[0] = car_s + our_path->T * 5;
@@ -176,10 +177,11 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 
 
 	if (target->S[1] < 6) {
-		our_path->ref_velocity -= 2;
+		our_path->ref_velocity -= 1;
+		//our_path->ref_velocity = min(our_path->ref_velocity, 35.00);
 	}
 	if (target->S[1] > 7) {
-		our_path->ref_velocity += 1;
+		our_path->ref_velocity += 3;
 		our_path->ref_velocity = min(our_path->ref_velocity, 48.0);
 	}
 
@@ -457,7 +459,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		//cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
 	}
 	
-	double time = .1;
+	double time = 1;
 	//double time = double(build_trajectory_time)*.004; // go back in time like pitbull
 	auto super_time = (trajectory[12]) - time;
 
@@ -479,12 +481,12 @@ double path::calculate_cost(vector<double> trajectory) {
 
 	cost += 1 * collision_cost(trajectory);
 	cost += 1 * total_acceleration_cost(trajectory);
-	cost += 1 * max_acceleration_cost(trajectory);
+	cost += .5 * max_acceleration_cost(trajectory);
 	cost += 1 * efficiency_cost(trajectory);
 	cost += 1 * total_jerk_cost(trajectory);
 	cost += 1 * buffer_cost(trajectory);
-	cost += 1 * s_diff_cost(trajectory);
-	cost += 1 * d_diff_cost(trajectory);
+	cost += .5 * s_diff_cost(trajectory);
+	cost += .5 * d_diff_cost(trajectory);
 	//cost += 1 * speed_limit_cost(trajectory);
 	cost += 1 * max_jerk_cost(trajectory);
 	//cost += 1 * stay_in_lane(trajectory);
@@ -721,6 +723,18 @@ double path::collision_cost(vector<double> trajectory) {
 }
 
 
+double path::collision_cost_front(vector<double> trajectory) {
+
+	double a = nearest_approach_to_vehicle_in_front(trajectory);
+	double b = 2 * r_daneel_olivaw->radius;
+	//cout << b << endl;
+	if (a < b) {
+		// cout << a << endl; 
+		return 1.0;
+	}
+	else { return 0.0; }
+}
+
 double path::stay_in_lane(vector<double> trajectory){
 	vector<double> D;
 	D = { trajectory[6], trajectory[7], trajectory[8], trajectory[9], trajectory[10], trajectory[11] };
@@ -754,6 +768,29 @@ double path::nearest_approach_to_any_vehicle(vector<double> trajectory) {
 		b = r_daneel_olivaw->nearest_approach(trajectory, other_vehicles[i]);
 		if (b < a) { a = b; }
 	}
+	return a;
+
+}
+
+double path::nearest_approach_to_vehicle_in_front(vector<double> trajectory) {
+	// returns closest distance to any vehicle
+
+	double a = 1e9;
+	double b;
+	for (size_t i = 0; i < other_vehicles.size(); ++i) {
+		
+		if (other_vehicles[i].sf_s > r_daneel_olivaw->S[0]) {
+
+			//cout << "other_vehicles[i].sf_d " << other_vehicles[i].sf_d << endl;
+			if (other_vehicles[i].sf_d < r_daneel_olivaw->D[0] + 1
+				|| other_vehicles[i].sf_d > r_daneel_olivaw->D[0] - 1) {
+			
+				b = r_daneel_olivaw->nearest_approach(trajectory, other_vehicles[i]);
+				if (b < a) { a = b; }
+			}
+		}
+	}
+	cout << a << endl;
 	return a;
 
 }
