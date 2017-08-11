@@ -25,9 +25,15 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
 	
 endif(${CMAKE_SYSTEM_NAME} MATCHES "Darwin") 
 
+
+if (UNIX)
+set(sources src/main.cpp src/path.cpp src/classifier.cpp src/behavior_planner.cpp)
+
+endif (UNIX)
+
 add_executable(path_planning ${sources})
 
 if (UNIX)
-set(sources src/main.cpp src/path.cpp src/classifier.cpp src/behavior_planner.cpp src/MPC.cpp)
-target_link_libraries(path_planning ipopt z ssl uv uWS)
+
+target_link_libraries(path_planning z ssl uv uWS)
 endif (UNIX)

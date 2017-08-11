@@ -1,7 +1,7 @@
 #include <fstream>
-#include "uWS/uWS.h"  // if WINDOWS
+//#include "uWS/uWS.h"  // if WINDOWS
 // IF LINUX
-//#include <uWS/uWS.h>
+#include <uWS/uWS.h>
 
 #include <thread>
 #include <vector>
@@ -108,7 +108,7 @@ int main() {
 		MAP->waypoints_s_upsampled.push_back(i);
 	}
 
-	// IF different version of uwebsockts replace all "ws" with "(*ws)"!
+	// IF different version of uwebsockts replace all "ws" with "ws"!
 
 
 	path::X_Y X_Y_, X_Y_2;
@@ -150,23 +150,25 @@ int main() {
 					//cout << "TIME 0 \t  Time since last loop \t"  << time_difference << endl;
 
 					/*
-					if (time_difference_b > 200) {
+					if (time_difference_b > 300) {
 						// 2. Update vehicles with sensor fusion readings
 						path.behavior_time = chrono::high_resolution_clock::now();
 
 						path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
 					}
+
 					*/
-
-
-					if (previous_path_x.size() < 200) {
+					if (time_difference > 200 ) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 
 						// 0. set clock for next round
+						path.behavior_time = chrono::high_resolution_clock::now();
+						path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
+
 						path.start_time = chrono::high_resolution_clock::now();
 
-						path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
+						//path.sensor_fusion_predict_and_behavior(sensor_fusion, time_difference_b);
 
 						
 						//cout << "TIME 1 \t path.start_time \t" << chrono::duration_cast<std::chrono::milliseconds>(chrono::high_resolution_clock::now() - path.start_time).count() << endl;
@@ -206,12 +208,18 @@ int main() {
 
 			
 					} 
+
+
+									
 				
 				else {
 					//cout << "Using previous path\n " << endl;
 					msgJson["next_x"] = previous_path_x;
 					msgJson["next_y"] = previous_path_y;
 				}
+
+
+				
 								
 				
 				auto msg = "42[\"control\"," + msgJson.dump() + "]";
