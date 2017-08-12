@@ -44,7 +44,7 @@ void path::init() {
 
 	our_path->timestep = .02;
 	our_path->T = 4;
-	our_path->trajectory_samples = 8;
+	our_path->trajectory_samples = 15;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 4., .1, .01 };
 	our_path->SIGMA_D = { .2, .1, .1 };
@@ -123,14 +123,14 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	
 	if (our_path->last_trajectory.size() != 0) {
 		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .00001;   // SHOULD BE SMALL
-		target->D[2] = .000001;
+		target->D[1] = .000001;   // SHOULD BE SMALL
+		target->D[2] = .0000001;
 		our_path->T = 8;
 	}
 	else {
 		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .00001;
-		target->D[2] = .000001;
+		target->D[1] = .000001;
+		target->D[2] = .0000001;
 	}
 
 	target->S[0] = car_s + our_path->distance_goal;
@@ -401,19 +401,20 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	//cout << "our_path->ref_velocity \t" << our_path->ref_velocity << endl;
 
 	
+	cout << our_path->last_trajectory[7] << endl;
 
 	for (size_t i = 0; i < our_path->T * 49; ++i) {
 
 		
-		if (i > 30 && i < (our_path->T * 49) - 30) {
+		if (i > 40 && i < (our_path->T * 49) - 30) {
 			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
 				
-				if (our_path->ref_velocity > 30) {
-					if (our_path->ref_velocity > 40) {
-						our_path->ref_velocity -= .003;
+				if (our_path->ref_velocity > 10) {
+					if (our_path->ref_velocity > 30) {
+						our_path->ref_velocity -= (.05 / our_path->ref_velocity);
 					}
 					else {
-						our_path->ref_velocity -= .0015; 
+						our_path->ref_velocity -= (.15 / our_path->ref_velocity);
 					}
 				}
 				else {
@@ -425,12 +426,12 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 			else {
 				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 49) {
 					
-					if (our_path->ref_velocity > 30) {
-						if (our_path->ref_velocity > 40) {
-							our_path->ref_velocity += .003;
+					if (our_path->ref_velocity > 10) {
+						if (our_path->ref_velocity > 30) {
+							our_path->ref_velocity += (.05 / our_path->ref_velocity);
 						}
 						else {
-							our_path->ref_velocity += .0015;
+							our_path->ref_velocity += (.3 / our_path->ref_velocity);
 						}
 					}
 					else {
@@ -502,7 +503,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		//cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
 	}
 	
-	double time = 1.4;
+	double time = .5;
 	
 	
 	auto super_time = (trajectory[12]) - time;
