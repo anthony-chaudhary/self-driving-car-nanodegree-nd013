@@ -380,9 +380,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	}
 	
 	//cout << "target->S[1] " << target->S[1] << endl;
+	/*
 	for (int i=0; i <X_Y.X.size(); ++i){
 		cout << "X_Y.X \t" << X_Y.X[i] << endl;
 	}
+	*/
 	
 	tk::spline spline_xy;
 	spline_xy.set_points(X_Y.X, X_Y.Y);
@@ -406,8 +408,13 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		if (i > 30 && i < (our_path->T * 49) - 30) {
 			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
 				
-				if (our_path->ref_velocity > 20) {
-					our_path->ref_velocity -= .002;
+				if (our_path->ref_velocity > 30) {
+					if (our_path->ref_velocity > 40) {
+						our_path->ref_velocity -= .002;
+					}
+					else {
+						our_path->ref_velocity -= .001; 
+					}
 				}
 				else {
 					our_path->ref_velocity -= .020;
@@ -416,15 +423,20 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 				our_path->ref_velocity = max(our_path->ref_velocity, 0.0);
 			}
 			else {
-				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 41) {
+				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 49) {
 					
-					if (our_path->ref_velocity > 20) {
-						our_path->ref_velocity += .002;
+					if (our_path->ref_velocity > 30) {
+						if (our_path->ref_velocity > 40) {
+							our_path->ref_velocity += .002;
+						}
+						else {
+							our_path->ref_velocity += .001;
+						}
 					}
 					else {
 						our_path->ref_velocity += .020;
 					}
-					our_path->ref_velocity = min(our_path->ref_velocity, 42.0);
+					our_path->ref_velocity = min(our_path->ref_velocity, 49.0);
 				}
 			}
 		}
@@ -490,7 +502,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		//cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
 	}
 	
-	double time = 1.2;
+	double time = 1.4;
 	
 	
 	auto super_time = (trajectory[12]) - time;
