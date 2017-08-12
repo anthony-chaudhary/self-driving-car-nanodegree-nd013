@@ -44,7 +44,8 @@ Behavior::lane Behavior::update_behavior_state(vector<double> trajectory, path *
 	// cout << chrono::high_resolution_clock::to_time_t(State->lane_change_end_time) << endl;
 	// cout << chrono::high_resolution_clock::to_time_t(chrono::high_resolution_clock::now()) << endl;
 
-	if (State->lane_change_end_time > chrono::high_resolution_clock::now()) 
+	if (State->lane_change_end_time > chrono::high_resolution_clock::now() || 
+		our_path->ref_velocity < 30)
 	{
 		return State->L_target;  // this could be expanded considerably but for now just locking out new moves while moving
 	}

@@ -1,7 +1,7 @@
 #include <fstream>
-//#include "uWS/uWS.h"  // if WINDOWS
+#include "uWS/uWS.h"  // if WINDOWS
 // IF LINUX
-#include <uWS/uWS.h>
+//#include <uWS/uWS.h>
 
 #include <thread>
 #include <vector>
@@ -62,7 +62,8 @@ int main() {
 	vector<double> map_waypoints_dy;
 
 	// Waypoint map to read from
-	string map_file_ = "../data/highway_map.csv";  // CHANGE BACK to ../ after debugging
+	string map_file_ = "../data/highway_map_bosch1.csv";
+	//string map_file_ = "../data/highway_map.csv";  
 												// The max s value before wrapping around the track back to 0
 	double max_s = 6945.554;
 
@@ -101,7 +102,7 @@ int main() {
 	path::MAP *MAP = new path::MAP;
 
 	// refine path with spline.
-	int spline_samples = 24000;
+	int spline_samples = 36000;
 	for (size_t i = 0; i < spline_samples; ++i) {
 		MAP->waypoints_x_upsampled.push_back(spline_x(i));
 		MAP->waypoints_y_upsampled.push_back(spline_y(i));
@@ -158,7 +159,7 @@ int main() {
 					}
 
 					*/
-					if (time_difference > 200 ) {
+					if (previous_path_x.size() < 200 ) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 

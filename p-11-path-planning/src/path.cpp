@@ -125,7 +125,7 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 		target->D[0] = our_path->current_lane_target;
 		target->D[1] = .00001;   // SHOULD BE SMALL
 		target->D[2] = .000001;
-		our_path->T = 6;
+		our_path->T = 8;
 	}
 	else {
 		target->D[0] = our_path->current_lane_target;
@@ -313,10 +313,13 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 			Previous_path.X.push_back(x_car_space);
 			Previous_path.Y.push_back(y_car_space);
 
-			i += 10;
+			i += 5;   // relationship ratio to number of points being kept
 		}	
 		Previous_path.x0 = previous_path_x[0];
 		Previous_path.y0 = previous_path_y[0];
+
+		//Previous_path.x1 = previous_path_x[1];
+		//Previous_path.y1 = previous_path_y[1];
 
 		vector<double> new_s_d = getFrenet(previous_path_x[p_x_size-1],
 			previous_path_y[p_x_size-1], car_yaw, MAP->waypoints_x_upsampled, MAP->waypoints_y_upsampled);
@@ -351,9 +354,17 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		Previous_path.x0 = r_daneel_olivaw->x;
 		Previous_path.y0 = r_daneel_olivaw->y;
 	}
+	else {
+
+		for (size_t i = 0; i < 1; ++i) {
+			output_points.X.push_back(Previous_path.x0);
+			output_points.Y.push_back(Previous_path.y0);
+			cout << "output -> x\t" << Previous_path.x0 << "\t y \t" << Previous_path.y0 << endl;
+		}
+	}
 
 
-	int index = 0;
+	int index = 10;
 	while (index < S_D_.S.size()) {
 
 		vector<double> a = getXY(S_D_.S[index], S_D_.D[index], MAP->waypoints_s_upsampled,
@@ -364,24 +375,20 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 		X_Y.X.push_back(x_car_space);
 		X_Y.Y.push_back(y_car_space);
-		index += 20;
+		index += 30;
 	
 	}
 	
-	//sort(X_Y.X.begin(), X_Y.X.end());
-	//sort(X_Y.Y.begin(), X_Y.Y.end());
-
 	//cout << "target->S[1] " << target->S[1] << endl;
-
 	for (int i=0; i <X_Y.X.size(); ++i){
-		//cout << "X_Y.X \t" << X_Y.X[i] << endl;
+		cout << "X_Y.X \t" << X_Y.X[i] << endl;
 	}
 	
 	tk::spline spline_xy;
 	spline_xy.set_points(X_Y.X, X_Y.Y);
 
 	//cout << "Spline created " << endl;
-	double target_x = 20	;   
+	double target_x = 30	;   
 	double target_y = spline_xy(target_x);
 	double target_dist = sqrt((target_x)*(target_x)+(target_y)*(target_y));
 	double x_add_on = 0;
@@ -391,28 +398,44 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 	cout << "our_path->ref_velocity \t" << our_path->ref_velocity << endl;
 
-	for (size_t i = 1; i < our_path->T * 49; ++i) {
+	
+
+	for (size_t i = 0; i < our_path->T * 49; ++i) {
 
 		
-		if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
-			our_path->ref_velocity -= .003;
-			our_path->ref_velocity = max(our_path->ref_velocity, 0.0);
-		}
-		else {
-			if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 45) {
-			our_path->ref_velocity += .003;
-			our_path->ref_velocity = min(our_path->ref_velocity, 46.0);
+		if (i > 30 && i < (our_path->T * 49) - 30) {
+			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
+				
+				if (our_path->ref_velocity > 20) {
+					our_path->ref_velocity -= .002;
+				}
+				else {
+					our_path->ref_velocity -= .020;
+				}
+				
+				our_path->ref_velocity = max(our_path->ref_velocity, 0.0);
+			}
+			else {
+				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 41) {
+					
+					if (our_path->ref_velocity > 20) {
+						our_path->ref_velocity += .002;
+					}
+					else {
+						our_path->ref_velocity += .020;
+					}
+					our_path->ref_velocity = min(our_path->ref_velocity, 42.0);
+				}
 			}
 		}
-
 		//our_path->ref_velocity = min(our_path->ref_velocity, 46.0);
 		
 
 		double N = (target_dist / (.02 * (our_path->ref_velocity) / 2.24));
 
-		auto x_point = x_add_on + (target_x) / N;
+		double x_point = x_add_on + (target_x) / N;
 		x_add_on = x_point;
-		auto y_point = spline_xy(x_point);
+		double y_point = spline_xy(x_point);
 
 		// convert back to normal space
 		auto x = x_point;
@@ -424,7 +447,8 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		x_point += Previous_path.x0;  // referance x
 		y_point += Previous_path.y0;
 
-			
+		//cout << "output -> x\t" << x_point << "\t y \t" << y_point << endl;
+
 		output_points.X.push_back(x_point);
 		output_points.Y.push_back(y_point);
 	}
@@ -433,8 +457,8 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	
 	//our_path->previous_path_size = X_Y.X.size();
 
-	//cout << "x_point 0 \t " << output_points.X[0] << " y \t" << output_points.Y[0] << endl;
-	//cout << "x_point 10 \t " << output_points.X[10] << " y \t" << output_points.Y[10] << endl;
+	cout << "x_point 0 \t " << output_points.X[0] << " y \t" << output_points.Y[0] << endl;
+	cout << "x_point 1 \t " << output_points.X[1] << " y \t" << output_points.Y[1] << endl;
 	//cout << "x_point last \t " << output_points.X[output_points.X.size()-1] << " y \t" << output_points.Y[output_points.X.size() - 1] << endl;
 	
 	return output_points;

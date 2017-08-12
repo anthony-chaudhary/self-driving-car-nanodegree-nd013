@@ -38,6 +38,8 @@ public:
 		double yaw;
 		double x0;
 		double y0;
+		double x1;
+		double y1;
 	};
 	struct MAP {
 		vector<double> waypoints_s_upsampled = {};
