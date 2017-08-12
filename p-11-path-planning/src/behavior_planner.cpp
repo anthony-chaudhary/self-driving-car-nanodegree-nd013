@@ -29,11 +29,11 @@ void Behavior::init() {
 		road->L.push_back(l_);
 	}
 
-	road->L[0].d = 6.2 - 4;
-	road->L[1].d = 6.2;
-	road->L[2].d = 6.2 + 3.8;
+	road->L[0].d = 6.3 - 4;
+	road->L[1].d = 6.3;
+	road->L[2].d = 6.3 + 3.8;
 
-	State->lane_change_end_time = chrono::high_resolution_clock::now() + 20000ms;
+	State->lane_change_end_time = chrono::high_resolution_clock::now() + 30000ms;
 	State->L_target = road->L[1];
 }
 
@@ -45,7 +45,7 @@ Behavior::lane Behavior::update_behavior_state(vector<double> trajectory, path *
 	// cout << chrono::high_resolution_clock::to_time_t(chrono::high_resolution_clock::now()) << endl;
 
 	if (State->lane_change_end_time > chrono::high_resolution_clock::now() || 
-		our_path->ref_velocity < 30)
+		our_path->ref_velocity < 35)
 	{
 		return State->L_target;  // this could be expanded considerably but for now just locking out new moves while moving
 	}
@@ -57,7 +57,7 @@ Behavior::lane Behavior::update_behavior_state(vector<double> trajectory, path *
 		// only update clock if state changes
 		if (previous_id != State->L_target.id) {
 			
-			State->lane_change_end_time = chrono::high_resolution_clock::now() + 20000ms;
+			State->lane_change_end_time = chrono::high_resolution_clock::now() + 30000ms;
 			previous_id = State->L_target.id;
 			cout << "\n*** Changing lanes \t" << State->L_target.d << "\n" <<endl;
 			//cout << "L target " << State->L_target.id << endl;
@@ -94,17 +94,17 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 	road->L[0].cost += our_path->buffer_cost_front(t_0);
 	road->L[0].cost += .3 * our_path->buffer_cost(t_0);
 	road->L[0].cost += .5 * our_path->total_acceleration_cost(t_0);
-	//road->L[0].cost += .5 * our_path->d_diff_cost(t_0);
+	road->L[0].cost += .5 * our_path->d_diff_cost(t_0);
 
 	road->L[1].cost += our_path->buffer_cost_front(t_1);
 	road->L[1].cost += .3 * our_path->buffer_cost(t_1);
 	road->L[1].cost += .5 * our_path->total_acceleration_cost(t_1);
-	//road->L[1].cost += .5 * our_path->d_diff_cost(t_1);
+	road->L[1].cost += .5 * our_path->d_diff_cost(t_1);
 
 	road->L[2].cost += our_path->buffer_cost_front(t_2);
 	road->L[2].cost +=  .6 * our_path->buffer_cost(t_2);
 	road->L[2].cost += .5 * our_path->total_acceleration_cost(t_2);
-	//road->L[2].cost += .8 * our_path->d_diff_cost(t_2);
+	road->L[2].cost += .8 * our_path->d_diff_cost(t_2);
 
 	
 	cout << "Lane0 " << road->L[0].cost << "\tL1 " << road->L[1].cost << "\tL2 " << road->L[2].cost << endl;
