@@ -403,18 +403,18 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	
 	cout << our_path->last_trajectory[7] << endl;
 
-	for (size_t i = 0; i < our_path->T * 49; ++i) {
+	for (size_t i = 2; i < our_path->T * 49; ++i) {
 
 		
-		if (i > 40 && i < (our_path->T * 49) - 30) {
+		if (i > 10 && i < (our_path->T * 49) - 100) {
 			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
 				
 				if (our_path->ref_velocity > 10) {
 					if (our_path->ref_velocity > 30) {
-						our_path->ref_velocity -= (.05 / our_path->ref_velocity);
+						our_path->ref_velocity -= (.06 / our_path->ref_velocity);
 					}
 					else {
-						our_path->ref_velocity -= (.15 / our_path->ref_velocity);
+						our_path->ref_velocity -= (.3 / our_path->ref_velocity);
 					}
 				}
 				else {
@@ -427,11 +427,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 49) {
 					
 					if (our_path->ref_velocity > 10) {
-						if (our_path->ref_velocity > 30) {
-							our_path->ref_velocity += (.05 / our_path->ref_velocity);
+						if (our_path->ref_velocity > 40) {
+							our_path->ref_velocity += (3 / pow(our_path->ref_velocity, 2));
 						}
 						else {
-							our_path->ref_velocity += (.3 / our_path->ref_velocity);
+							our_path->ref_velocity += (4 / pow(our_path->ref_velocity, 2));
 						}
 					}
 					else {
@@ -503,7 +503,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		//cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
 	}
 	
-	double time = .5;
+	double time = 0;
 	
 	
 	auto super_time = (trajectory[12]) - time;
@@ -1079,6 +1079,8 @@ int path::ClosestWaypoint(double x, double y, vector<double> maps_x, vector<doub
 
 	return closestWaypoint;
 }
+
+
 int path::NextWaypoint(double x, double y, double theta, vector<double> maps_x, vector<double> maps_y)
 {
 
@@ -1091,7 +1093,7 @@ int path::NextWaypoint(double x, double y, double theta, vector<double> maps_x, 
 
 	double angle = abs(theta - heading);
 
-	if (angle > pi() / 4)
+	if (angle > pi() / 2)
 	{
 		closestWaypoint++;
 	}
@@ -1099,3 +1101,5 @@ int path::NextWaypoint(double x, double y, double theta, vector<double> maps_x, 
 	return closestWaypoint;
 
 }
+
+
