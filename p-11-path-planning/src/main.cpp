@@ -102,6 +102,7 @@ int main() {
 	path::MAP *MAP = new path::MAP;
 
 	// refine path with spline.
+	int spline_samples = 12000;
 	for (size_t i = 0; i < spline_samples; ++i) {
 		MAP->waypoints_x_upsampled.push_back(spline_x(i));
 		MAP->waypoints_y_upsampled.push_back(spline_y(i));
@@ -158,7 +159,7 @@ int main() {
 					}
 
 					*/
-					if (previous_path_x.size() < 200 ) {
+					if (previous_path_x.size() < 200 || time_difference > 200) {
 
 						// cout <<  "time_difference " << time_difference << endl;
 

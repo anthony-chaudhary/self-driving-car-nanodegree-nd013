@@ -123,8 +123,8 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	
 	if (our_path->last_trajectory.size() != 0) {
 		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .000001;   // SHOULD BE SMALL
-		target->D[2] = .0000001;
+		target->D[1] = .00000001;   // SHOULD BE SMALL
+		target->D[2] = .000000001;
 		our_path->T = 8;
 	}
 	else {
@@ -142,8 +142,8 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 	}
 
 	if (car_speed > 35) {
-		target->S[0] = car_s + our_path->T * 9.5;
-		target->S[1] = 9; //  velocity
+		target->S[0] = car_s + our_path->T * 7;
+		target->S[1] = 7; //  velocity
 		target->S[2] = 0.01;  // 
 	}
 
@@ -292,7 +292,7 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	p_x_size = min(41, p_x_size);
 
 	if (our_path->ref_velocity > 20) {
-		p_x_size = min(21, p_x_size);
+		p_x_size = min(41, p_x_size);
 	}
 	
 	//cout << "p_x_size " << p_x_size << endl;
@@ -408,11 +408,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	
 	cout << our_path->last_trajectory[7] << endl;
 
-	auto jump_index = 2;  // random latency handling
+	auto jump_index = 1;  // random latency handling
 
-	if (our_path->ref_velocity > 20) { jump_index = 4;  }
-	if (our_path->ref_velocity > 30) { jump_index = 6; }
-	if (our_path->ref_velocity > 40) { jump_index = 10; }
+	if (our_path->ref_velocity > 20) { jump_index = 1;  }
+	if (our_path->ref_velocity > 30) { jump_index = 1; }
+	if (our_path->ref_velocity > 40) { jump_index = 1; }
 
 
 	for (size_t i = jump_index; i < our_path->T * 49; ++i) {
@@ -422,11 +422,16 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
 				
 				if (our_path->ref_velocity > 5) {
-					if (our_path->ref_velocity > 40) {
-						our_path->ref_velocity -= (250 / pow(our_path->ref_velocity, 3));
+					if (our_path->ref_velocity > 15) {
+						if (our_path->ref_velocity > 47) {
+							our_path->ref_velocity -= (5 / pow(our_path->ref_velocity, 3));
+						}
+						else {
+							our_path->ref_velocity -= (35 / pow(our_path->ref_velocity, 3));
+						}
 					}
 					else {
-						our_path->ref_velocity -= (380 / pow(our_path->ref_velocity, 3));
+						our_path->ref_velocity -= (4 / pow(our_path->ref_velocity, 3));
 					}
 				}
 				else {
@@ -436,20 +441,26 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 				our_path->ref_velocity = max(our_path->ref_velocity, 0.0);
 			}
 			else {
-				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 48) {
+				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 49.6) {
 					
-					if (our_path->ref_velocity > 10) {
-						if (our_path->ref_velocity > 40) {
-							our_path->ref_velocity += (250 / pow(our_path->ref_velocity, 3));
+					if (our_path->ref_velocity > 5) {
+						if (our_path->ref_velocity > 15) {
+							
+							if (our_path->ref_velocity > 47) {
+								our_path->ref_velocity += (5 / pow(our_path->ref_velocity, 3));
+							}
+							else {
+								our_path->ref_velocity += (35 / pow(our_path->ref_velocity, 3));
+							}
 						}
 						else {
-							our_path->ref_velocity += (380 / pow(our_path->ref_velocity, 3));
+							our_path->ref_velocity += (4 / pow(our_path->ref_velocity, 3));
 						}
 					}
 					else {
-						our_path->ref_velocity += .025;
+						our_path->ref_velocity += .01;
 					}
-					our_path->ref_velocity = min(our_path->ref_velocity, 48.0);
+					our_path->ref_velocity = min(our_path->ref_velocity, 49.6);
 				}
 			}
 		}
@@ -520,10 +531,10 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		time = 0;
 	}
 	if (our_path->ref_velocity > 30) {
-		time = .5;
+		time = .6;
 	}
 	if (our_path->ref_velocity > 40) {
-		time = 1;
+		time = .7;
 	}
 	
 	
@@ -793,7 +804,7 @@ double path::collision_cost(vector<double> trajectory) {
 double path::buffer_cost_front(vector<double> trajectory) {
 
 	double a = nearest_approach_to_vehicle_in_front(trajectory);
-	double b = 120;
+	double b = 50;
 	//cout << a << endl;
 	if (a < b) {
 		// cout << a << endl; 
