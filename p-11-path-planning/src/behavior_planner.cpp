@@ -29,9 +29,9 @@ void Behavior::init() {
 		road->L.push_back(l_);
 	}
 
-	road->L[0].d = 6.3 - 4;
-	road->L[1].d = 6.3;
-	road->L[2].d = 6.3 + 3.8;
+	road->L[0].d = 6 - 3.8;
+	road->L[1].d = 6;
+	road->L[2].d = 6 + 3.8;
 
 	State->lane_change_end_time = chrono::high_resolution_clock::now() + 30000ms;
 	State->L_target = road->L[1];
@@ -102,9 +102,9 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 	road->L[1].cost += .5 * our_path->d_diff_cost(t_1);
 
 	road->L[2].cost += our_path->buffer_cost_front(t_2);
-	road->L[2].cost +=  .6 * our_path->buffer_cost(t_2);
+	road->L[2].cost +=  .3 * our_path->buffer_cost(t_2);
 	road->L[2].cost += .5 * our_path->total_acceleration_cost(t_2);
-	road->L[2].cost += .8 * our_path->d_diff_cost(t_2);
+	road->L[2].cost += .7 * our_path->d_diff_cost(t_2);
 
 	
 	cout << "Lane0 " << road->L[0].cost << "\tL1 " << road->L[1].cost << "\tL2 " << road->L[2].cost << endl;

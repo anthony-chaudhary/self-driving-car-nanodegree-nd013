@@ -44,7 +44,7 @@ void path::init() {
 
 	our_path->timestep = .02;
 	our_path->T = 4;
-	our_path->trajectory_samples = 10;
+	our_path->trajectory_samples = 4;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 4., .1, .01 };
 	our_path->SIGMA_D = { .2, .1, .1 };
@@ -135,16 +135,16 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 
 	target->S[0] = car_s + our_path->distance_goal;
 
-	if (car_speed < 45) {
+	if (car_speed < 35) {
 		target->S[0] = car_s + our_path->T * 7;
 		target->S[1] = 7;
 		target->S[2] = .01;
 	}
 
-	if (car_speed > 45) {
-		target->S[0] = car_s + our_path->T * 7;
-		target->S[1] = 7; //  velocity
-		target->S[2] = 0.0001;  // 
+	if (car_speed > 35) {
+		target->S[0] = car_s + our_path->T * 9.5;
+		target->S[1] = 9; //  velocity
+		target->S[2] = 0.01;  // 
 	}
 
 	
@@ -289,7 +289,12 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	path::Previous_path Previous_path;
 	int p_x_size;
 	p_x_size = previous_path_x.size();
-	p_x_size = min(61, p_x_size);
+	p_x_size = min(41, p_x_size);
+
+	if (our_path->ref_velocity > 20) {
+		p_x_size = min(21, p_x_size);
+	}
+	
 	//cout << "p_x_size " << p_x_size << endl;
 
 	
@@ -407,18 +412,18 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 	if (our_path->ref_velocity > 20) { jump_index = 4;  }
 	if (our_path->ref_velocity > 30) { jump_index = 6; }
-	if (our_path->ref_velocity > 40) { jump_index = 8; }
+	if (our_path->ref_velocity > 40) { jump_index = 10; }
 
 
 	for (size_t i = jump_index; i < our_path->T * 49; ++i) {
 
 		
-		if (i > 10 && i < (our_path->T * 49) - 100) {
+		if (i > 0 && i < (our_path->T * 49) - 100) {
 			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
 				
 				if (our_path->ref_velocity > 5) {
 					if (our_path->ref_velocity > 40) {
-						our_path->ref_velocity -= (200 / pow(our_path->ref_velocity, 3));
+						our_path->ref_velocity -= (250 / pow(our_path->ref_velocity, 3));
 					}
 					else {
 						our_path->ref_velocity -= (380 / pow(our_path->ref_velocity, 3));
@@ -431,11 +436,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 				our_path->ref_velocity = max(our_path->ref_velocity, 0.0);
 			}
 			else {
-				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 49) {
+				if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 48) {
 					
 					if (our_path->ref_velocity > 10) {
 						if (our_path->ref_velocity > 40) {
-							our_path->ref_velocity += (200 / pow(our_path->ref_velocity, 3));
+							our_path->ref_velocity += (250 / pow(our_path->ref_velocity, 3));
 						}
 						else {
 							our_path->ref_velocity += (380 / pow(our_path->ref_velocity, 3));
@@ -444,7 +449,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 					else {
 						our_path->ref_velocity += .025;
 					}
-					our_path->ref_velocity = min(our_path->ref_velocity, 49.0);
+					our_path->ref_velocity = min(our_path->ref_velocity, 48.0);
 				}
 			}
 		}
@@ -511,6 +516,16 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 	}
 	
 	double time = 0;
+	if (our_path->ref_velocity > 20) {
+		time = 0;
+	}
+	if (our_path->ref_velocity > 30) {
+		time = .5;
+	}
+	if (our_path->ref_velocity > 40) {
+		time = 1;
+	}
+	
 	
 	
 	auto super_time = (trajectory[12]) - time;
@@ -531,14 +546,14 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
-	cost += 1 * collision_cost(trajectory);
+	cost += .5 * collision_cost(trajectory);
 	cost += 1 * total_acceleration_cost(trajectory);
 	cost += 1 * max_acceleration_cost(trajectory);
-	cost += .5 * efficiency_cost(trajectory);
+	cost += .2 * efficiency_cost(trajectory);
 	cost += 1 * total_jerk_cost(trajectory);
 	cost += .5 * buffer_cost(trajectory);
-	cost += .5 * s_diff_cost(trajectory);
-	cost += .5 * d_diff_cost(trajectory);
+	cost += .2 * s_diff_cost(trajectory);
+	cost += .2 * d_diff_cost(trajectory);
 	//cost += 1 * speed_limit_cost(trajectory);
 	cost += 1 * max_jerk_cost(trajectory);
 	//cost += 1 * stay_in_lane(trajectory);
