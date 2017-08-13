@@ -44,7 +44,7 @@ void path::init() {
 
 	our_path->timestep = .02;
 	our_path->T = 4;
-	our_path->trajectory_samples = 15;
+	our_path->trajectory_samples = 10;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 4., .1, .01 };
 	our_path->SIGMA_D = { .2, .1, .1 };
@@ -153,13 +153,13 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 		// this should be in behavior planner?
 		if (our_path->buffer_cost_front(our_path->last_trajectory) == 1.0) {
 			
-			cout << "Slowing down for car in front within 40 " << endl;
+			cout << "Slowing down for car in front within 80 " << endl;
 			target->S[0] = car_s + our_path->T * 5.5;
 			target->S[1] = 5.5;
 			target->S[2] = .0001;
 		}
 		else {
-			cout << "Clear for 40 m ahead" << endl;
+			cout << "Clear for 80 m ahead" << endl;
 		}
 
 		/*
@@ -403,18 +403,25 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	
 	cout << our_path->last_trajectory[7] << endl;
 
-	for (size_t i = 2; i < our_path->T * 49; ++i) {
+	auto jump_index = 2;  // random latency handling
+
+	if (our_path->ref_velocity > 20) { jump_index = 4;  }
+	if (our_path->ref_velocity > 30) { jump_index = 6; }
+	if (our_path->ref_velocity > 40) { jump_index = 8; }
+
+
+	for (size_t i = jump_index; i < our_path->T * 49; ++i) {
 
 		
 		if (i > 10 && i < (our_path->T * 49) - 100) {
 			if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
 				
-				if (our_path->ref_velocity > 10) {
-					if (our_path->ref_velocity > 30) {
-						our_path->ref_velocity -= (.06 / our_path->ref_velocity);
+				if (our_path->ref_velocity > 5) {
+					if (our_path->ref_velocity > 40) {
+						our_path->ref_velocity -= (200 / pow(our_path->ref_velocity, 3));
 					}
 					else {
-						our_path->ref_velocity -= (.3 / our_path->ref_velocity);
+						our_path->ref_velocity -= (380 / pow(our_path->ref_velocity, 3));
 					}
 				}
 				else {
@@ -428,10 +435,10 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 					
 					if (our_path->ref_velocity > 10) {
 						if (our_path->ref_velocity > 40) {
-							our_path->ref_velocity += (3 / pow(our_path->ref_velocity, 2));
+							our_path->ref_velocity += (200 / pow(our_path->ref_velocity, 3));
 						}
 						else {
-							our_path->ref_velocity += (4 / pow(our_path->ref_velocity, 2));
+							our_path->ref_velocity += (380 / pow(our_path->ref_velocity, 3));
 						}
 					}
 					else {
@@ -771,7 +778,7 @@ double path::collision_cost(vector<double> trajectory) {
 double path::buffer_cost_front(vector<double> trajectory) {
 
 	double a = nearest_approach_to_vehicle_in_front(trajectory);
-	double b = 40;
+	double b = 120;
 	//cout << a << endl;
 	if (a < b) {
 		// cout << a << endl; 
