@@ -64,6 +64,10 @@ public:
 	double T;
 	double distance_goal;
 	int trajectory_samples;
+	double previous_lane_target;
+	bool lane_change_state;
+
+
 	vector<double> SIGMA_S, SIGMA_D;
 
 	// Cost functions
