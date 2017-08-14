@@ -11,7 +11,6 @@
 #include "json.hpp"
 #include "path.h"
 #include "spline.h"
-//#include "MPC.h"
 
 #include <iostream>
 #include <ctime>
@@ -51,9 +50,6 @@ double polyeval(Eigen::VectorXd coeffs, double x) {
 int main() {
 	uWS::Hub h;
 
-	//MPC mpc;
-	//mpc.Init(hyper_parameters) ;
-
 	// Load up map values for waypoint's x,y,s and d normalized normal vectors
 	vector<double> map_waypoints_x;
 	vector<double> map_waypoints_y;
@@ -92,7 +88,7 @@ int main() {
 	path path;
 	path.init();
 
-	path.start_time = chrono::high_resolution_clock::now();
+	path.start_time = chrono::high_resolution_clock::now() - 300ms;
 	path.behavior_time = chrono::high_resolution_clock::now();
 
 	tk::spline spline_x, spline_y;
@@ -109,6 +105,7 @@ int main() {
 		MAP->waypoints_s_upsampled.push_back(i);
 	}
 
+	cout << "Waypoints loaded." << endl;
 	// IF different version of uwebsockts replace all "ws" with "ws"!
 
 

@@ -49,7 +49,7 @@ void path::init() {
 	our_path->SIGMA_S = { 4., .1, .01 };
 	our_path->SIGMA_D = { .2, .1, .1 };
 	our_path->current_lane_target = 6;
-	our_path->ref_velocity = 0;
+	our_path->ref_velocity = 0.0001;
 
 	our_path->previous_lane_target = 6;
 }
@@ -86,10 +86,10 @@ void path::sensor_fusion_predict_and_behavior(vector< vector<double>> sensor_fus
 
 		if (our_path->current_lane_target != our_path->previous_lane_target) {
 			our_path->lane_change_state = true;
-			cout << "\n\n\n Lane change lock \n" << endl;
+			cout << "\n Lane change lock \n \n" << endl;
 		}
-		if (r_daneel_olivaw->D[0]+1 > our_path->current_lane_target && 
-			r_daneel_olivaw->D[0]-1 < our_path->current_lane_target ){
+		if (r_daneel_olivaw->D[0]+.3 > our_path->current_lane_target && 
+			r_daneel_olivaw->D[0]-.3 < our_path->current_lane_target ){
 			our_path->lane_change_state = false;
 		}
 		our_path->previous_lane_target = lane.d;
@@ -139,11 +139,7 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 		target->D[1] = .00000001;   // SHOULD BE SMALL
 		target->D[2] = .000000001;
 	}
-	else {
-		target->D[0] = our_path->current_lane_target;
-		target->D[1] = .000001;
-		target->D[2] = .0000001;
-	}
+	
 
 	if (our_path->lane_change_state == true) {
 		our_path->T = 8;
@@ -169,22 +165,15 @@ void path::update_our_car_state(path::MAP *MAP, double car_x, double car_y, doub
 		// this should be in behavior planner?
 		if (our_path->buffer_cost_front(our_path->last_trajectory) == 1.0) {
 			
-			cout << "Slowing down for car in front within 80 " << endl;
+			cout << "Slowing down for car in front " << endl;
 			target->S[0] = car_s + our_path->T * 5.5;
 			target->S[1] = 5.5;
 			target->S[2] = .0001;
 		}
 		else {
-			cout << "Clear for 80 m ahead" << endl;
+			cout << "Clear ahead" << endl;
 		}
 
-		/*
-		if (our_path->speed_limit_cost(our_path->last_trajectory) > .4) {
-			target->S[0] = car_s + our_path->T * 3;
-			target->S[1] = 1;  //  velocity
-			target->S[2] = 0.00000;  // 
-		}
-		*/
 	}
 	
 	//cout << "target->D[0]" << target->D[0] << endl;
@@ -199,7 +188,6 @@ vector<double> path::trajectory_generation() {
 
 	// 1. Generate random nearby goals
 	vector< vector<double>> goals;
-
 
 	// first goal
 	goals.resize(1);
@@ -218,7 +206,6 @@ vector<double> path::trajectory_generation() {
 		vector<double> new_goal;
 
 		//cout << "target->D[0]" << target->D[0] << endl;
-
 		target_goals.resize(our_path->trajectory_samples);
 
 		for (size_t i = 0; i < target_goals.size(); ++i) {
@@ -268,8 +255,6 @@ vector<double> path::trajectory_generation() {
 	}
 
 	//cout << "Best trajectory cost: " << cost << endl;
-
-
 	our_path->last_trajectory = best_trajectory;
 	our_path->last_n_trajectories.resize(our_path->last_n_trajectories.size() + 1);
 	our_path->last_n_trajectories[our_path->last_n_trajectories.size() - 1].insert(end(our_path->last_n_trajectories[our_path->last_n_trajectories.size() -1]),
@@ -307,13 +292,16 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 	p_x_size = previous_path_x.size();
 	p_x_size = min(41, p_x_size);
 
+	if (our_path->ref_velocity < 15) {
+		p_x_size = min(41, p_x_size);
+	}
+	
 	if (our_path->lane_change_state == true) {
 		p_x_size = min(41, p_x_size);
 	}
 	
 	//cout << "p_x_size " << p_x_size << endl;
-
-	
+		
 	if (p_x_size > 2) {
 
 		//steps_moved = time_difference
@@ -324,6 +312,11 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 			previous_path_x[p_x_size - 1] - previous_path_x[p_x_size - 2]);
 		// cout << "car yaw " << car_yaw << endl;
 		Previous_path.yaw = car_yaw;
+		/*
+		if (our_path->ref_velocity < 5) {
+			Previous_path.yaw = 0;
+		}
+		*/
 
 		auto i = 0;
 		while (i < p_x_size) {
@@ -354,9 +347,11 @@ path::Previous_path path::merge_previous_path(path::MAP *MAP, vector< double> pr
 		
 		Previous_path.s = car_s;
 		Previous_path.d = car_d;
-		Previous_path.yaw = deg2rad(car_yaw);
+		Previous_path.yaw = 0;
 		
 	}
+
+	
 
 	//Previous_path.yaw = car_yaw;
 	return Previous_path;
@@ -401,11 +396,13 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	}
 	
 	//cout << "target->S[1] " << target->S[1] << endl;
+	
 	/*
 	for (int i=0; i <X_Y.X.size(); ++i){
 		cout << "X_Y.X \t" << X_Y.X[i] << endl;
 	}
 	*/
+	
 	
 	tk::spline spline_xy;
 	spline_xy.set_points(X_Y.X, X_Y.Y);
@@ -419,18 +416,10 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	//cout << "our_path->last_trajectory[1]\t"  << our_path->last_trajectory[1]  << endl;
 	//cout << "our_path->last_trajectory[7]\t"  << our_path->last_trajectory[7]  << endl;
 
-	cout << "our_path->ref_velocity \t" << our_path->ref_velocity << endl;
-
 	
-	cout << our_path->last_trajectory[7] << endl;
+	//cout << our_path->last_trajectory[7] << endl;
 
 	auto jump_index = 1;  // random latency handling
-
-	if (our_path->ref_velocity > 20) { jump_index = 1;  }
-	if (our_path->ref_velocity > 30) { jump_index = 1; }
-	if (our_path->ref_velocity > 40) { jump_index = 1; }
-
-
 	for (size_t i = jump_index; i < our_path->T * 49; ++i) {
 
 		
@@ -438,16 +427,17 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 			if (i > 0 && i < (our_path->T * 49) - 100) {
 
-				if (our_path->last_trajectory[1] < 0 || target->S[1] < 6) {
+				//our_path->last_trajectory[1] < 0 ||
+				if (target->S[1] < 6) {
 
 					if (our_path->ref_velocity > 5) {
 						if (our_path->ref_velocity > 15) {
 							if (our_path->ref_velocity > 47) {
-								our_path->ref_velocity -= (60 / pow(our_path->ref_velocity, 3));
+								our_path->ref_velocity -= (85 / pow(our_path->ref_velocity, 3));
 							}
 							else {
-								our_path->ref_velocity -= (80 / pow(our_path->ref_velocity, 3));
-								our_path->ref_velocity = max(our_path->ref_velocity, 40.0);
+								our_path->ref_velocity -= (90 / pow(our_path->ref_velocity, 3));
+								our_path->ref_velocity = max(our_path->ref_velocity, 30.0);
 							}
 						}
 						else {
@@ -460,8 +450,8 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 					
 				}
-				else {
-					if (our_path->last_trajectory[1] > 0 || our_path->ref_velocity < 49.2) {
+				else { // our_path->last_trajectory[1] > 0 
+					if (our_path->ref_velocity < 49.2) {
 
 						if (our_path->ref_velocity > 5) {
 							if (our_path->ref_velocity > 15) {
@@ -474,11 +464,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 								}
 							}
 							else {
-								our_path->ref_velocity += (4 / pow(our_path->ref_velocity, 3));
+								our_path->ref_velocity += (5 / pow(our_path->ref_velocity, 3));
 							}
 						}
 						else {
-							our_path->ref_velocity += .01;
+							our_path->ref_velocity += .005;
 						}
 
 						our_path->ref_velocity = min(our_path->ref_velocity, 49.2);
@@ -487,9 +477,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 			}
 		}
 		
-		//our_path->ref_velocity = min(our_path->ref_velocity, 46.0);
 		
-
 		double N = (target_dist / (.02 * (our_path->ref_velocity) / 2.24));
 
 		double x_point = x_add_on + (target_x) / N;
@@ -511,6 +499,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 		output_points.X.push_back(x_point);
 		output_points.Y.push_back(y_point);
 	}
+	cout << "our_path->ref_velocity \t" << our_path->ref_velocity << endl;
 	
 	//cout << "our_path->ref_velocity \t" << our_path->ref_velocity << endl;
 	
@@ -523,23 +512,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 	return output_points;
 }
 
+
+
 path::S_D  path::build_trajectory(vector<double> trajectory, long long build_trajectory_time) {
 
-	vector<double> S, D, X, Y; // TODO better way to do this
-							   // refactor using S_D struct
-
-							   // Average previously trajectory
-
-
-							   //auto super_time = 0;
-	auto sums_time = 0;
-	auto factor = min(int(our_path->last_n_trajectories.size()), 3);
-	//cout << "factor" << factor << endl;
-	vector<double> sums_S, sums_D;
-
-	sums_S.resize(6);
-	sums_D.resize(6);
-	
+	vector<double> S, D, X, Y; // TODO refactor using S_D struct
 	S_D S_D_;
 
 
@@ -549,6 +526,10 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		//cout << "S" << i << "\t"<<  S[i] << " \t D[i] \t" << D[i] << endl;
 	}
 	
+
+
+
+
 	double time = 0;
 	if (our_path->ref_velocity > 20) {
 		time = 0;
@@ -561,15 +542,21 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 	}
 
 	if (our_path->lane_change_state == true) {
-		time = 3.5;
+		time = 2.7;
+		if (our_path->ref_velocity > 40) {
+			time = 4;
+		}
 	}
 	
-	
-	
-	auto super_time = (trajectory[12]) - time;
+
+
+
+
+
+	auto end_time = (trajectory[12]) - time;
 
 	//cout << "time\t" << time << endl;
-	while (time <= super_time) {
+	while (time <= end_time) {
 		S_D_.S.push_back(coefficients_to_time_function(S, time));
 		S_D_.D.push_back(coefficients_to_time_function(D, time));
 		time += our_path->timestep;
@@ -737,11 +724,11 @@ double path::max_acceleration_cost(vector<double> trajectory) {
 	double t_ = trajectory[12];
 	double cost = 0;
 	double total_acceleration = 0;
-	double max_acceleration = 10;
+	double max_acceleration = 8;
 
 	S_dot_coefficients = differentiate_polynomial(S);
 	S_dot_dot_coeffecients = differentiate_polynomial(S_dot_coefficients);
-	double delta_time = t_ / 10;  // out path T / increment
+	double delta_time = t_ / 1;  // out path T / increment
 
 	for (size_t i = 0; i < 10; ++i) {
 
@@ -819,7 +806,7 @@ double path::collision_cost(vector<double> trajectory) {
 	double a = nearest_approach_to_any_vehicle(trajectory);
 
 	double b = 30 * r_daneel_olivaw->radius;
-	//cout << b << endl;
+	//cout << a << endl;
 	if (a < b) { 
 		// cout << a << endl; 
 		return 1.0; 
@@ -831,7 +818,7 @@ double path::collision_cost(vector<double> trajectory) {
 double path::buffer_cost_front(vector<double> trajectory) {
 
 	double a = nearest_approach_to_vehicle_in_front(trajectory);
-	double b = 46;
+	double b = 30;
 	//cout << a << endl;
 	if (a < b) {
 		// cout << a << endl; 
@@ -890,8 +877,6 @@ double path::nearest_approach_to_vehicle_in_front(vector<double> trajectory) {
 			if (other_vehicles[i].sf_d < r_daneel_olivaw->D[0] + 2 
 				&& other_vehicles[i].sf_d > r_daneel_olivaw->D[0] - 2) {
 			
-				trajectory[12] = 3; // project up to 2 seconds forward
-
 				b = r_daneel_olivaw->nearest_approach(trajectory, other_vehicles[i]);
 
 				//cout << "Vehicle ID:\t" << i << " nearest approach\t" << b << "\t D: " << other_vehicles[i].sf_d << endl;
@@ -905,20 +890,26 @@ double path::nearest_approach_to_vehicle_in_front(vector<double> trajectory) {
 
 double Vehicle::nearest_approach(vector<double> trajectory, Vehicle vehicle) {
 
-	double T, s_time, d_time, a, b, c, e, t;
+	double T_, s_time, d_time, a, b, c, e, t_;
 	a = 1e9;
-	T = trajectory[12];
+	T_ = trajectory[12];
 
 	vector<double> S, D; // TODO better way to do this
 	S = { trajectory[0], trajectory[1], trajectory[2], trajectory[3], trajectory[4], trajectory[5] };
 	D = { trajectory[6], trajectory[7], trajectory[8], trajectory[9], trajectory[10], trajectory[11] };
 
-	for (size_t i = -.5; i < (our_path->T / our_path->timestep); ++i) {
-		t = double(i) / (our_path->T / our_path->timestep) * T;
-		s_time = coefficients_to_time_function(S, t);
-		d_time = coefficients_to_time_function(D, t);
 
-		vehicle.update_target_state(t);
+	double delta_time = T_ / 100;
+	if (our_path->lane_change_state == true) {
+		delta_time = T_ / 100;
+	}
+
+	for (size_t index = 0;	index < 100;		++index) {
+		t_ = delta_time * index;
+		s_time = coefficients_to_time_function(S, t_);
+		d_time = coefficients_to_time_function(D, t_);
+
+		vehicle.update_target_state(t_);
 
 		b = pow((s_time - vehicle.s_target), 2);
 		c = pow((d_time - vehicle.d_target), 2);
