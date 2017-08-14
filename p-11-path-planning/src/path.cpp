@@ -44,7 +44,7 @@ void path::init() {
 
 	our_path->timestep = .02;
 	our_path->T = 6;
-	our_path->trajectory_samples = 4;
+	our_path->trajectory_samples = 8;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 4., .1, .01 };
 	our_path->SIGMA_D = { .2, .1, .1 };
@@ -437,7 +437,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 							}
 							else {
 								our_path->ref_velocity -= (90 / pow(our_path->ref_velocity, 3));
-								our_path->ref_velocity = max(our_path->ref_velocity, 30.0);
+								our_path->ref_velocity = max(our_path->ref_velocity, 28.0);
 							}
 						}
 						else {
@@ -451,16 +451,16 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 					
 				}
 				else { // our_path->last_trajectory[1] > 0 
-					if (our_path->ref_velocity < 49.2) {
+					if (our_path->ref_velocity < 49.1) {
 
 						if (our_path->ref_velocity > 5) {
 							if (our_path->ref_velocity > 15) {
 
-								if (our_path->ref_velocity > 47) {
+								if (our_path->ref_velocity > 48) {
 									our_path->ref_velocity += (5 / pow(our_path->ref_velocity, 3));
 								}
 								else {
-									our_path->ref_velocity += (65 / pow(our_path->ref_velocity, 3));
+									our_path->ref_velocity += (90 / pow(our_path->ref_velocity, 3));
 								}
 							}
 							else {
@@ -471,7 +471,7 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 							our_path->ref_velocity += .005;
 						}
 
-						our_path->ref_velocity = min(our_path->ref_velocity, 49.2);
+						our_path->ref_velocity = min(our_path->ref_velocity, 49.1);
 					}
 				}
 			}
@@ -544,7 +544,10 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 	if (our_path->lane_change_state == true) {
 		time = 2.7;
 		if (our_path->ref_velocity > 40) {
-			time = 4;
+			time = 3.3;
+		}
+		if (our_path->ref_velocity > 44) {
+			time = 3.6;
 		}
 	}
 	
@@ -818,7 +821,7 @@ double path::collision_cost(vector<double> trajectory) {
 double path::buffer_cost_front(vector<double> trajectory) {
 
 	double a = nearest_approach_to_vehicle_in_front(trajectory);
-	double b = 30;
+	double b = 20;
 	//cout << a << endl;
 	if (a < b) {
 		// cout << a << endl; 
