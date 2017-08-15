@@ -99,6 +99,7 @@ def optimize(nn_last_layer, labels, learning_rate, num_classes):
     soft = tf.nn.softmax_cross_entropy_with_logits(logits=logits, labels=labels_re)
     loss = tf.reduce_mean(soft)
 
+    tf.summary.histogram("logits", logits)
     tf.summary.histogram("softmax", soft)
     tf.summary.scalar("loss", loss)
 
@@ -125,6 +126,7 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
     """
     index = 0
 
+    saver = tf.train.Saver()
     train_writer = tf.summary.FileWriter('./logs', sess.graph)
 
     for i in range(epochs):
@@ -143,21 +145,24 @@ def train_nn(sess, epochs, batch_size, get_batches_fn, train_op, cross_entropy_l
                 print("Epoch", i)
                 print("Loss {:.5f}...".format(loss))
 
-            index += 1          
+            index += 1  
+            
+    saver.save(sess, "checkpoints/a.ckpt")
+    print("Saved")     
 
 
-def run():
-    num_classes = 2
-    image_shape = (160, 576)
+def run(flag="TRAIN"):
+    num_classes = 3
+    image_shape = (160, 320)
     data_dir = './data'
     runs_dir = './runs'
 
-    tests.test_load_vgg(load_vgg, tf)
-    tests.test_layers(layers)
+    #tests.test_load_vgg(load_vgg, tf)
+    #tests.test_layers(layers)
     print("layers test passed")
-    tests.test_optimize(optimize)
+    #tests.test_optimize(optimize)
     print("optimize test passed")
-    tests.test_train_nn(train_nn)
+    #tests.test_train_nn(train_nn)
     print("train test passed")
 
     #tests.test_for_kitti_dataset(data_dir)
@@ -169,14 +174,9 @@ def run():
 
     with tf.Session() as sess:
 
-
-               
         vgg_path = os.path.join(data_dir, 'vgg')
         
-        get_batches_fn = helper.gen_batch_function(os.path.join(data_dir, 'data_road/training'), image_shape)
-
-        # OPTIONAL: Augment Images for better results
-        #  https://datascience.stackexchange.com/questions/5224/how-to-prepare-augment-images-for-neural-network
+        get_batches_fn = helper.gen_batch_function(data_dir, image_shape)
 
         learning_rate = tf.placeholder(tf.float32)
         correct_labels = tf.placeholder(tf.float32, shape=(None, None, None, num_classes))
@@ -190,19 +190,22 @@ def run():
     
         sess.run(tf.global_variables_initializer())
 
-    
-        epochs = 15
-        batch_size = 8
+        epochs = 10
+        batch_size = 16
 
-        train_nn(sess, epochs, batch_size, get_batches_fn, trainer, loss, image_input,
-             correct_labels, keep_prob, learning_rate)
 
-        
+        if flag == "TRAIN":
+           train_nn(sess, epochs, batch_size, get_batches_fn, trainer, loss, image_input,
+                     correct_labels, keep_prob, learning_rate)
+
+    with tf.Session() as sess:
+        saver = tf.train.Saver()
+        saver.restore(sess, tf.train.latest_checkpoint('checkpoints'))
         helper.save_inference_samples(runs_dir, data_dir, sess, image_shape, logits, keep_prob, image_input)
 
-        # OPTIONAL: Apply the trained model to a video
-
+            # OPTIONAL: Apply the trained model to a video
 
 if __name__ == '__main__':
-    run()
+    run("TRAIN")
+    #run("TEST")
 
