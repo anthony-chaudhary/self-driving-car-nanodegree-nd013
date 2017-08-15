@@ -43,7 +43,7 @@ void path::init() {
 	//classifier->train(X_train, Y_train);
 
 	our_path->timestep = .02;
-	our_path->T = 6;
+	our_path->T = 4;
 	our_path->trajectory_samples = 8;
 	our_path->distance_goal = our_path->T * 8;
 	our_path->SIGMA_S = { 4., .1, .01 };
@@ -88,8 +88,8 @@ void path::sensor_fusion_predict_and_behavior(vector< vector<double>> sensor_fus
 			our_path->lane_change_state = true;
 			cout << "\n Lane change lock \n \n" << endl;
 		}
-		if (r_daneel_olivaw->D[0]+.3 > our_path->current_lane_target && 
-			r_daneel_olivaw->D[0]-.3 < our_path->current_lane_target ){
+		if (r_daneel_olivaw->D[0]+1 > our_path->current_lane_target && 
+			r_daneel_olivaw->D[0]-.1 < our_path->current_lane_target ){
 			our_path->lane_change_state = false;
 		}
 		our_path->previous_lane_target = lane.d;
@@ -432,11 +432,11 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 
 					if (our_path->ref_velocity > 5) {
 						if (our_path->ref_velocity > 15) {
-							if (our_path->ref_velocity > 47) {
-								our_path->ref_velocity -= (85 / pow(our_path->ref_velocity, 3));
+							if (our_path->ref_velocity > 40) {
+								our_path->ref_velocity -= (.17 / our_path->ref_velocity);
 							}
 							else {
-								our_path->ref_velocity -= (90 / pow(our_path->ref_velocity, 3));
+								our_path->ref_velocity -= (.11 / our_path->ref_velocity);
 								our_path->ref_velocity = max(our_path->ref_velocity, 28.0);
 							}
 						}
@@ -445,22 +445,35 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 						}
 					}
 					else {
-						our_path->ref_velocity -= .025;
+						our_path->ref_velocity -= .003;
 					}
 
 					
 				}
 				else { // our_path->last_trajectory[1] > 0 
-					if (our_path->ref_velocity < 49.1) {
+					if (our_path->ref_velocity < 49.5) {
 
 						if (our_path->ref_velocity > 5) {
-							if (our_path->ref_velocity > 15) {
+							if (our_path->ref_velocity > 10) {
 
-								if (our_path->ref_velocity > 48) {
+								if (our_path->ref_velocity > 47) {
+									if (our_path->ref_velocity > 48) {
+									our_path->ref_velocity += (3 / pow(our_path->ref_velocity, 3));
+								} else {
 									our_path->ref_velocity += (5 / pow(our_path->ref_velocity, 3));
 								}
+								}
 								else {
-									our_path->ref_velocity += (90 / pow(our_path->ref_velocity, 3));
+									if (our_path->ref_velocity > 20) {
+										if (our_path->ref_velocity > 30 && our_path->ref_velocity < 43 ) {
+											our_path->ref_velocity += (180 / pow(our_path->ref_velocity, 3));
+										}
+										else {
+											our_path->ref_velocity += (110 / pow(our_path->ref_velocity, 3));
+										}									
+									} else {
+									our_path->ref_velocity += (55 / pow(our_path->ref_velocity, 3));
+									}
 								}
 							}
 							else {
@@ -468,10 +481,10 @@ path::X_Y path::convert_new_path_to_X_Y_and_merge(path::MAP* MAP, path::S_D S_D_
 							}
 						}
 						else {
-							our_path->ref_velocity += .005;
+							our_path->ref_velocity += .002;
 						}
 
-						our_path->ref_velocity = min(our_path->ref_velocity, 49.1);
+						our_path->ref_velocity = min(our_path->ref_velocity, 49.5);
 					}
 				}
 			}
@@ -535,19 +548,19 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 		time = 0;
 	}
 	if (our_path->ref_velocity > 30) {
-		time = .6;
+		time = .7;
 	}
 	if (our_path->ref_velocity > 40) {
-		time = .7;
+		time = .9;
 	}
 
 	if (our_path->lane_change_state == true) {
-		time = 2.7;
+		time = 2.9;
 		if (our_path->ref_velocity > 40) {
-			time = 3.3;
+			time = 3.7;
 		}
-		if (our_path->ref_velocity > 44) {
-			time = 3.6;
+		if (our_path->ref_velocity > 43) {
+			time = 3.8;
 		}
 	}
 	
@@ -574,7 +587,7 @@ path::S_D  path::build_trajectory(vector<double> trajectory, long long build_tra
 double path::calculate_cost(vector<double> trajectory) {
 	double cost = 0;
 
-	cost += .5 * collision_cost(trajectory);
+	cost += 1 * collision_cost(trajectory);
 	cost += 1 * total_acceleration_cost(trajectory);
 	cost += 1 * max_acceleration_cost(trajectory);
 	cost += .2 * efficiency_cost(trajectory);
@@ -808,7 +821,7 @@ double path::collision_cost(vector<double> trajectory) {
 
 	double a = nearest_approach_to_any_vehicle(trajectory);
 
-	double b = 30 * r_daneel_olivaw->radius;
+	double b = 2 * r_daneel_olivaw->radius;
 	//cout << a << endl;
 	if (a < b) { 
 		// cout << a << endl; 
@@ -821,7 +834,7 @@ double path::collision_cost(vector<double> trajectory) {
 double path::buffer_cost_front(vector<double> trajectory) {
 
 	double a = nearest_approach_to_vehicle_in_front(trajectory);
-	double b = 20;
+	double b = .25;
 	//cout << a << endl;
 	if (a < b) {
 		// cout << a << endl; 

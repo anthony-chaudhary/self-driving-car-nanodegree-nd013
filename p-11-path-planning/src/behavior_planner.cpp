@@ -83,40 +83,37 @@ void Behavior::update_lane_costs(vector<double> trajectory, path *our_path) {
 	t_2[6] = road->L[2].d;
 
 	if (previous_id == 0) {
-		road->L[0].cost += .7 * our_path->buffer_cost_front(t_0);
+		road->L[0].cost += .55 * our_path->buffer_cost_front(t_0);
 	}
 	if (previous_id == 1) {
-		road->L[1].cost += .7 * our_path->buffer_cost_front(t_1);
+		road->L[1].cost += .55 * our_path->buffer_cost_front(t_1);
 	}
 	if (previous_id == 2) {
-		road->L[2].cost += .7 * our_path->buffer_cost_front(t_2);
+		road->L[2].cost += .55 * our_path->buffer_cost_front(t_2);
 	}
 
 
 	//road->L[0].cost += our_path->buffer_cost_front(t_0);
-	road->L[0].cost += 1 * our_path->buffer_cost(t_0);
-	road->L[0].cost += .2 * our_path->total_acceleration_cost(t_0);
-	road->L[0].cost += 1 * our_path->max_acceleration_cost(t_0);
-
+	//road->L[0].cost += 1 * our_path->buffer_cost(t_0);
+	
 	if (previous_id != 0) {
-		road->L[0].cost += 2 * our_path->collision_cost(t_0);
+		road->L[0].cost += 1 * our_path->collision_cost(t_0);
+		road->L[0].cost += 1 * our_path->buffer_cost(t_0);
 	}
 
 	//road->L[1].cost += our_path->buffer_cost_front(t_1);
-	road->L[1].cost += 1 * our_path->buffer_cost(t_1);
-	road->L[1].cost += .2 * our_path->total_acceleration_cost(t_1);
-	road->L[1].cost += 1 * our_path->max_acceleration_cost(t_1);
-	
+	//road->L[1].cost += 1 * our_path->buffer_cost(t_1);
+		
 	if (previous_id != 1) {
-		road->L[1].cost += 2 * our_path->collision_cost(t_1);
+		road->L[1].cost += 1 * our_path->collision_cost(t_1);
+		road->L[1].cost += 1 * our_path->buffer_cost(t_1);
 	}
 
-	road->L[2].cost +=  1 * our_path->buffer_cost(t_2);
-	road->L[2].cost += .2 * our_path->total_acceleration_cost(t_2);
-	road->L[2].cost += 1 * our_path->max_acceleration_cost(t_2);
+	//road->L[2].cost +=  1 * our_path->buffer_cost(t_2);
 	
 	if (previous_id != 2) {
-		road->L[2].cost += 2 * our_path->collision_cost(t_2);
+		road->L[2].cost += 1 * our_path->collision_cost(t_2);
+		road->L[2].cost += 1 * our_path->buffer_cost(t_2);
 	}
 
 	
